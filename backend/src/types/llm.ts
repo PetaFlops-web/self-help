@@ -2,9 +2,9 @@
  * Tipe kontrak antara Main Backend dan llm-service (SRS 6.4 / 6.5).
  */
 
-export type LlmTugas = 'explain' | 'draft';
+export type LlmTask = 'explain' | 'draft';
 
-export interface LlmProyekInput {
+export interface LlmProjectInput {
   id?: string;
   nama?: string;
   dinas?: string | null;
@@ -29,8 +29,8 @@ export interface LlmIndicatorInput {
 /** Payload yang dikirim ke POST /internal/generate (SRS 6.4). */
 export interface LlmGeneratePayload {
   versi_prompt: string;
-  tugas: LlmTugas;
-  proyek: LlmProyekInput;
+  tugas: LlmTask;
+  proyek: LlmProjectInput;
   skor: {
     total: number | null;
     kategori: string | null;
@@ -42,7 +42,7 @@ export interface LlmGeneratePayload {
   tujuan_pembaca: string;
 }
 
-export interface LlmTemuanOutput {
+export interface LlmFindingOutput {
   kode_aturan: string;
   penjelasan: string;
   arti_bagi_warga: string;
@@ -51,7 +51,7 @@ export interface LlmTemuanOutput {
 /** Keluaran T1 (penjelasan berbahasa awam), SRS 6.5. */
 export interface LlmExplainOutput {
   ringkasan: string;
-  temuan: LlmTemuanOutput[];
+  temuan: LlmFindingOutput[];
   keterbatasan: string[];
   saran_tindak_lanjut: Array<{ langkah: string; lembaga: string }>;
   penafian: string;
@@ -62,7 +62,7 @@ export interface LlmDraftOutput {
   kepada: string;
   perihal: string;
   pembuka: string;
-  uraian_indikator: LlmTemuanOutput[];
+  uraian_indikator: LlmFindingOutput[];
   permohonan: string;
   penutup: string;
   penafian: string;
@@ -72,5 +72,5 @@ export interface LlmDraftOutput {
 export type LlmOutput = LlmExplainOutput | LlmDraftOutput;
 
 /** Lembaga tujuan draf yang sah (SRS 6.5). */
-export const LEMBAGA_TUJUAN = ['inspektorat', 'BPK', 'KPK', 'Ombudsman', 'dinas_terkait'] as const;
-export type LembagaTujuan = (typeof LEMBAGA_TUJUAN)[number];
+export const LLM_TARGET_INSTITUTIONS = ['inspektorat', 'BPK', 'KPK', 'Ombudsman', 'dinas_terkait'] as const;
+export type LlmTargetInstitution = (typeof LLM_TARGET_INSTITUTIONS)[number];

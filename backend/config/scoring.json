@@ -130,17 +130,29 @@
     {
       "code": "D5-01",
       "dimension": "D5",
-      "nama": "Temuan BPK terkait entitas",
-      "input": "jumlah_temuan_bpk",
+      "nama": "Dokumen wajib yang belum dipublikasikan",
+      "input": "persen_dokumen_belum_publik",
       "direction": "gte",
-      "sedang": 3,
-      "tinggi": 8,
-      "required_fields": ["jumlah_temuan_bpk"],
-      "sumber": "SRC-06",
-      "uraian_aturan": "Temuan pemeriksaan BPK terkait entitas pada tahun sebelumnya"
+      "sedang": 20,
+      "tinggi": 50,
+      "required_fields": ["persen_dokumen_belum_publik"],
+      "sumber": "SRC-01, SRC-02",
+      "uraian_aturan": "Persentase dokumen wajib yang belum dipublikasikan"
     },
     {
       "code": "D6-01",
+      "dimension": "D6",
+      "nama": "Checklist prosedur yang tidak terpenuhi",
+      "input": "persen_prosedur_tidak_terpenuhi",
+      "direction": "gte",
+      "sedang": 20,
+      "tinggi": 50,
+      "required_fields": ["persen_prosedur_tidak_terpenuhi"],
+      "sumber": "SRC-02",
+      "uraian_aturan": "Persentase tahapan prosedur pengadaan yang tidak terpenuhi"
+    },
+    {
+      "code": "D6-02",
       "dimension": "D6",
       "nama": "RUP diumumkan terlambat",
       "input": "hari_rup_ke_tender",
@@ -150,18 +162,6 @@
       "required_fields": ["hari_rup_ke_tender"],
       "sumber": "SRC-01, SRC-02",
       "uraian_aturan": "RUP diumumkan terlambat (hari antara pengumuman RUP dan mulai tender)"
-    },
-    {
-      "code": "D6-02",
-      "dimension": "D6",
-      "nama": "Laporan warga tanpa tindak lanjut",
-      "input": "hari_tanpa_tindak_lanjut",
-      "direction": "gte",
-      "sedang": 30,
-      "tinggi": 60,
-      "required_fields": ["hari_tanpa_tindak_lanjut"],
-      "sumber": "SRC-09",
-      "uraian_aturan": "Pengaduan terkait proyek belum ditindaklanjuti (hari sejak diverifikasi)"
     }
   ]
 }

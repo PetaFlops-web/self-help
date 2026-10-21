@@ -1,4 +1,4 @@
-export interface Pembayaran {
+export interface Payment {
   id: string;
   proyek_id: string;
   termin_ke: number | null;
@@ -11,7 +11,7 @@ export interface Pembayaran {
   is_dummy: boolean;
 }
 
-export interface Progres {
+export interface Progress {
   id: string;
   proyek_id: string;
   tanggal: Date | null;
@@ -23,7 +23,7 @@ export interface Progres {
   is_dummy: boolean;
 }
 
-export interface RingkasanKeuangan {
+export interface FinancialSummary {
   proyek_id: string;
   nilai_kontrak: string | null;
   total_dibayar: number;

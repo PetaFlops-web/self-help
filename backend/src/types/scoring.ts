@@ -1,4 +1,4 @@
-export type Tingkat = 'rendah' | 'sedang' | 'tinggi';
+export type Level = 'rendah' | 'sedang' | 'tinggi';
 export type Dimension = 'D1' | 'D2' | 'D3' | 'D4' | 'D5' | 'D6';
 
 export type ScoreInput = Record<string, number | null | undefined>;
@@ -37,7 +37,7 @@ export interface IndicatorFinding {
   kode_aturan: string;
   nilai_terukur: number;
   ambang: number;
-  tingkat: Tingkat;
+  tingkat: Level;
   sumber: string;
   uraian_aturan: string;
   bukti_ref?: Record<string, unknown>;

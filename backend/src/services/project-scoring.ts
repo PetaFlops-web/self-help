@@ -4,71 +4,82 @@ import { scoreProject } from './scoring.js';
 import { toNum } from '../helpers/number.js';
 import type { ScoreInput, ScoreResult } from '../types/scoring.js';
 import {
-  deleteIndikatorTemuan,
-  getLaporanTerverifikasiCount,
-  getPembayaranCair,
-  getProgresFisik,
-  getProyekRow,
-  getRabTotalAcuan,
+  deleteIndicatorFindingsByProjectId,
+  getUnpublishedDocumentSummary,
+  getVerifiedReportCount,
+  getPaymentDisbursedPercentage,
+  getPhysicalProgressPercentage,
+  getUnfulfilledProcedureSummary,
+  getProjectRow,
+  getRabTotalReference,
   getTenderRow,
-  insertIndikatorTemuan,
-  updateProyekScore,
+  insertIndicatorFinding,
+  updateProjectScore,
   type DbClient,
 } from '../repositories/project-scoring.js';
 
-export async function collectScoreInput(client: DbClient, proyekId: string): Promise<ScoreInput> {
-  const proyek = await getProyekRow(client, proyekId);
-  const tender = await getTenderRow(client, proyekId);
-  const persenCairRaw = await getPembayaranCair(client, proyekId);
-  const persenFisikRaw = await getProgresFisik(client, proyekId);
-  const laporanCountRaw = await getLaporanTerverifikasiCount(client, proyekId);
-  const totalAcuanRaw = await getRabTotalAcuan(client, proyekId);
+export async function collectScoreInput(client: DbClient, projectId: string): Promise<ScoreInput> {
+  const projectRow = await getProjectRow(client, projectId);
+  const tender = await getTenderRow(client, projectId);
+  const disbursedPctRaw = await getPaymentDisbursedPercentage(client, projectId);
+  const physicalPctRaw = await getPhysicalProgressPercentage(client, projectId);
+  const reportCountRaw = await getVerifiedReportCount(client, projectId);
+  const referenceTotalRaw = await getRabTotalReference(client, projectId);
+  const documentSummary = await getUnpublishedDocumentSummary(client, projectId);
+  const procedureSummary = await getUnfulfilledProcedureSummary(client, projectId);
 
-  const hps = toNum(proyek?.hps);
-  const nilaiKontrak = toNum(proyek?.nilai_kontrak);
-  const hargaMenang = toNum(tender?.harga_penawaran_menang);
-  const totalAcuan = toNum(totalAcuanRaw);
-  const persenCair = toNum(persenCairRaw);
-  const persenFisik = toNum(persenFisikRaw);
+  const hps = toNum(projectRow?.hps);
+  const nilaiKontrak = toNum(projectRow?.nilai_kontrak);
+  const winningBid = toNum(tender?.harga_penawaran_menang);
+  const referenceTotal = toNum(referenceTotalRaw);
+  const disbursedPct = toNum(disbursedPctRaw);
+  const physicalPct = toNum(physicalPctRaw);
 
   const input: ScoreInput = {};
 
   input.jumlah_penawar = toNum(tender?.jumlah_penawar);
   input.hari_rup_ke_tender = toNum(tender?.hari_rup_ke_tender);
-  input.jumlah_laporan_terverifikasi = toNum(laporanCountRaw);
+  input.jumlah_laporan_terverifikasi = toNum(reportCountRaw);
 
-  if (hps !== null && hargaMenang !== null) {
-    input.menang_hps_pct = Math.round((hargaMenang / hps) * 100);
+  if (documentSummary.wajib > 0) {
+    input.persen_dokumen_belum_publik = Math.round((documentSummary.belum_publik / documentSummary.wajib) * 100);
   }
-  if (totalAcuan !== null && totalAcuan > 0) {
+  if (procedureSummary.total > 0) {
+    input.persen_prosedur_tidak_terpenuhi = Math.round((procedureSummary.tidak_terpenuhi / procedureSummary.total) * 100);
+  }
+
+  if (hps !== null && winningBid !== null) {
+    input.menang_hps_pct = Math.round((winningBid / hps) * 100);
+  }
+  if (referenceTotal !== null && referenceTotal > 0) {
     if (nilaiKontrak !== null) {
-      input.selisih_harga_acuan_pct = Math.round(((nilaiKontrak - totalAcuan) / totalAcuan) * 100);
+      input.selisih_harga_acuan_pct = Math.round(((nilaiKontrak - referenceTotal) / referenceTotal) * 100);
     }
     if (hps !== null) {
-      input.selisih_hps_acuan_pct = Math.round(((hps - totalAcuan) / totalAcuan) * 100);
+      input.selisih_hps_acuan_pct = Math.round(((hps - referenceTotal) / referenceTotal) * 100);
     }
   }
-  if (persenCair !== null && persenFisik !== null) {
-    input.cair_minus_fisik_poin = Math.round(persenCair - persenFisik);
+  if (disbursedPct !== null && physicalPct !== null) {
+    input.cair_minus_fisik_poin = Math.round(disbursedPct - physicalPct);
   }
 
   return input;
 }
 
-export async function recalculateProjectScore(pool: Pool, proyekId: string): Promise<ScoreResult> {
+export async function recalculateProjectScore(pool: Pool, projectId: string): Promise<ScoreResult> {
   const config = loadScoringConfig();
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    const input = await collectScoreInput(client, proyekId);
+    const input = await collectScoreInput(client, projectId);
     const result = scoreProject(input, config);
 
-    await updateProyekScore(client, proyekId, result.skor_total, result.kategori);
-    await deleteIndikatorTemuan(client, proyekId);
+    await updateProjectScore(client, projectId, result.skor_total, result.kategori);
+    await deleteIndicatorFindingsByProjectId(client, projectId);
     for (const f of result.indikator_temuan) {
-      await insertIndikatorTemuan(client, proyekId, f);
+      await insertIndicatorFinding(client, projectId, f);
     }
 
     await client.query('COMMIT');

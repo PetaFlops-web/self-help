@@ -1,6 +1,6 @@
-import { listSumberData } from '../repositories/sumber-data.js';
-import type { SumberData } from '../types/sumber-data.js';
+import { listDataSources } from '../repositories/data-source.js';
+import type { DataSource } from '../types/data-source.js';
 
-export async function listSources(): Promise<SumberData[]> {
-  return listSumberData();
+export async function listSources(): Promise<DataSource[]> {
+  return listDataSources();
 }

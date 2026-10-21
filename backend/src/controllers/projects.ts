@@ -4,7 +4,7 @@ import { ok } from '../middlewares/response.js';
 
 export async function listProjects(req: Request, res: Response): Promise<void> {
   const query = req.query as Record<string, unknown>;
-  const projects = await projectsService.listProjects(query);
+  const projects = await projectsService.listProjectsByFilters(query);
   ok(res, 'projects', projects);
 }
 

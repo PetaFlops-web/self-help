@@ -1,6 +1,6 @@
-import type { WilayahRow } from '../types/wilayah.js';
+import type { RegionRow } from '../types/region.js';
 import { toNum } from '../helpers/number.js';
-import { listWilayah } from '../repositories/wilayah.js';
+import { listRegions } from '../repositories/region.js';
 
 interface GeoJSONFeature {
   type: 'Feature';
@@ -18,14 +18,14 @@ interface GeoJSONFeatureCollection {
   features: GeoJSONFeature[];
 }
 
-function pointGeometry(row: WilayahRow): unknown {
+function pointGeometry(row: RegionRow): unknown {
   const lng = toNum(row.lng);
   const lat = toNum(row.lat);
   if (lng === null || lat === null) return null;
   return { type: 'Point', coordinates: [lng, lat] };
 }
 
-export function toGeoJSON(rows: WilayahRow[]): GeoJSONFeatureCollection {
+export function toGeoJSON(rows: RegionRow[]): GeoJSONFeatureCollection {
   const features: GeoJSONFeature[] = rows.map((row) => {
     const geometry =
       row.geojson !== null && typeof row.geojson === 'object'
@@ -46,6 +46,6 @@ export function toGeoJSON(rows: WilayahRow[]): GeoJSONFeatureCollection {
 }
 
 export async function getRegionsGeoJSON(): Promise<GeoJSONFeatureCollection> {
-  const rows = await listWilayah();
+  const rows = await listRegions();
   return toGeoJSON(rows);
 }

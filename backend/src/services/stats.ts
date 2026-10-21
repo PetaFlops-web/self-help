@@ -1,4 +1,4 @@
-import { getStats } from '../repositories/proyek.js';
+import { getStats } from '../repositories/project.js';
 import type { StatsResponse } from '../types/stats.js';
 
 export async function getStatsSummary(): Promise<StatsResponse> {

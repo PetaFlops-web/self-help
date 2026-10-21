@@ -6,13 +6,13 @@ import type {
   ScoreResult,
   ScoringConfig,
   ScoringRule,
-  Tingkat,
+  Level,
 } from '../types/scoring.js';
 import { isPresent } from '../helpers/number.js';
 
 const DIMENSIONS: Dimension[] = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6'];
 
-function levelFor(value: number, rule: ScoringRule): Tingkat {
+function levelFor(value: number, rule: ScoringRule): Level {
   if (rule.direction === 'gte') {
     if (value >= rule.tinggi) return 'tinggi';
     if (value >= rule.sedang) return 'sedang';
@@ -24,7 +24,7 @@ function levelFor(value: number, rule: ScoringRule): Tingkat {
   return 'rendah';
 }
 
-function ambangFor(tingkat: Tingkat, rule: ScoringRule): number {
+function ambangFor(tingkat: Level, rule: ScoringRule): number {
   if (tingkat === 'tinggi') return rule.tinggi;
   return rule.sedang;
 }
@@ -72,11 +72,11 @@ export function scoreProject(input: ScoreInput, config: ScoringConfig): ScoreRes
     byDimension.set(rule.dimension, list);
   }
 
-  const indikator: IndicatorFinding[] = [];
-  const dimensi: Record<Dimension, number | null> = {
+  const findings: IndicatorFinding[] = [];
+  const dimensionScores: Record<Dimension, number | null> = {
     D1: null, D2: null, D3: null, D4: null, D5: null, D6: null,
   };
-  const dimensiDataBelumCukup: Dimension[] = [];
+  const insufficientDataDimensions: Dimension[] = [];
   const dimensionResults: DimensionResult[] = [];
 
   for (const dim of DIMENSIONS) {
@@ -86,8 +86,8 @@ export function scoreProject(input: ScoreInput, config: ScoringConfig): ScoreRes
     );
 
     if (applicable.length === 0) {
-      dimensi[dim] = null;
-      dimensiDataBelumCukup.push(dim);
+      dimensionScores[dim] = null;
+      insufficientDataDimensions.push(dim);
       dimensionResults.push({ dimensi: dim, skor: null, status: 'data_belum_cukup' });
       continue;
     }
@@ -98,7 +98,7 @@ export function scoreProject(input: ScoreInput, config: ScoringConfig): ScoreRes
       const tingkat = levelFor(value, rule);
       const points = config.level_points[tingkat];
       if (points > maxPoints) maxPoints = points;
-      indikator.push({
+      findings.push({
         dimensi: rule.dimension,
         kode_aturan: rule.code,
         nilai_terukur: value,
@@ -109,16 +109,16 @@ export function scoreProject(input: ScoreInput, config: ScoringConfig): ScoreRes
       });
     }
 
-    dimensi[dim] = maxPoints;
+    dimensionScores[dim] = maxPoints;
     dimensionResults.push({ dimensi: dim, skor: maxPoints, status: 'dihitung' });
   }
 
   const computedDims = dimensionResults
     .filter((d) => d.status === 'dihitung')
     .map((d) => d.dimensi);
-  const weights_used: Partial<Record<Dimension, number>> = {};
+  const weightsUsed: Partial<Record<Dimension, number>> = {};
 
-  let skor_total: number | null = null;
+  let totalScore: number | null = null;
   if (computedDims.length > 0) {
     const rawWeightSum = computedDims.reduce(
       (acc, d) => acc + (config.dimension_weights[d] ?? 0),
@@ -128,22 +128,22 @@ export function scoreProject(input: ScoreInput, config: ScoringConfig): ScoreRes
       let total = 0;
       for (const d of computedDims) {
         const w = (config.dimension_weights[d] ?? 0) / rawWeightSum;
-        weights_used[d] = w;
-        total += w * (dimensi[d] as number);
+        weightsUsed[d] = w;
+        total += w * (dimensionScores[d] as number);
       }
-      skor_total = Math.round(total * 100) / 100;
+      totalScore = Math.round(total * 100) / 100;
     }
   }
 
-  const kategori =
-    skor_total === null ? null : categorize(skor_total, config.category_thresholds);
+  const category =
+    totalScore === null ? null : categorize(totalScore, config.category_thresholds);
 
   return {
-    skor_total,
-    kategori,
-    dimensi,
-    indikator_temuan: indikator,
-    dimensi_data_belum_cukup: dimensiDataBelumCukup,
-    weights_used,
+    skor_total: totalScore,
+    kategori: category,
+    dimensi: dimensionScores,
+    indikator_temuan: findings,
+    dimensi_data_belum_cukup: insufficientDataDimensions,
+    weights_used: weightsUsed,
   };
 }

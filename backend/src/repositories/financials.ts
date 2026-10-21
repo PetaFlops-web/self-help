@@ -1,31 +1,31 @@
 import pool from '../config/database.js';
-import type { Pembayaran, Progres, RabItem } from '../types/financials.js';
+import type { Payment, Progress, RabItem } from '../types/financials.js';
 
-export async function getPembayaranByProyekId(proyekId: string): Promise<Pembayaran[]> {
-  const res = await pool.query<Pembayaran>(
+export async function getPaymentsByProjectId(projectId: string): Promise<Payment[]> {
+  const res = await pool.query<Payment>(
     `SELECT id, proyek_id, termin_ke, tanggal, jumlah, persen_kontrak,
             source_id, source_url, fetched_at, is_dummy
        FROM pembayaran
       WHERE proyek_id = $1
       ORDER BY termin_ke NULLS LAST, tanggal NULLS LAST`,
-    [proyekId],
+    [projectId],
   );
   return res.rows;
 }
 
-export async function getProgresByProyekId(proyekId: string): Promise<Progres[]> {
-  const res = await pool.query<Progres>(
+export async function getProgressByProjectId(projectId: string): Promise<Progress[]> {
+  const res = await pool.query<Progress>(
     `SELECT id, proyek_id, tanggal, persen_fisik, sumber,
             source_id, source_url, fetched_at, is_dummy
        FROM progres
       WHERE proyek_id = $1
       ORDER BY tanggal DESC NULLS LAST`,
-    [proyekId],
+    [projectId],
   );
   return res.rows;
 }
 
-export async function getRabItemsByProyekId(proyekId: string): Promise<RabItem[]> {
+export async function getRabItemsByProjectId(projectId: string): Promise<RabItem[]> {
   const res = await pool.query<RabItem>(
     `SELECT ri.id, ri.proyek_id, ri.uraian, ri.satuan, ri.volume, ri.harga_satuan,
             ri.kode_harga_acuan,
@@ -37,7 +37,7 @@ export async function getRabItemsByProyekId(proyekId: string): Promise<RabItem[]
        LEFT JOIN harga_acuan ha ON ha.kode = ri.kode_harga_acuan
       WHERE ri.proyek_id = $1
       ORDER BY ri.id`,
-    [proyekId],
+    [projectId],
   );
   return res.rows;
 }

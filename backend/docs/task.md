@@ -106,10 +106,10 @@ Verifikasi: Matikan LLM Microservice, lalu jalankan curl -X POST .../explain ke 
 
 ## Fase 6 — Lapor Warga & Panel Admin
 
-- [ ] **6.1** `POST /api/reports` → buat laporan warga (tiket, kategori, keterangan, lat/lng, foto, anonim) + `GET /api/reports?tiket=...` untuk lacak (FR-26).
+- [x] **6.1** `POST /api/reports` → buat laporan warga (tiket, kategori, keterangan, lat/lng, foto, anonim) + `GET /api/reports?tiket=...` untuk lacak (FR-26).
   - **Verifikasi:** `curl` POST membuat tiket; GET mengembalikan status "Dilaporkan".
 
-- [ ] **6.2** `PATCH /api/admin/reports/{id}` → verifikasi laporan (status Diverifikasi/Ditolak + catatan), lalu picu hitung ulang skor proyek terkait (PRD 8).
+- [x] **6.2** `PATCH /api/admin/reports/{id}` → verifikasi laporan (status Diverifikasi/Ditolak + catatan), lalu picu hitung ulang skor proyek terkait (PRD 8).
   - **Verifikasi:** laporan terverifikasi mengubah skor D3 proyek setelah verifikasi.
 ---
 
@@ -175,3 +175,140 @@ Endpoint dokumentasi API (Swagger) untuk dikonsumsi frontend.
   - Setiap proyek selesai mendapat 3 snapshot: 40%, 70%, dan nilai final `fisik` dari skenario risiko.
   - Proyek dengan status `pelaksanaan` mendapat 2 snapshot.
   - **Verifikasi:** `curl /api/projects/{id}/progress` mengembalikan array `progres` dengan 2–3 item; `npm run build` dan `npm run seed` lolos.
+
+---
+
+## Fase 8 — Filter & Search Proyek (penambahan)
+
+Berdasarkan PRD §11 (*Peta dan Daftar Proyek*: "filter kabupaten, dinas, **nilai**, risiko") dan kebutuhan menelusuri proyek, perlu menambahkan kemampuan pencarian/filter pada daftar proyek.
+
+- [x] **8.1** Tambahkan pencarian teks (`q`) pada `GET /api/projects` untuk mencari `nama` proyek dan `dinas` menggunakan `ILIKE`.
+  - **Verifikasi:** `curl '/api/projects?q=embung'` mengembalikan hanya proyek yang `nama` atau `dinas` mengandung "embung".
+
+- [x] **8.2** Tambahkan filter range nilai (`pagu_min`, `pagu_max`, `nilai_kontrak_min`, `nilai_kontrak_max`) pada `GET /api/projects` untuk memenuhi filter nilai di PRD §11.
+  - **Verifikasi:** `curl '/api/projects?nilai_kontrak_min=1000000000&nilai_kontrak_max=5000000000'` mengembalikan proyek dalam range tersebut.
+
+- [x] **8.3** Perbarui dokumentasi Swagger (`src/config/swagger.ts`) untuk mencakup parameter baru (`q`, `pagu_min`, `pagu_max`, `nilai_kontrak_min`, `nilai_kontrak_max`) di spesifikasi `GET /api/projects`.
+  - **Verifikasi:** `curl http://localhost:3000/docs.json` menampilkan parameter-parameter baru di `/projects`.
+
+---
+
+## Fase 11 — Seed RAB yang Lebih Realistis
+
+Saat ini `seed/seed.ts` hanya membuat satu baris `rab_item` per proyek, sehingga endpoint `/api/projects/{id}/rab-items` hanya mengembalikan satu item dan indikator D1 kurang bermakna.
+
+- [x] **11.1** Perbarui `seed/seed.ts` agar setiap proyek memiliki 3–5 item RAB dummy yang realistis (misalnya pekerjaan persiapan, pekerjaan utama, pekerjaan finishing).
+  - Setiap item memiliki `uraian`, `satuan`, `volume`, dan `harga_satuan` sendiri.
+  - Setiap item terhubung ke `harga_acuan` berbeda agar `deviasi_pct` bervariasi.
+  - **Verifikasi:** `curl /api/projects/{id}/rab-items` mengembalikan array dengan 3–5 item; `npm run seed` dan `npm run build` lolos.
+
+- [x] **11.2** Pastikan perubahan seed tetap menghasilkan kategori proyek yang bervariasi (Tinggi / Perlu Perhatian / Rendah) setelah `recalculateProjectScore`.
+  - **Verifikasi:** setelah seed, `GET /api/stats` menunjukkan minimal ada proyek di setiap kategori.
+
+---
+
+## Fase 9 — Prosedur & Dokumen Keterbukaan
+
+Berdasarkan PRD §9 (Spesifikasi Data: `Dokumen`, `Prosedur_Checklist`) dan SRS aturan D5/D6, dimensi kepatuhan prosedur dan keterbukaan informasi saat ini selalu berstatus *data belum cukup* karena tabel pendukung belum ada.
+
+- [x] **9.1** Migrasi tabel `dokumen` dan `prosedur_checklist` sesuai PRD §9.
+  - `dokumen`: `id`, `proyek_id`, `jenis`, `wajib`, `dipublikasikan`, `tanggal`.
+  - `prosedur_checklist`: `proyek_id`, `tahapan`, `terpenuhi`.
+  - **Verifikasi:** `\dt` menampilkan kedua tabel; kolom sesuai spesifikasi.
+
+- [x] **9.2** Seed data dummy untuk `dokumen` dan `prosedur_checklist` agar D5 dan D6 bisa dihitung untuk proyek-proyek existing.
+  - **Verifikasi:** setelah `npm run seed`, query `dokumen` dan `prosedur_checklist` memiliki baris untuk setiap proyek.
+
+- [x] **9.3** Endpoint read-only publik:
+  - `GET /api/projects/{id}/documents` → daftar dokumen wajib publik proyek.
+  - `GET /api/projects/{id}/procedure-checklist` → daftar checklist prosedur proyek.
+  - **Verifikasi:** `curl` mengembalikan JSON 200 dengan data sesuai; `npm run build` lolos.
+
+- [x] **9.4** Perluas mesin skor (`src/services/project-scoring.ts`) agar membaca `dokumen` dan `prosedur_checklist`, lalu menghitung indikator D5 dan D6.
+  - **Verifikasi:** setelah seed, `GET /api/projects/{id}/indicators` mengembalikan indikator dari D1–D6 (tidak ada dimensi yang *data belum cukup* karena dummy melengkapi semua); skor total dan kategori berubah sesuai.
+
+- [x] **9.5** Perbarui dokumentasi Swagger dengan skema dan endpoint baru.
+  - **Verifikasi:** `curl http://localhost:3000/docs.json` menampilkan `/projects/{id}/documents` dan `/projects/{id}/procedure-checklist`.
+
+---
+
+## Fase 10 — Cache & Rate Limit LLM
+
+Berdasarkan SRS §6.1, LLM-07, LLM-08, dan NFR-11, endpoint LLM perlu cache hasil dan pembatasan laju untuk efisiensi kuota serta keamanan.
+
+- [ ] **10.1** Simpan hasil LLM yang lolos validasi ke tabel `penjelasan_llm` dengan `input_hash`, `model`, `versi_prompt`, `jenis`, dan `isi_json`.
+  - **Verifikasi:** setelah memanggil `/explain` atau `/draft`, baris baru muncul di `penjelasan_llm`.
+
+- [ ] **10.2** Gunakan cache `penjelasan_llm` bila `input_hash` sama untuk jenis yang sama; hindari panggilan ulang ke LLM Microservice.
+  - **Verifikasi:** panggilan kedua ke `/explain` untuk proyek yang sama mengembalikan hasil lebih cepat tanpa memanggil LLM service (log LLM service tidak menerima request baru).
+
+- [ ] **10.3** Tambahkan rate limit per alamat IP per hari untuk endpoint `POST /api/projects/{id}/explain` dan `POST /api/projects/{id}/draft`.
+  - **Verifikasi:** setelah melebihi batas, request mengembalikan HTTP 429 dengan pesan yang jelas.
+
+- [ ] **10.4** Perbarui dokumentasi Swagger untuk mencakup respons 429 dan skema `PenjelasanLLM`.
+  - **Verifikasi:** `curl http://localhost:3000/docs.json` menampilkan respons 429 di endpoint LLM.
+
+---
+
+## Fase 12 — Validasi Input dengan Zod
+
+Berdasarkan kebutuhan menjaga konsistensi dan keamanan input pada endpoint mutasi, seluruh request **POST**, **PATCH/UPDATE**, dan **DELETE** wajib divalidasi menggunakan package `zod` sebelum masuk ke controller/service. Endpoint GET tetap menggunakan helper manual yang ada.
+
+- [ ] **12.1** Instalasi dependency dan fondasi middleware validasi.
+  - Tambahkan `zod` ke `dependencies` di `package.json` dan jalankan `npm install`.
+  - Buat `src/middlewares/validate.ts` berisi middleware generik `validateBody(schema)` dan `validateParams(schema)` yang mem-parse input dengan Zod, melempar `HttpError(400)` dengan pesan error terformat saat gagal, dan mengisi `req.body`/`req.params` dengan hasil parse.
+  - **Verifikasi:** `npm run build` lolos; middleware dapat dipasang di route tanpa error.
+
+- [ ] **12.2** Buat schema Zod di `src/utils/validators/`.
+  - `src/utils/validators/reports.ts` — schema `CreateReportBodySchema` untuk `POST /api/reports` (proyek_id UUID, kategori wajib, keterangan 1–4000 karakter, lat/lng opsional number, foto_urls opsional array string, anonim opsional boolean).
+  - `src/utils/validators/admin-reports.ts` — schema `VerifyReportBodySchema` untuk `PATCH /api/admin/reports/:id` (status enum Diverifikasi/Ditolak, alasan_tolak wajib jika status Ditolak).
+  - `src/utils/validators/llm.ts` — schema `DraftBodySchema` untuk `POST /api/projects/:id/draft` (tujuan enum lembaga, default 'inspektorat').
+  - **Verifikasi:** `npm run build` lolos; schema dapat di-import di route.
+
+- [ ] **12.3** Pasang middleware validasi pada route POST/PATCH dan hapus validasi manual yang redundan.
+  - Pasang `validateBody` di `src/routes/reports.ts`, `src/routes/admin-reports.ts`, dan `src/routes/llm.ts`.
+  - Hapus atau kurangi validasi manual di `src/services/reports.ts`, `src/services/admin-reports.ts`, dan `src/controllers/llm.ts` yang sudah tercover Zod.
+  - **Verifikasi:** `curl -X POST /api/reports -H 'Content-Type: application/json' -d '{"proyek_id":"not-uuid","kategori":""}'` mengembalikan HTTP 400 dengan pesan validasi; request valid tetap berhasil.
+
+- [ ] **12.4** Verifikasi endpoint existing tetap berfungsi.
+  - `POST /api/reports` dengan data valid membuat tiket.
+  - `PATCH /api/admin/reports/:id` dengan data valid mengubah status laporan.
+  - `POST /api/projects/:id/draft` dengan tujuan valid menghasilkan draf.
+  - **Verifikasi:** `npm run build` lolos; curl ke endpoint mutasi valid mengembalikan 200/201 seperti sebelumnya.
+
+---
+
+## Fase 13 — Refactoring: Konsistensi Bahasa Inggris untuk Nama Function/Type
+
+Ubah nama setiap `function`, `interface`, `type`, dan variabel lokal yang masih menggunakan bahasa Indonesia di `src/` dan `seed/` menjadi bahasa Inggris secara konsisten. Nama kolom database, nama tabel, endpoint URL, dan properti JSON response tetap tidak diubah agar tidak merusak kontrak API dan data existing.
+
+- [x] **13.1** Identifikasi mapping rename seluruh simbol berbahasa Indonesia di `src/` dan `seed/`, kelompokkan per file.
+  - **Verifikasi:** daftar mapping rename tertulis dan disetujui owner sebelum implementasi.
+
+- [x] **13.2** Refactor tipe/interface (`src/types/`) dan repository (`src/repositories/`) ke bahasa Inggris.
+  - Contoh: `Proyek` → `Project`, `LaporanWarga` → `CitizenReport`, `Wilayah` → `Region`, `IndikatorTemuan` → `IndicatorFindingRow`, `listProyek` → `listProjects`, `getProyekById` → `getProjectById`.
+  - **Verifikasi:** `npm run build` lolos setelah batch ini.
+
+- [x] **13.3** Refactor services dan controllers ke bahasa Inggris.
+  - Pastikan semua import dan pemanggilan fungsi dari repository/types sudah mengikuti nama baru.
+  - **Verifikasi:** `npm run build` lolos setelah batch ini.
+
+- [x] **13.4** Refactor `seed/seed.ts` dan helper seed ke bahasa Inggris.
+  - Contoh: `PROYEK` → `PROJECTS`, `WILAYAH` → `REGIONS`, `dokumenDipublikasikan` → `isDocumentPublished`.
+  - **Verifikasi:** `npm run build` dan `npm run seed` lolos; data dummy tetap sama jumlah dan kategorinya.
+
+- [x] **13.5** Smoke test endpoint existing untuk memastikan kontrak API tidak berubah.
+  - `GET /api/projects`
+  - `GET /api/projects/:id`
+  - `GET /api/projects/:id/indicators`
+  - `GET /api/projects/:id/documents`
+  - `GET /api/projects/:id/procedure-checklist`
+  - `POST /api/reports`
+  - `PATCH /api/admin/reports/:id`
+  - `POST /api/projects/:id/explain`
+  - `POST /api/projects/:id/draft`
+  - `GET /api/stats`
+  - **Verifikasi:** semua endpoint mengembalikan status dan struktur respons yang sama seperti sebelum refaktor.
+
+- [x] **13.6** Perbarui dokumentasi Swagger bila ada referensi nama tipe/schema yang berubah.
+  - **Verifikasi:** `curl http://localhost:3000/docs.json` tetap valid dan spesifikasi endpoint tidak rusak.

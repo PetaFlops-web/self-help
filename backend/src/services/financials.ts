@@ -1,70 +1,70 @@
 import {
-  getPembayaranByProyekId,
-  getProgresByProyekId,
-  getRabItemsByProyekId,
+  getPaymentsByProjectId,
+  getProgressByProjectId,
+  getRabItemsByProjectId,
 } from '../repositories/financials.js';
-import { getProyekById } from '../repositories/proyek.js';
+import { getProjectById } from '../repositories/project.js';
 import { HttpError, isUuid } from '../helpers/http.js';
 import { toNum } from '../helpers/number.js';
-import type { Pembayaran, Progres, RabItem, RabItemsResponse, RingkasanKeuangan } from '../types/financials.js';
+import type { Payment, Progress, RabItem, RabItemsResponse, FinancialSummary } from '../types/financials.js';
 
 export interface PaymentsResponse {
   proyek_id: string;
-  pembayaran: Pembayaran[];
-  ringkasan: RingkasanKeuangan;
+  pembayaran: Payment[];
+  ringkasan: FinancialSummary;
 }
 
 export interface ProgressResponse {
   proyek_id: string;
-  progres: Progres[];
+  progres: Progress[];
 }
 
 export async function getProjectPayments(id: string): Promise<PaymentsResponse> {
   if (!isUuid(id)) {
-    throw new HttpError(400, 'id proyek harus UUID yang valid');
+    throw new HttpError(400, 'id project harus UUID yang valid');
   }
 
-  const proyek = await getProyekById(id);
-  if (!proyek) {
-    throw new HttpError(404, 'Proyek tidak ditemukan');
+  const project = await getProjectById(id);
+  if (!project) {
+    throw new HttpError(404, 'Project tidak ditemukan');
   }
 
-  const pembayaran = await getPembayaranByProyekId(id);
-  const nilaiKontrak = toNum(proyek.nilai_kontrak) ?? 0;
+  const payments = await getPaymentsByProjectId(id);
+  const contractValue = toNum(project.nilai_kontrak) ?? 0;
 
   let totalDibayar = 0;
   let persenDibayar = 0;
-  for (const p of pembayaran) {
+  for (const p of payments) {
     const jumlah = toNum(p.jumlah);
     const persen = toNum(p.persen_kontrak);
     if (jumlah !== null) totalDibayar += jumlah;
     if (persen !== null) persenDibayar += persen;
   }
 
-  const ringkasan: RingkasanKeuangan = {
+  const ringkasan: FinancialSummary = {
     proyek_id: id,
-    nilai_kontrak: proyek.nilai_kontrak,
+    nilai_kontrak: project.nilai_kontrak,
     total_dibayar: totalDibayar,
     persen_dibayar: persenDibayar,
     sisa_persen: Math.max(0, 100 - persenDibayar),
-    termin_count: pembayaran.length,
+    termin_count: payments.length,
   };
 
-  return { proyek_id: id, pembayaran, ringkasan };
+  return { proyek_id: id, pembayaran: payments, ringkasan };
 }
 
 export async function getProjectProgress(id: string): Promise<ProgressResponse> {
   if (!isUuid(id)) {
-    throw new HttpError(400, 'id proyek harus UUID yang valid');
+    throw new HttpError(400, 'id project harus UUID yang valid');
   }
 
-  const proyek = await getProyekById(id);
-  if (!proyek) {
-    throw new HttpError(404, 'Proyek tidak ditemukan');
+  const project = await getProjectById(id);
+  if (!project) {
+    throw new HttpError(404, 'Project tidak ditemukan');
   }
 
-  const progres = await getProgresByProyekId(id);
-  return { proyek_id: id, progres };
+  const progress = await getProgressByProjectId(id);
+  return { proyek_id: id, progres: progress };
 }
 
 function computeRabItem(row: RabItem): RabItem {
@@ -91,15 +91,15 @@ function computeRabItem(row: RabItem): RabItem {
 
 export async function getProjectRabItems(id: string): Promise<RabItemsResponse> {
   if (!isUuid(id)) {
-    throw new HttpError(400, 'id proyek harus UUID yang valid');
+    throw new HttpError(400, 'id project harus UUID yang valid');
   }
 
-  const proyek = await getProyekById(id);
-  if (!proyek) {
-    throw new HttpError(404, 'Proyek tidak ditemukan');
+  const project = await getProjectById(id);
+  if (!project) {
+    throw new HttpError(404, 'Project tidak ditemukan');
   }
 
-  const rows = await getRabItemsByProyekId(id);
+  const rows = await getRabItemsByProjectId(id);
   const items = rows.map(computeRabItem);
   return { proyek_id: id, items };
 }

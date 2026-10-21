@@ -31,6 +31,11 @@ export function positiveIntParam(v: unknown): number | undefined {
   return n !== undefined && Number.isInteger(n) && n > 0 ? n : undefined;
 }
 
+export function nonNegativeNumberParam(v: unknown): number | undefined {
+  const n = asNumber(v);
+  return n !== undefined && n >= 0 ? n : undefined;
+}
+
 export function isUuid(v: string): boolean {
   return UUID_RE.test(v);
 }
