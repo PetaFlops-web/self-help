@@ -24,6 +24,7 @@ const swaggerSpec: JsonObject = {
     { name: 'Sources', description: 'Daftar sumber data publik' },
     { name: 'Config', description: 'Konfigurasi scoring aktif' },
     { name: 'LLM', description: 'Penjelasan dan draf laporan berbasis LLM' },
+    { name: 'Financials', description: 'Data pembayaran dan progres proyek' },
   ],
   paths: {
     '/ping': {
@@ -186,6 +187,98 @@ const swaggerSpec: JsonObject = {
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/IndicatorsResponse' },
+              },
+            },
+          },
+          '404': {
+            description: 'Proyek tidak ditemukan',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    '/projects/{id}/payments': {
+      get: {
+        tags: ['Financials'],
+        summary: 'Daftar pembayaran proyek',
+        description:
+          'Mengembalikan rincian termin pembayaran proyek beserta ringkasan ' +
+          'total dibayar dan persentase sisa pembayaran.',
+        operationId: 'getProjectPayments',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'UUID proyek',
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Daftar pembayaran dan ringkasan',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/PaymentsResponse' },
+              },
+            },
+          },
+          '400': {
+            description: 'UUID tidak valid',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          '404': {
+            description: 'Proyek tidak ditemukan',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    '/projects/{id}/progress': {
+      get: {
+        tags: ['Financials'],
+        summary: 'Daftar progres fisik proyek',
+        description:
+          'Mengembalikan riwayat progres fisik proyek (persentase pekerjaan selesai) ' +
+          'berdasarkan sumber verifikasi.',
+        operationId: 'getProjectProgress',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'UUID proyek',
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Daftar progres fisik',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ProgressResponse' },
+              },
+            },
+          },
+          '400': {
+            description: 'UUID tidak valid',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
               },
             },
           },
@@ -538,6 +631,86 @@ const swaggerSpec: JsonObject = {
           },
         },
         required: ['status', 'indicators'],
+      },
+
+      Pembayaran: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          proyek_id: { type: 'string', format: 'uuid' },
+          termin_ke: { type: 'integer', nullable: true, example: 1 },
+          tanggal: { type: 'string', format: 'date', nullable: true },
+          jumlah: { type: 'string', nullable: true, description: 'Jumlah rupiah (bigint as string)' },
+          persen_kontrak: { type: 'string', nullable: true, description: 'Persen dari nilai kontrak (numeric as string)' },
+          source_id: { type: 'string', nullable: true },
+          source_url: { type: 'string', nullable: true },
+          fetched_at: { type: 'string', format: 'date-time', nullable: true },
+          is_dummy: { type: 'boolean' },
+        },
+        required: ['id', 'proyek_id', 'is_dummy'],
+      },
+
+      Progres: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          proyek_id: { type: 'string', format: 'uuid' },
+          tanggal: { type: 'string', format: 'date', nullable: true },
+          persen_fisik: { type: 'string', nullable: true, description: 'Persen fisik selesai (numeric as string)' },
+          sumber: { type: 'string', nullable: true, example: 'verifikasi lapangan' },
+          source_id: { type: 'string', nullable: true },
+          source_url: { type: 'string', nullable: true },
+          fetched_at: { type: 'string', format: 'date-time', nullable: true },
+          is_dummy: { type: 'boolean' },
+        },
+        required: ['id', 'proyek_id', 'is_dummy'],
+      },
+
+      PaymentsResponse: {
+        type: 'object',
+        properties: {
+          status: { type: 'string', example: 'success' },
+          payments: {
+            type: 'object',
+            properties: {
+              proyek_id: { type: 'string', format: 'uuid' },
+              pembayaran: {
+                type: 'array',
+                items: { $ref: '#/components/schemas/Pembayaran' },
+              },
+              ringkasan: {
+                type: 'object',
+                properties: {
+                  proyek_id: { type: 'string', format: 'uuid' },
+                  nilai_kontrak: { type: 'string', nullable: true, description: 'Nilai kontrak (bigint as string)' },
+                  total_dibayar: { type: 'number', example: 6282781392 },
+                  persen_dibayar: { type: 'number', example: 90 },
+                  sisa_persen: { type: 'number', example: 10 },
+                  termin_count: { type: 'integer', example: 1 },
+                },
+              },
+            },
+          },
+        },
+        required: ['status', 'payments'],
+      },
+
+      ProgressResponse: {
+        type: 'object',
+        properties: {
+          status: { type: 'string', example: 'success' },
+          progress: {
+            type: 'object',
+            properties: {
+              proyek_id: { type: 'string', format: 'uuid' },
+              progres: {
+                type: 'array',
+                items: { $ref: '#/components/schemas/Progres' },
+              },
+            },
+          },
+        },
+        required: ['status', 'progress'],
       },
 
       LlmTemuan: {
