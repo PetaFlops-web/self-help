@@ -24,7 +24,7 @@ const swaggerSpec: JsonObject = {
     { name: 'Sources', description: 'Daftar sumber data publik' },
     { name: 'Config', description: 'Konfigurasi scoring aktif' },
     { name: 'LLM', description: 'Penjelasan dan draf laporan berbasis LLM' },
-    { name: 'Financials', description: 'Data pembayaran dan progres proyek' },
+    { name: 'Financials', description: 'Data pembayaran, progres, dan RAB proyek' },
   ],
   paths: {
     '/ping': {
@@ -271,6 +271,52 @@ const swaggerSpec: JsonObject = {
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ProgressResponse' },
+              },
+            },
+          },
+          '400': {
+            description: 'UUID tidak valid',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+          '404': {
+            description: 'Proyek tidak ditemukan',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ErrorResponse' },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    '/projects/{id}/rab-items': {
+      get: {
+        tags: ['Financials'],
+        summary: 'Daftar item RAB proyek',
+        description:
+          'Mengembalikan rincian item RAB (rencana anggaran biaya) proyek, termasuk ' +
+          'perbandingan harga satuan dengan harga acuan.',
+        operationId: 'getProjectRabItems',
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            description: 'UUID proyek',
+            schema: { type: 'string', format: 'uuid' },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Daftar item RAB',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/RabItemsResponse' },
               },
             },
           },
@@ -711,6 +757,47 @@ const swaggerSpec: JsonObject = {
           },
         },
         required: ['status', 'progress'],
+      },
+
+      RabItem: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          proyek_id: { type: 'string', format: 'uuid' },
+          uraian: { type: 'string', nullable: true, example: 'Lapisan aspal jalan (AC-WC)' },
+          satuan: { type: 'string', nullable: true, example: 'm2' },
+          volume: { type: 'string', nullable: true, description: 'Volume (numeric as string)' },
+          harga_satuan: { type: 'string', nullable: true, description: 'Harga satuan RAB (bigint as string)' },
+          kode_harga_acuan: { type: 'string', nullable: true, example: 'HAC-1' },
+          harga_acuan: { type: 'string', nullable: true, description: 'Harga acuan (bigint as string)' },
+          acuan_uraian: { type: 'string', nullable: true },
+          acuan_satuan: { type: 'string', nullable: true },
+          total: { type: 'string', nullable: true, description: 'volume × harga_satuan (bigint as string)' },
+          deviasi_pct: { type: 'string', nullable: true, description: 'Selisih harga_satuan vs harga_acuan dalam persen (numeric as string)' },
+          source_id: { type: 'string', nullable: true },
+          source_url: { type: 'string', nullable: true },
+          fetched_at: { type: 'string', format: 'date-time', nullable: true },
+          is_dummy: { type: 'boolean' },
+        },
+        required: ['id', 'proyek_id', 'is_dummy'],
+      },
+
+      RabItemsResponse: {
+        type: 'object',
+        properties: {
+          status: { type: 'string', example: 'success' },
+          rab_items: {
+            type: 'object',
+            properties: {
+              proyek_id: { type: 'string', format: 'uuid' },
+              items: {
+                type: 'array',
+                items: { $ref: '#/components/schemas/RabItem' },
+              },
+            },
+          },
+        },
+        required: ['status', 'rab_items'],
       },
 
       LlmTemuan: {

@@ -13,3 +13,10 @@ export async function getProjectProgress(req: Request<{ id: string }>, res: Resp
   const result = await financialsService.getProjectProgress(id);
   ok(res, 'progress', result);
 }
+
+export async function getProjectRabItems(req: Request<{ id: string }>, res: Response): Promise<void> {
+  const id = req.params.id;
+  const result = await financialsService.getProjectRabItems(id);
+  ok(res, 'rab_items', result);
+}
+

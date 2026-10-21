@@ -10,3 +10,8 @@ export async function getProjectProgress(req, res) {
     const result = await financialsService.getProjectProgress(id);
     ok(res, 'progress', result);
 }
+export async function getProjectRabItems(req, res) {
+    const id = req.params.id;
+    const result = await financialsService.getProjectRabItems(id);
+    ok(res, 'rab_items', result);
+}
