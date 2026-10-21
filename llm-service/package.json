@@ -1,0 +1,26 @@
+{
+  "name": "llm-service",
+  "version": "1.0.0",
+  "description": "LLM microservice AliranTerang: penjelasan risiko proyek publik berbahasa awam",
+  "type": "module",
+  "license": "ISC",
+  "scripts": {
+    "dev": "tsx watch server.js",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.6",
+    "express": "^5.2.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,0 +1,167 @@
+{
+  "version": "1.1.0",
+  "category_thresholds": {
+    "rendah_max": 34,
+    "perlu_perhatian_max": 65
+  },
+  "level_points": {
+    "rendah": 10,
+    "sedang": 50,
+    "tinggi": 100
+  },
+  "dimension_weights": {
+    "D1": 0.15,
+    "D2": 0.25,
+    "D3": 0.20,
+    "D4": 0.25,
+    "D5": 0.05,
+    "D6": 0.10
+  },
+  "missing_data_policy": "mark_insufficient_and_renormalize",
+  "rules": [
+    {
+      "code": "D1-01",
+      "dimension": "D1",
+      "nama": "Kenaikan pagu dibanding tahun lalu",
+      "input": "kenaikan_pagu_pct",
+      "direction": "gte",
+      "sedang": 20,
+      "tinggi": 40,
+      "required_fields": ["kenaikan_pagu_pct"],
+      "sumber": "SRC-01",
+      "uraian_aturan": "Pagu naik dibanding tahun lalu untuk paket sejenis"
+    },
+    {
+      "code": "D1-02",
+      "dimension": "D1",
+      "nama": "Selisih HPS terhadap harga acuan RAB",
+      "input": "selisih_hps_acuan_pct",
+      "direction": "gte",
+      "sedang": 10,
+      "tinggi": 20,
+      "required_fields": ["selisih_hps_acuan_pct"],
+      "sumber": "SRC-02, SRC-07",
+      "uraian_aturan": "Selisih HPS terhadap harga acuan RAB"
+    },
+    {
+      "code": "D2-01",
+      "dimension": "D2",
+      "nama": "Jumlah penawar",
+      "input": "jumlah_penawar",
+      "direction": "lte",
+      "sedang": 2,
+      "tinggi": 1,
+      "required_fields": ["jumlah_penawar"],
+      "sumber": "SRC-02",
+      "uraian_aturan": "Hanya satu penawar"
+    },
+    {
+      "code": "D2-02",
+      "dimension": "D2",
+      "nama": "Harga menang terhadap HPS",
+      "input": "menang_hps_pct",
+      "direction": "gte",
+      "sedang": 97,
+      "tinggi": 99.5,
+      "required_fields": ["menang_hps_pct"],
+      "sumber": "SRC-02",
+      "uraian_aturan": "Harga penawaran menang mendekati HPS"
+    },
+    {
+      "code": "D2-03",
+      "dimension": "D2",
+      "nama": "Harga terhadap harga acuan",
+      "input": "selisih_harga_acuan_pct",
+      "direction": "gte",
+      "sedang": 15,
+      "tinggi": 25,
+      "required_fields": ["selisih_harga_acuan_pct"],
+      "sumber": "SRC-02, SRC-07",
+      "uraian_aturan": "Nilai kontrak di atas harga acuan"
+    },
+    {
+      "code": "D2-04",
+      "dimension": "D2",
+      "nama": "Konsentrasi pemenang pada satu dinas",
+      "input": "konsentrasi_pemenang_pct",
+      "direction": "gte",
+      "sedang": 30,
+      "tinggi": 50,
+      "required_fields": ["konsentrasi_pemenang_pct"],
+      "sumber": "SRC-02",
+      "uraian_aturan": "Satu perusahaan memenangi banyak paket di dinas yang sama"
+    },
+    {
+      "code": "D3-01",
+      "dimension": "D3",
+      "nama": "Selisih volume lapangan terhadap RAB",
+      "input": "selisih_volume_pct",
+      "direction": "gte",
+      "sedang": 8,
+      "tinggi": 15,
+      "required_fields": ["selisih_volume_pct"],
+      "sumber": "SRC-09",
+      "uraian_aturan": "Selisih volume kontrak dan hasil ukur terverifikasi"
+    },
+    {
+      "code": "D3-02",
+      "dimension": "D3",
+      "nama": "Jumlah laporan terverifikasi",
+      "input": "jumlah_laporan_terverifikasi",
+      "direction": "gte",
+      "sedang": 1,
+      "tinggi": 3,
+      "required_fields": ["jumlah_laporan_terverifikasi"],
+      "sumber": "SRC-09",
+      "uraian_aturan": "Banyaknya laporan warga terverifikasi untuk proyek ini"
+    },
+    {
+      "code": "D4-01",
+      "dimension": "D4",
+      "nama": "Pencairan melebihi progres",
+      "input": "cair_minus_fisik_poin",
+      "direction": "gte",
+      "sedang": 15,
+      "tinggi": 30,
+      "required_fields": ["cair_minus_fisik_poin"],
+      "sumber": "SRC-10, SRC-09",
+      "uraian_aturan": "Persentase pencairan melebihi progres terverifikasi (poin)"
+    },
+    {
+      "code": "D5-01",
+      "dimension": "D5",
+      "nama": "Temuan BPK terkait entitas",
+      "input": "jumlah_temuan_bpk",
+      "direction": "gte",
+      "sedang": 3,
+      "tinggi": 8,
+      "required_fields": ["jumlah_temuan_bpk"],
+      "sumber": "SRC-06",
+      "uraian_aturan": "Temuan pemeriksaan BPK terkait entitas pada tahun sebelumnya"
+    },
+    {
+      "code": "D6-01",
+      "dimension": "D6",
+      "nama": "RUP diumumkan terlambat",
+      "input": "hari_rup_ke_tender",
+      "direction": "lte",
+      "sedang": 14,
+      "tinggi": 3,
+      "required_fields": ["hari_rup_ke_tender"],
+      "sumber": "SRC-01, SRC-02",
+      "uraian_aturan": "RUP diumumkan terlambat (hari antara pengumuman RUP dan mulai tender)"
+    },
+    {
+      "code": "D6-02",
+      "dimension": "D6",
+      "nama": "Laporan warga tanpa tindak lanjut",
+      "input": "hari_tanpa_tindak_lanjut",
+      "direction": "gte",
+      "sedang": 30,
+      "tinggi": 60,
+      "required_fields": ["hari_tanpa_tindak_lanjut"],
+      "sumber": "SRC-09",
+      "uraian_aturan": "Pengaduan terkait proyek belum ditindaklanjuti (hari sejak diverifikasi)"
+    }
+  ]
+}

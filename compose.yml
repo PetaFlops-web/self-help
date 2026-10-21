@@ -1,0 +1,51 @@
+services:
+  backend:
+    build: ./backend
+    container_name: backend_app_self-help
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - HOST=0.0.0.0
+      - DATABASE_URL=postgresql://root:rootpassword@db:5432/db_wia
+      - REDIS_URL=redis://redis:6379
+      - LLM_SERVICE_URL=http://llm:3001
+    depends_on:
+      - redis
+      - db
+      - llm
+
+  llm:
+    build: ./llm-service
+    container_name: ml_service_self-help
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./llm-service/.env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3001
+
+  db:
+    image: postgres:17-alpine
+    container_name: db_wialmb
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: rootpassword
+      POSTGRES_DB: db_wia
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:8.10.2-alpine
+    container_name: redis_wialmb
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata:

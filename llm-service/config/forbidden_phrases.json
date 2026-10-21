@@ -1,0 +1,22 @@
+{
+  "version": "1.1.0",
+  "phrases": [
+    "terbukti korupsi",
+    "korupsi",
+    "suap",
+    "pelaku",
+    "tersangka",
+    "menggelapkan",
+    "mark up",
+    "penipuan",
+    "melanggar hukum",
+    "pasti"
+  ],
+  "exceptions": {
+    "korupsi": {
+      "allow_in_phrases": ["Komisi Pemberantasan Korupsi"],
+      "note": "Kata 'korupsi' hanya boleh muncul pada nama lembaga (mis. Komisi Pemberantasan Korupsi / KPK)."
+    }
+  },
+  "notes": "Daftar frasa terlarang untuk validasi keluaran LLM (SRS 6.7). Dapat ditambah tanpa mengubah kode."
+}
