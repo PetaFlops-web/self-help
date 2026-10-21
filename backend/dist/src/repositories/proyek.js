@@ -1,7 +1,7 @@
 import pool from '../config/database.js';
 const PROYEK_COLS = `
   p.id, p.kode_rup, p.kode_tender, p.nama, p.dinas, p.kode_bps,
-  p.lat, p.lng, p.tahun_anggaran, p.sumber_dana, p.metode_pemilihan,
+  COALESCE(p.lat, w.lat) AS lat, COALESCE(p.lng, w.lng) AS lng, p.tahun_anggaran, p.sumber_dana, p.metode_pemilihan,
   p.pagu, p.hps, p.nilai_kontrak, p.status, p.pengumuman_rup_tgl,
   p.match_status, p.skor_total, p.kategori, p.is_dummy,
   p.source_id, p.source_url, p.fetched_at,

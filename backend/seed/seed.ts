@@ -138,6 +138,78 @@ const TEMUAN: Temuan[] = [
   { n: 12, jenis: 'penyidikan', kurang_volume: null, tidak_sesuai_spek: null, kelebihan_bayar_atau_kerugian: 1_300_000_000, catatan: 'Kejati Lampung menetapkan 3 tersangka (Kadis PUPR, direktur PT Citra Primadona Perkasa, konsultan pengawas) pada 6 Des 2024.', dokumen: null },
 ];
 
+// ---------- Data dummy pendukung agar scoring menghasilkan dimensi lengkap ----------
+
+type RiskLevel = 'tinggi' | 'perlu_perhatian' | 'rendah';
+
+interface ScenarioParams {
+  acuanMargin: number; // selisih HPS vs total acuan (% desimal)
+  menangFactor: number; // harga penawaran menang / HPS
+  jumlah_penawar: number;
+  cair: number; // persen cair
+  fisik: number; // persen fisik
+  hari_rup: number; // selisih hari RUP ke pengumuman tender
+  laporan: number; // jumlah laporan terverifikasi
+}
+
+const RISK_BY_PROJECT: Record<number, RiskLevel> = {
+  1: 'tinggi', 2: 'tinggi', 3: 'tinggi', 4: 'tinggi',
+  5: 'perlu_perhatian', 6: 'perlu_perhatian', 7: 'perlu_perhatian', 8: 'perlu_perhatian',
+  9: 'perlu_perhatian', 10: 'perlu_perhatian',
+  11: 'tinggi', 12: 'tinggi',
+  13: 'rendah',
+};
+
+function scenarioParams(risk: RiskLevel): ScenarioParams {
+  switch (risk) {
+    case 'tinggi':
+      return {
+        acuanMargin: 0.22,
+        menangFactor: 0.998,
+        jumlah_penawar: 1,
+        cair: 90,
+        fisik: 50,
+        hari_rup: 2,
+        laporan: 3,
+      };
+    case 'perlu_perhatian':
+      return {
+        acuanMargin: 0.14,
+        menangFactor: 0.98,
+        jumlah_penawar: 2,
+        cair: 75,
+        fisik: 55,
+        hari_rup: 10,
+        laporan: 1,
+      };
+    case 'rendah':
+      return {
+        acuanMargin: -0.05,
+        menangFactor: 0.95,
+        jumlah_penawar: 5,
+        cair: 60,
+        fisik: 55,
+        hari_rup: 30,
+        laporan: 0,
+      };
+    default:
+      throw new Error(`Skenario tidak dikenal: ${risk}`);
+  }
+}
+
+function estimateHps(p: Proyek): number {
+  if (p.nilai_kontrak != null) return p.nilai_kontrak;
+  const t = TEMUAN.find((x) => x.n === p.n);
+  if (t) return Math.max(1_000_000_000, t.kelebihan_bayar_atau_kerugian * 10);
+  return 5_000_000_000;
+}
+
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
 function uuid(n: number): string {
   return `11111111-0000-4000-8000-${String(n).padStart(12, '0')}`;
 }
@@ -155,9 +227,11 @@ async function run(): Promise<void> {
     await pool.query(`DELETE FROM ${table} WHERE proyek_id IN (SELECT id FROM proyek WHERE is_dummy = true)`);
   }
   await pool.query('DELETE FROM proyek WHERE is_dummy = true');
-  await pool.query('DELETE FROM harga_acuan WHERE is_dummy = true');
 
+  // Hapus data real sebelumnya; harga_acuan baru bisa dibersihkan setelah
+  // rab_item-nya terhapus agar tidak melanggar foreign key.
   await clearPreviousRealSeed();
+  await pool.query('DELETE FROM harga_acuan WHERE is_dummy = true');
 
   for (const w of WILAYAH) {
     await pool.query(
@@ -174,14 +248,79 @@ async function run(): Promise<void> {
   }
 
   for (const p of PROYEK) {
+    const risk = RISK_BY_PROJECT[p.n];
+    const scen = scenarioParams(risk);
+    const hps = estimateHps(p);
+    const pagu = hps;
+    const pengumumanRupTgl = `${p.tahun}-01-15`;
+
     await pool.query(
       `INSERT INTO proyek
          (id, kode_rup, kode_tender, nama, dinas, kode_bps, tahun_anggaran,
           sumber_dana, metode_pemilihan, pagu, hps, nilai_kontrak, status,
           pengumuman_rup_tgl, match_status, source_id, source_url, fetched_at, is_dummy)
-       VALUES ($1,NULL,NULL,$2,$3,$4,$5,$6,NULL,NULL,NULL,$7,$8,NULL,'unmatched',$9,$10,now(),false)`,
-      [uuid(p.n), p.nama, p.dinas, p.kode_bps, p.tahun, p.sumber_dana, p.nilai_kontrak, p.status, p.source_id, p.source_url],
+       VALUES ($1,NULL,NULL,$2,$3,$4,$5,$6,NULL,$7,$8,$9,$10,$11,'unmatched',$12,$13,now(),false)`,
+      [
+        uuid(p.n), p.nama, p.dinas, p.kode_bps, p.tahun, p.sumber_dana,
+        pagu, hps, p.nilai_kontrak, p.status, pengumumanRupTgl,
+        p.source_id, p.source_url,
+      ],
     );
+
+    // Harga acuan + RAB dummy agar D1 & D2-03 bisa dihitung
+    const totalAcuan = Math.round(hps / (1 + scen.acuanMargin));
+    const hargaAcuanKode = `HAC-${p.n}`;
+    await pool.query(
+      `INSERT INTO harga_acuan (kode, uraian, satuan, harga, kode_bps, tahun, source_id, is_dummy)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,true)
+       ON CONFLICT (kode) DO UPDATE SET harga = EXCLUDED.harga`,
+      [hargaAcuanKode, `Acuan dummy proyek ${p.n}`, 'paket', 1, p.kode_bps, p.tahun, 'SRC-SEED'],
+    );
+    await pool.query(
+      `INSERT INTO rab_item (proyek_id, uraian, satuan, volume, harga_satuan, kode_harga_acuan, source_id, is_dummy)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,false)`,
+      [
+        uuid(p.n), `RAB dummy proyek ${p.n}`, 'paket', totalAcuan, 1,
+        hargaAcuanKode, 'SRC-SEED',
+      ],
+    );
+
+    // Tender dummy agar D2 & D6 bisa dihitung
+    const tglPengumuman = addDays(pengumumanRupTgl, scen.hari_rup);
+    const tglPenetapan = addDays(tglPengumuman, 7);
+    await pool.query(
+      `INSERT INTO tender (proyek_id, jumlah_peserta, jumlah_penawar, harga_penawaran_menang, tgl_pengumuman, tgl_penetapan, source_id, is_dummy)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,false)`,
+      [
+        uuid(p.n), scen.jumlah_penawar, scen.jumlah_penawar,
+        Math.round(hps * scen.menangFactor), tglPengumuman, tglPenetapan, 'SRC-SEED',
+      ],
+    );
+
+    // Pembayaran & progres dummy agar D4 bisa dihitung
+    await pool.query(
+      `INSERT INTO pembayaran (proyek_id, termin_ke, tanggal, jumlah, persen_kontrak, source_id, is_dummy)
+       VALUES ($1,$2,$3,$4,$5,$6,false)`,
+      [uuid(p.n), 1, `${p.tahun}-06-01`, Math.round(hps * (scen.cair / 100)), scen.cair, 'SRC-SEED'],
+    );
+    await pool.query(
+      `INSERT INTO progres (proyek_id, tanggal, persen_fisik, sumber, source_id, is_dummy)
+       VALUES ($1,$2,$3,$4,$5,false)`,
+      [uuid(p.n), `${p.tahun}-06-01`, scen.fisik, 'verifikasi lapangan', 'SRC-SEED'],
+    );
+
+    // Laporan warga terverifikasi dummy agar D3 punya nilai terukur
+    for (let i = 0; i < scen.laporan; i += 1) {
+      await pool.query(
+        `INSERT INTO laporan_warga (tiket, proyek_id, kategori, keterangan, status, lat, lng)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)
+         ON CONFLICT (tiket) DO NOTHING`,
+        [
+          `LPR-${p.n}-${String(i + 1).padStart(3, '0')}`, uuid(p.n), 'Kualitas pekerjaan',
+          `Laporan dummy ${i + 1} untuk proyek ${p.n}`, 'Diverifikasi', 0, 0,
+        ],
+      );
+    }
   }
 
   for (const p of PROYEK) {
