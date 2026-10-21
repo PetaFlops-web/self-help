@@ -38,18 +38,18 @@ export async function collectScoreInput(client: DbClient, proyekId: string): Pro
   input.jumlah_laporan_terverifikasi = toNum(laporanCountRaw);
 
   if (hps !== null && hargaMenang !== null) {
-    input.menang_hps_pct = (hargaMenang / hps) * 100;
+    input.menang_hps_pct = Math.round((hargaMenang / hps) * 100);
   }
   if (totalAcuan !== null && totalAcuan > 0) {
     if (nilaiKontrak !== null) {
-      input.selisih_harga_acuan_pct = ((nilaiKontrak - totalAcuan) / totalAcuan) * 100;
+      input.selisih_harga_acuan_pct = Math.round(((nilaiKontrak - totalAcuan) / totalAcuan) * 100);
     }
     if (hps !== null) {
-      input.selisih_hps_acuan_pct = ((hps - totalAcuan) / totalAcuan) * 100;
+      input.selisih_hps_acuan_pct = Math.round(((hps - totalAcuan) / totalAcuan) * 100);
     }
   }
   if (persenCair !== null && persenFisik !== null) {
-    input.cair_minus_fisik_poin = persenCair - persenFisik;
+    input.cair_minus_fisik_poin = Math.round(persenCair - persenFisik);
   }
 
   return input;

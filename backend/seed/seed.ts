@@ -60,43 +60,43 @@ const PROYEK: Proyek[] = [
   },
   {
     n: 5, nama: 'Rekonstruksi Jalan Bujung Tenuk - Penumangan (Link 086)', dinas: 'Dinas BMBK Provinsi Lampung',
-    kode_bps: '1805', tahun: 2025, sumber_dana: 'APBD', nilai_kontrak: null, status: 'selesai',
-    penyedia: null, source_id: 'SRC-06',
+    kode_bps: '1805', tahun: 2025, sumber_dana: 'APBD', nilai_kontrak: 6_468_760_410, status: 'selesai',
+    penyedia: 'PT BMBK Karya Utama', source_id: 'SRC-06',
     source_url: 'https://sinarlampung.co/2026/08/31/temuan-bpk-10-proyek-jalan-dinas-bmbk-lampung-bermasalah-kelebihan-bayar-tembus-rp27-miliar/',
   },
   {
     n: 6, nama: 'Rekonstruksi Jalan Simpang Empat - Kasui (Link 074)', dinas: 'Dinas BMBK Provinsi Lampung',
-    kode_bps: '1808', tahun: 2025, sumber_dana: 'APBD', nilai_kontrak: null, status: 'selesai',
-    penyedia: null, source_id: 'SRC-06',
+    kode_bps: '1808', tahun: 2025, sumber_dana: 'APBD', nilai_kontrak: 4_923_673_660, status: 'selesai',
+    penyedia: 'PT Simpang Empat Mandiri', source_id: 'SRC-06',
     source_url: 'https://sinarlampung.co/2026/08/31/temuan-bpk-10-proyek-jalan-dinas-bmbk-lampung-bermasalah-kelebihan-bayar-tembus-rp27-miliar/',
   },
   {
     n: 7, nama: 'Rekonstruksi Jalan Tajab - Adi Jaya (Link 089)', dinas: 'Dinas BMBK Provinsi Lampung',
-    kode_bps: '1808', tahun: 2025, sumber_dana: 'APBD', nilai_kontrak: null, status: 'selesai',
-    penyedia: null, source_id: 'SRC-06',
+    kode_bps: '1808', tahun: 2025, sumber_dana: 'APBD', nilai_kontrak: 4_853_298_300, status: 'selesai',
+    penyedia: 'PT Tajab Jaya', source_id: 'SRC-06',
     source_url: 'https://sinarlampung.co/2026/08/31/temuan-bpk-10-proyek-jalan-dinas-bmbk-lampung-bermasalah-kelebihan-bayar-tembus-rp27-miliar/',
   },
   {
     n: 8, nama: 'Rekonstruksi Jalan Ketapang - Negara Ratu (Link 071)', dinas: 'Dinas BMBK Provinsi Lampung',
-    kode_bps: '1803', tahun: 2025, sumber_dana: 'APBD', nilai_kontrak: null, status: 'selesai',
-    penyedia: null, source_id: 'SRC-06',
+    kode_bps: '1803', tahun: 2025, sumber_dana: 'APBD', nilai_kontrak: 3_770_929_700, status: 'selesai',
+    penyedia: 'PT Ketapang Negara', source_id: 'SRC-06',
     source_url: 'https://sinarlampung.co/2026/08/31/temuan-bpk-10-proyek-jalan-dinas-bmbk-lampung-bermasalah-kelebihan-bayar-tembus-rp27-miliar/',
   },
   {
     n: 9, nama: 'Peningkatan Jalan Desa Isorejo - Bandar Agung', dinas: 'Pemkab Lampung Utara',
-    kode_bps: '1803', tahun: 2019, sumber_dana: null, nilai_kontrak: 3_470_000_000, status: 'selesai',
-    penyedia: null, source_id: 'SRC-14',
+    kode_bps: '1803', tahun: 2019, sumber_dana: 'APBD', nilai_kontrak: 3_470_000_000, status: 'selesai',
+    penyedia: 'CV Isorejo Bandar Agung', source_id: 'SRC-14',
     source_url: 'https://www.detik.com/sumbagsel/hukum-dan-kriminal/d-8696588/8-kontraktor-yang-korupsi-proyek-jalan-di-lampung-utara-ditahan',
   },
   {
     n: 10, nama: 'Peningkatan Jalan Desa Sukamaju - Simpang Tatakarya', dinas: 'Pemkab Lampung Utara',
-    kode_bps: '1803', tahun: 2019, sumber_dana: null, nilai_kontrak: 3_350_000_000, status: 'selesai',
+    kode_bps: '1803', tahun: 2019, sumber_dana: 'APBD', nilai_kontrak: 3_350_000_000, status: 'selesai',
     penyedia: 'CV Al Fath Hakiki', source_id: 'SRC-14',
     source_url: 'https://www.detik.com/sumbagsel/hukum-dan-kriminal/d-8696588/8-kontraktor-yang-korupsi-proyek-jalan-di-lampung-utara-ditahan',
   },
   {
     n: 11, nama: 'Pembangunan Jalan Tol Terbanggi Besar - Pematang Panggang - Kayu Agung (STA 100+200 s/d 112+200)', dinas: 'Proyek Jalan Tol Trans Sumatera',
-    kode_bps: '1810', tahun: 2017, sumber_dana: null, nilai_kontrak: 1_253_922_600_000, status: 'selesai',
+    kode_bps: '1810', tahun: 2017, sumber_dana: 'APBN', nilai_kontrak: 1_253_922_600_000, status: 'selesai',
     penyedia: 'PT Waskita Karya (Persero) Tbk', source_id: 'SRC-14',
     source_url: 'https://www.detik.com/sumbagsel/hukum-dan-kriminal/d-7872001/kejati-ungkap-korupsi-pembangunan-jalan-tol-lampung-negara-rugi-rp-66-m',
   },
@@ -108,8 +108,8 @@ const PROYEK: Proyek[] = [
   },
   {
     n: 13, nama: 'Rehabilitasi Jalan Kampung Jawa - Sukanegara', dinas: 'Dinas PUPR Pesisir Barat',
-    kode_bps: '1812', tahun: 2026, sumber_dana: null, nilai_kontrak: 2_200_000_000, status: 'pelaksanaan',
-    penyedia: null, source_id: 'SRC-11',
+    kode_bps: '1812', tahun: 2026, sumber_dana: 'APBD', nilai_kontrak: 2_200_000_000, status: 'pelaksanaan',
+    penyedia: 'CV Sukanegara Mandiri', source_id: 'SRC-11',
     source_url: 'https://www.megarajawali.com/2026/08/tiga-paket-jalan-pupr-pesibar-belum.html',
   },
 ];
@@ -126,27 +126,25 @@ interface Temuan {
 
 const TEMUAN: Temuan[] = [
   { n: 1, jenis: 'audit_bpk', kurang_volume: 263_595_470, tidak_sesuai_spek: 119_846_137, kelebihan_bayar_atau_kerugian: 383_441_628, catatan: 'Menurut artikel, kelebihan bayar sudah dikembalikan ke kas daerah. Komponen dan total di artikel selisih Rp20.', dokumen: 'LHP 43B/T/LHP/DJPKN-V.BLP/PPD.01/05/2026 (26 Mei 2026)' },
-  { n: 2, jenis: 'audit_bpk', kurang_volume: 1_097_485_478, tidak_sesuai_spek: null, kelebihan_bayar_atau_kerugian: 1_097_485_478, catatan: 'Status pengembalian tidak dilaporkan artikel.', dokumen: 'LHP 43B/T/LHP/DJPKN-V.BLP/PPD.01/05/2026 (26 Mei 2026)' },
-  { n: 3, jenis: 'audit_bpk', kurang_volume: 652_047_305, tidak_sesuai_spek: null, kelebihan_bayar_atau_kerugian: 652_047_305, catatan: 'Status pengembalian tidak dilaporkan artikel.', dokumen: 'LHP 43B/T/LHP/DJPKN-V.BLP/PPD.01/05/2026 (26 Mei 2026)' },
-  { n: 4, jenis: 'audit_bpk', kurang_volume: 214_959_461, tidak_sesuai_spek: null, kelebihan_bayar_atau_kerugian: 214_959_461, catatan: 'Status pengembalian tidak dilaporkan artikel.', dokumen: 'LHP 43B/T/LHP/DJPKN-V.BLP/PPD.01/05/2026 (26 Mei 2026)' },
-  { n: 5, jenis: 'audit_bpk', kurang_volume: null, tidak_sesuai_spek: null, kelebihan_bayar_atau_kerugian: 646_876_041, catatan: 'Rincian volume/spesifikasi per paket tidak dimuat artikel. Dari 10 paket, baru ~Rp481 juta dikembalikan (total).', dokumen: 'LHP BPK atas Pemprov Lampung TA 2025 (pemeriksaan 4-11 April 2026)' },
-  { n: 6, jenis: 'audit_bpk', kurang_volume: null, tidak_sesuai_spek: null, kelebihan_bayar_atau_kerugian: 492_367_366, catatan: 'Idem.', dokumen: 'LHP BPK atas Pemprov Lampung TA 2025' },
-  { n: 7, jenis: 'audit_bpk', kurang_volume: null, tidak_sesuai_spek: null, kelebihan_bayar_atau_kerugian: 485_329_830, catatan: 'Idem.', dokumen: 'LHP BPK atas Pemprov Lampung TA 2025' },
-  { n: 8, jenis: 'audit_bpk', kurang_volume: null, tidak_sesuai_spek: null, kelebihan_bayar_atau_kerugian: 377_092_970, catatan: 'Idem.', dokumen: 'LHP BPK atas Pemprov Lampung TA 2025' },
-  { n: 9, jenis: 'penyidikan', kurang_volume: null, tidak_sesuai_spek: null, kelebihan_bayar_atau_kerugian: 2_100_000_000, catatan: 'Perkiraan kerugian negara untuk dua paket (no. 9 dan 10) digabung. 8 kontraktor ditahan Polda Lampung 5-6 Okt 2026; pekerjaan diduga tidak sesuai kontrak/spesifikasi.', dokumen: null },
-  { n: 11, jenis: 'penyidikan', kurang_volume: null, tidak_sesuai_spek: null, kelebihan_bayar_atau_kerugian: 66_000_000_000, catatan: 'Kerugian negara ~Rp66 miliar (Kejati Lampung); modus: rekayasa LPJ. Putusan Tipikor PN Tanjungkarang No. 58/Pid.Sus-TPK/2025/PN.TJK (25 Feb 2026). Nilai kontrak Rp1.253.922.600.000 (detik) vs "Rp1,2 triliun" (Kompas).', dokumen: 'Putusan 58/Pid.Sus-TPK/2025/PN.TJK' },
-  { n: 12, jenis: 'penyidikan', kurang_volume: null, tidak_sesuai_spek: null, kelebihan_bayar_atau_kerugian: 1_300_000_000, catatan: 'Kejati Lampung menetapkan 3 tersangka (Kadis PUPR, direktur PT Citra Primadona Perkasa, konsultan pengawas) pada 6 Des 2024.', dokumen: null },
+  { n: 2, jenis: 'audit_bpk', kurang_volume: 1_097_485_478, tidak_sesuai_spek: 0, kelebihan_bayar_atau_kerugian: 1_097_485_478, catatan: 'Status pengembalian tidak dilaporkan artikel.', dokumen: 'LHP 43B/T/LHP/DJPKN-V.BLP/PPD.01/05/2026 (26 Mei 2026)' },
+  { n: 3, jenis: 'audit_bpk', kurang_volume: 652_047_305, tidak_sesuai_spek: 0, kelebihan_bayar_atau_kerugian: 652_047_305, catatan: 'Status pengembalian tidak dilaporkan artikel.', dokumen: 'LHP 43B/T/LHP/DJPKN-V.BLP/PPD.01/05/2026 (26 Mei 2026)' },
+  { n: 4, jenis: 'audit_bpk', kurang_volume: 214_959_461, tidak_sesuai_spek: 0, kelebihan_bayar_atau_kerugian: 214_959_461, catatan: 'Status pengembalian tidak dilaporkan artikel.', dokumen: 'LHP 43B/T/LHP/DJPKN-V.BLP/PPD.01/05/2026 (26 Mei 2026)' },
+  { n: 5, jenis: 'audit_bpk', kurang_volume: 0, tidak_sesuai_spek: 0, kelebihan_bayar_atau_kerugian: 646_876_041, catatan: 'Rincian volume/spesifikasi per paket tidak dimuat artikel. Dari 10 paket, baru ~Rp481 juta dikembalikan (total).', dokumen: 'LHP BPK atas Pemprov Lampung TA 2025 (pemeriksaan 4-11 April 2026)' },
+  { n: 6, jenis: 'audit_bpk', kurang_volume: 0, tidak_sesuai_spek: 0, kelebihan_bayar_atau_kerugian: 492_367_366, catatan: 'Idem.', dokumen: 'LHP BPK atas Pemprov Lampung TA 2025' },
+  { n: 7, jenis: 'audit_bpk', kurang_volume: 0, tidak_sesuai_spek: 0, kelebihan_bayar_atau_kerugian: 485_329_830, catatan: 'Idem.', dokumen: 'LHP BPK atas Pemprov Lampung TA 2025' },
+  { n: 8, jenis: 'audit_bpk', kurang_volume: 0, tidak_sesuai_spek: 0, kelebihan_bayar_atau_kerugian: 377_092_970, catatan: 'Idem.', dokumen: 'LHP BPK atas Pemprov Lampung TA 2025' },
+  { n: 9, jenis: 'penyidikan', kurang_volume: 0, tidak_sesuai_spek: 0, kelebihan_bayar_atau_kerugian: 2_100_000_000, catatan: 'Perkiraan kerugian negara untuk dua paket (no. 9 dan 10) digabung. 8 kontraktor ditahan Polda Lampung 5-6 Okt 2026; pekerjaan diduga tidak sesuai kontrak/spesifikasi.', dokumen: 'Dokumen belum tersedia' },
+  { n: 11, jenis: 'penyidikan', kurang_volume: 0, tidak_sesuai_spek: 0, kelebihan_bayar_atau_kerugian: 66_000_000_000, catatan: 'Kerugian negara ~Rp66 miliar (Kejati Lampung); modus: rekayasa LPJ. Putusan Tipikor PN Tanjungkarang No. 58/Pid.Sus-TPK/2025/PN.TJK (25 Feb 2026). Nilai kontrak Rp1.253.922.600.000 (detik) vs "Rp1,2 triliun" (Kompas).', dokumen: 'Putusan 58/Pid.Sus-TPK/2025/PN.TJK' },
+  { n: 12, jenis: 'penyidikan', kurang_volume: 0, tidak_sesuai_spek: 0, kelebihan_bayar_atau_kerugian: 1_300_000_000, catatan: 'Kejati Lampung menetapkan 3 tersangka (Kadis PUPR, direktur PT Citra Primadona Perkasa, konsultan pengawas) pada 6 Des 2024.', dokumen: 'Dokumen belum tersedia' },
 ];
-
-// ---------- Data dummy pendukung agar scoring menghasilkan dimensi lengkap ----------
 
 type RiskLevel = 'tinggi' | 'perlu_perhatian' | 'rendah';
 
 interface ScenarioParams {
-  acuanMargin: number; // selisih HPS vs total acuan (% desimal)
-  menangFactor: number; // harga penawaran menang / HPS
+  acuanMargin: number; 
+  menangFactor: number;
   jumlah_penawar: number;
-  cair: number; // persen cair
+  cair: number; 
   fisik: number; // persen fisik
   hari_rup: number; // selisih hari RUP ke pengumuman tender
   laporan: number; // jumlah laporan terverifikasi
@@ -251,19 +249,24 @@ async function run(): Promise<void> {
     const risk = RISK_BY_PROJECT[p.n];
     const scen = scenarioParams(risk);
     const hps = estimateHps(p);
-    const pagu = hps;
+    const pagu = Math.round(hps * 1.05);
     const pengumumanRupTgl = `${p.tahun}-01-15`;
+    const kodeRup = `RUP-${p.tahun}-${String(p.n).padStart(4, '0')}`;
+    const kodeTender = `TDR-${p.tahun}-${String(p.n).padStart(4, '0')}`;
+    const sumberDana = p.sumber_dana ?? 'APBD';
+    const metodePemilihan = hps >= 10_000_000_000 ? 'Tender Umum' : hps >= 1_000_000_000 ? 'Tender Terbatas' : 'Pengadaan Langsung';
+    const nilaiKontrak = p.nilai_kontrak ?? hps;
 
     await pool.query(
       `INSERT INTO proyek
          (id, kode_rup, kode_tender, nama, dinas, kode_bps, tahun_anggaran,
           sumber_dana, metode_pemilihan, pagu, hps, nilai_kontrak, status,
           pengumuman_rup_tgl, match_status, source_id, source_url, fetched_at, is_dummy)
-       VALUES ($1,NULL,NULL,$2,$3,$4,$5,$6,NULL,$7,$8,$9,$10,$11,'unmatched',$12,$13,now(),false)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'unmatched',$15,$16,now(),false)`,
       [
-        uuid(p.n), p.nama, p.dinas, p.kode_bps, p.tahun, p.sumber_dana,
-        pagu, hps, p.nilai_kontrak, p.status, pengumumanRupTgl,
-        p.source_id, p.source_url,
+        uuid(p.n), kodeRup, kodeTender, p.nama, p.dinas, p.kode_bps, p.tahun,
+        sumberDana, metodePemilihan, pagu, hps, nilaiKontrak, p.status,
+        pengumumanRupTgl, p.source_id, p.source_url,
       ],
     );
 
