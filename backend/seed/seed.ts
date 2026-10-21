@@ -306,11 +306,22 @@ async function run(): Promise<void> {
        VALUES ($1,$2,$3,$4,$5,$6,false)`,
       [uuid(p.n), 1, `${p.tahun}-06-01`, Math.round(hps * (scen.cair / 100)), scen.cair, 'SRC-SEED'],
     );
-    await pool.query(
-      `INSERT INTO progres (proyek_id, tanggal, persen_fisik, sumber, source_id, is_dummy)
-       VALUES ($1,$2,$3,$4,$5,false)`,
-      [uuid(p.n), `${p.tahun}-06-01`, scen.fisik, 'verifikasi lapangan', 'SRC-SEED'],
-    );
+
+    const progressEntries = [
+      { tanggal: `${p.tahun}-03-15`, persen: Math.max(0, Math.round(scen.fisik * 0.4)), sumber: 'verifikasi lapangan' },
+      { tanggal: `${p.tahun}-05-15`, persen: Math.max(0, Math.round(scen.fisik * 0.7)), sumber: 'verifikasi lapangan' },
+      { tanggal: `${p.tahun}-07-15`, persen: scen.fisik, sumber: 'verifikasi akhir' },
+    ];
+    if (p.status === 'pelaksanaan') {
+      progressEntries.pop();
+    }
+    for (const entry of progressEntries) {
+      await pool.query(
+        `INSERT INTO progres (proyek_id, tanggal, persen_fisik, sumber, source_id, is_dummy)
+         VALUES ($1,$2,$3,$4,$5,false)`,
+        [uuid(p.n), entry.tanggal, entry.persen, entry.sumber, 'SRC-SEED'],
+      );
+    }
 
     // Laporan warga terverifikasi dummy agar D3 punya nilai terukur
     for (let i = 0; i < scen.laporan; i += 1) {

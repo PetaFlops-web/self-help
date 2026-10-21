@@ -170,3 +170,8 @@ Endpoint dokumentasi API (Swagger) untuk dikonsumsi frontend.
   - Daftarkan route `/projects/:id/rab-items` di `src/routes/financials.ts`.
   - Perbarui `src/config/swagger.ts` dengan skema `RabItem` dan `RabItemsResponse`.
   - **Verifikasi:** `curl /api/projects/{id}/rab-items` mengembalikan JSON 200 dengan array item RAB; `npm run build` lolos.
+
+- [x] **O.6** Perbarui `seed/seed.ts` agar setiap proyek memiliki lebih dari satu baris progres (riwayat fisik), bukan hanya satu snapshot.
+  - Setiap proyek selesai mendapat 3 snapshot: 40%, 70%, dan nilai final `fisik` dari skenario risiko.
+  - Proyek dengan status `pelaksanaan` mendapat 2 snapshot.
+  - **Verifikasi:** `curl /api/projects/{id}/progress` mengembalikan array `progres` dengan 2–3 item; `npm run build` dan `npm run seed` lolos.
