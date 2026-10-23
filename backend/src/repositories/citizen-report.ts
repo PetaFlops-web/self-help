@@ -67,17 +67,39 @@ function wrapReporterData(keterangan: string | null): string | null {
   return cleaned.length > 0 ? `<data_pelapor>${cleaned}</data_pelapor>` : null;
 }
 
-function toPublicView(row: CitizenReport): ReportPublicView {
+function toPublicView(
+  row: CitizenReport,
+  projectDetail?: { nama: string | null; kabupaten: string | null } | null,
+): ReportPublicView {
+  const showKeterangan = row.status === 'Diverifikasi' || row.status === 'Ditolak';
   return {
     tiket: row.tiket,
     proyek_id: row.proyek_id,
     kategori: row.kategori,
     status: row.status,
+    keterangan: showKeterangan ? row.keterangan : null,
     catatan_verifikator: row.catatan_verifikator,
     alasan_tolak: row.alasan_tolak,
     dibuat_pada: row.dibuat_pada,
     diubah_pada: row.diubah_pada,
+    proyek: projectDetail ?? null,
   };
+}
+
+/** Ambil nama dan kabupaten proyek untuk ditampilkan di laporan publik. */
+export async function getProjectDetailForReport(
+  projectId: string | null,
+): Promise<{ nama: string | null; kabupaten: string | null } | null> {
+  if (!projectId) return null;
+  const res = await pool.query<{ nama: string | null; kabupaten: string | null }>(
+    `SELECT p.nama,
+            w.nama AS kabupaten
+       FROM proyek p
+       LEFT JOIN wilayah w ON w.kode_bps = p.kode_bps
+      WHERE p.id = $1`,
+    [projectId],
+  );
+  return res.rows[0] ?? null;
 }
 
 function generateTiket(): string {
@@ -104,7 +126,8 @@ export async function createReport(input: CreateReportInput): Promise<ReportPubl
       input.anonim ?? false,
     ],
   );
-  return toPublicView(res.rows[0]);
+  const projectDetail = await getProjectDetailForReport(input.proyek_id);
+  return toPublicView(res.rows[0], projectDetail);
 }
 
 export async function getReportByTiket(tiket: string): Promise<ReportPublicView | null> {
@@ -115,7 +138,9 @@ export async function getReportByTiket(tiket: string): Promise<ReportPublicView 
       WHERE tiket = $1`,
     [tiket],
   );
-  return res.rows[0] ? toPublicView(res.rows[0]) : null;
+  if (!res.rows[0]) return null;
+  const projectDetail = await getProjectDetailForReport(res.rows[0].proyek_id);
+  return toPublicView(res.rows[0], projectDetail);
 }
 
 /** Ambil laporan lengkap (termasuk proyek_id) untuk proses verifikasi. */
@@ -144,5 +169,7 @@ export async function verifyReport(
      RETURNING *`,
     [tiket, input.status, input.catatan_verifikator ?? null, input.alasan_tolak ?? null],
   );
-  return res.rows[0] ? toPublicView(res.rows[0]) : null;
+  if (!res.rows[0]) return null;
+  const projectDetail = await getProjectDetailForReport(res.rows[0].proyek_id);
+  return toPublicView(res.rows[0], projectDetail);
 }

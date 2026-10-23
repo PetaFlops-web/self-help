@@ -50,8 +50,13 @@ export interface ReportPublicView {
   proyek_id: string | null;
   kategori: string | null;
   status: ReportStatus | string;
+  keterangan: string | null;
   catatan_verifikator: string | null;
   alasan_tolak: string | null;
   dibuat_pada: Date | null;
   diubah_pada: Date | null;
+  proyek: {
+    nama: string | null;
+    kabupaten: string | null;
+  } | null;
 }
