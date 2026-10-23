@@ -1,7 +1,7 @@
 import { draftProject, explainProject } from '../services/llm-explanation.js';
 import { HttpError } from '../helpers/http.js';
 import { success } from '../middlewares/response.js';
-import { LEMBAGA_TUJUAN } from '../types/llm.js';
+import { LLM_TARGET_INSTITUTIONS } from '../types/llm.js';
 export async function explain(req, res) {
     const result = await explainProject(req.params.id);
     success(res, 'penjelasan', result, 'Penjelasan proyek berhasil dibuat');
@@ -11,8 +11,8 @@ export async function draft(req, res) {
     const raw = body.tujuan;
     let tujuan = 'inspektorat';
     if (raw !== undefined) {
-        if (typeof raw !== 'string' || !LEMBAGA_TUJUAN.includes(raw)) {
-            throw new HttpError(400, `tujuan harus salah satu dari: ${LEMBAGA_TUJUAN.join(', ')}`);
+        if (typeof raw !== 'string' || !LLM_TARGET_INSTITUTIONS.includes(raw)) {
+            throw new HttpError(400, `tujuan harus salah satu dari: ${LLM_TARGET_INSTITUTIONS.join(', ')}`);
         }
         tujuan = raw;
     }

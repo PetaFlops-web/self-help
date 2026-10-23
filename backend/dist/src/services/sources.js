@@ -1,4 +1,4 @@
-import { listSumberData } from '../repositories/sumber-data.js';
+import { listDataSources } from '../repositories/data-source.js';
 export async function listSources() {
-    return listSumberData();
+    return listDataSources();
 }

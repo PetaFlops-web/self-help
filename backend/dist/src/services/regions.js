@@ -1,5 +1,5 @@
 import { toNum } from '../helpers/number.js';
-import { listWilayah } from '../repositories/wilayah.js';
+import { listRegions } from '../repositories/region.js';
 function pointGeometry(row) {
     const lng = toNum(row.lng);
     const lat = toNum(row.lat);
@@ -26,6 +26,6 @@ export function toGeoJSON(rows) {
     return { type: 'FeatureCollection', features };
 }
 export async function getRegionsGeoJSON() {
-    const rows = await listWilayah();
+    const rows = await listRegions();
     return toGeoJSON(rows);
 }

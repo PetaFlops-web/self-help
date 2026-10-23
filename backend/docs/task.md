@@ -111,6 +111,10 @@ Verifikasi: Matikan LLM Microservice, lalu jalankan curl -X POST .../explain ke 
 
 - [x] **6.2** `PATCH /api/admin/reports/{id}` → verifikasi laporan (status Diverifikasi/Ditolak + catatan), lalu picu hitung ulang skor proyek terkait (PRD 8).
   - **Verifikasi:** laporan terverifikasi mengubah skor D3 proyek setelah verifikasi.
+
+- [x] **6.3** `GET /api/projects/{id}` → detail proyek sekarang menyertakan `laporan_warga` dengan `total` count dan daftar `items` (maksimal 20 item terbaru, semua status).
+  - **Verifikasi:** `curl /api/projects/{id}` menampilkan field `laporan_warga.total` dan `laporan_warga.items[]` dengan field `tiket`, `kategori`, `status`, `dibuat_pada`.
+
 ---
 
 ## Fase 7 — ETL Data Publik (prioritas S, bisa menyusul)

@@ -26,3 +26,62 @@ function wrapDataPelapor(keterangan) {
         .slice(0, 500);
     return cleaned.length > 0 ? `<data_pelapor>${cleaned}</data_pelapor>` : null;
 }
+function toPublicView(row) {
+    return {
+        tiket: row.tiket,
+        proyek_id: row.proyek_id,
+        kategori: row.kategori,
+        status: row.status,
+        catatan_verifikator: row.catatan_verifikator,
+        alasan_tolak: row.alasan_tolak,
+        dibuat_pada: row.dibuat_pada,
+        diubah_pada: row.diubah_pada,
+    };
+}
+function generateTiket() {
+    const ts = Date.now().toString(36).toUpperCase();
+    const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+    return `LPR-${ts}-${rand}`;
+}
+export async function createReport(input) {
+    const tiket = generateTiket();
+    const res = await pool.query(`INSERT INTO laporan_warga
+       (tiket, proyek_id, kategori, keterangan, lat, lng, foto_urls, anonim, status, dibuat_pada)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Dilaporkan', now())
+     RETURNING *`, [
+        tiket,
+        input.proyek_id,
+        input.kategori,
+        input.keterangan,
+        input.lat ?? null,
+        input.lng ?? null,
+        input.foto_urls ?? null,
+        input.anonim ?? false,
+    ]);
+    return toPublicView(res.rows[0]);
+}
+export async function getReportByTiket(tiket) {
+    const res = await pool.query(`SELECT tiket, proyek_id, kategori, keterangan, lat, lng, foto_urls, anonim,
+            status, alasan_tolak, catatan_verifikator, dibuat_pada, diubah_pada
+       FROM laporan_warga
+      WHERE tiket = $1`, [tiket]);
+    return res.rows[0] ? toPublicView(res.rows[0]) : null;
+}
+/** Ambil laporan lengkap (termasuk proyek_id) untuk proses verifikasi. */
+export async function getReportInternal(tiket) {
+    const res = await pool.query(`SELECT tiket, proyek_id, kategori, keterangan, lat, lng, foto_urls, anonim,
+            status, alasan_tolak, catatan_verifikator, dibuat_pada, diubah_pada
+       FROM laporan_warga
+      WHERE tiket = $1`, [tiket]);
+    return res.rows[0] ?? null;
+}
+export async function verifyReport(tiket, input) {
+    const res = await pool.query(`UPDATE laporan_warga
+        SET status = $2,
+            catatan_verifikator = $3,
+            alasan_tolak = $4,
+            diubah_pada = now()
+      WHERE tiket = $1
+     RETURNING *`, [tiket, input.status, input.catatan_verifikator ?? null, input.alasan_tolak ?? null]);
+    return res.rows[0] ? toPublicView(res.rows[0]) : null;
+}

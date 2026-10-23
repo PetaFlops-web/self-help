@@ -53,6 +53,22 @@ export interface IndicatorFindingRow {
   dihitung_pada: Date | null;
 }
 
+/** Item laporan warga yang muncul di detail proyek. */
+export interface ProjectReportItem {
+  tiket: string;
+  kategori: string | null;
+  status: string;
+  dibuat_pada: Date | null;
+}
+
+/** Detail proyek lengkap termasuk laporan warga terkait. */
+export interface ProjectDetail extends Project {
+  laporan_warga: {
+    total: number;
+    items: ProjectReportItem[];
+  };
+}
+
 /** Hasil agregasi ringkas beranda (FR-05). */
 export interface StatsSummary {
   total_proyek: number;

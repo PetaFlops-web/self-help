@@ -57,18 +57,18 @@ export function scoreProject(input, config) {
         list.push(rule);
         byDimension.set(rule.dimension, list);
     }
-    const indikator = [];
-    const dimensi = {
+    const findings = [];
+    const dimensionScores = {
         D1: null, D2: null, D3: null, D4: null, D5: null, D6: null,
     };
-    const dimensiDataBelumCukup = [];
+    const insufficientDataDimensions = [];
     const dimensionResults = [];
     for (const dim of DIMENSIONS) {
         const rules = byDimension.get(dim) ?? [];
         const applicable = rules.filter((r) => r.required_fields.every((f) => isPresent(input[f])));
         if (applicable.length === 0) {
-            dimensi[dim] = null;
-            dimensiDataBelumCukup.push(dim);
+            dimensionScores[dim] = null;
+            insufficientDataDimensions.push(dim);
             dimensionResults.push({ dimensi: dim, skor: null, status: 'data_belum_cukup' });
             continue;
         }
@@ -79,7 +79,7 @@ export function scoreProject(input, config) {
             const points = config.level_points[tingkat];
             if (points > maxPoints)
                 maxPoints = points;
-            indikator.push({
+            findings.push({
                 dimensi: rule.dimension,
                 kode_aturan: rule.code,
                 nilai_terukur: value,
@@ -89,33 +89,33 @@ export function scoreProject(input, config) {
                 uraian_aturan: rule.uraian_aturan ?? rule.code,
             });
         }
-        dimensi[dim] = maxPoints;
+        dimensionScores[dim] = maxPoints;
         dimensionResults.push({ dimensi: dim, skor: maxPoints, status: 'dihitung' });
     }
     const computedDims = dimensionResults
         .filter((d) => d.status === 'dihitung')
         .map((d) => d.dimensi);
-    const weights_used = {};
-    let skor_total = null;
+    const weightsUsed = {};
+    let totalScore = null;
     if (computedDims.length > 0) {
         const rawWeightSum = computedDims.reduce((acc, d) => acc + (config.dimension_weights[d] ?? 0), 0);
         if (rawWeightSum > 0) {
             let total = 0;
             for (const d of computedDims) {
                 const w = (config.dimension_weights[d] ?? 0) / rawWeightSum;
-                weights_used[d] = w;
-                total += w * dimensi[d];
+                weightsUsed[d] = w;
+                total += w * dimensionScores[d];
             }
-            skor_total = Math.round(total * 100) / 100;
+            totalScore = Math.round(total * 100) / 100;
         }
     }
-    const kategori = skor_total === null ? null : categorize(skor_total, config.category_thresholds);
+    const category = totalScore === null ? null : categorize(totalScore, config.category_thresholds);
     return {
-        skor_total,
-        kategori,
-        dimensi,
-        indikator_temuan: indikator,
-        dimensi_data_belum_cukup: dimensiDataBelumCukup,
-        weights_used,
+        skor_total: totalScore,
+        kategori: category,
+        dimensi: dimensionScores,
+        indikator_temuan: findings,
+        dimensi_data_belum_cukup: insufficientDataDimensions,
+        weights_used: weightsUsed,
     };
 }

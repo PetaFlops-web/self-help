@@ -1,4 +1,5 @@
 import pool from '../config/database.js';
+import type { ProjectReportItem } from '../types/project.js';
 import type {
   CreateReportInput,
   CitizenReport,
@@ -23,6 +24,33 @@ export async function listVerifiedReportsByProjectId(projectId: string): Promise
     kategori: r.kategori,
     ringkasan: wrapReporterData(r.keterangan),
   }));
+}
+
+/** Daftar laporan warga untuk ditampilkan di detail proyek (20 item terbaru). */
+export async function listReportsByProjectId(
+  projectId: string,
+  limit = 20,
+): Promise<ProjectReportItem[]> {
+  const res = await pool.query<ProjectReportItem>(
+    `SELECT tiket, kategori, status, dibuat_pada
+       FROM laporan_warga
+      WHERE proyek_id = $1
+      ORDER BY dibuat_pada DESC
+      LIMIT $2`,
+    [projectId, limit],
+  );
+  return res.rows;
+}
+
+/** Total jumlah laporan warga untuk satu proyek. */
+export async function countReportsByProjectId(projectId: string): Promise<number> {
+  const res = await pool.query<{ count: number }>(
+    `SELECT COUNT(*)::int AS count
+       FROM laporan_warga
+      WHERE proyek_id = $1`,
+    [projectId],
+  );
+  return res.rows[0]?.count ?? 0;
 }
 
 /**

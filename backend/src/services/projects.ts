@@ -3,8 +3,12 @@ import {
   listIndicatorFindingRows,
   listProjects as listProjectsFromRepository,
 } from '../repositories/project.js';
+import {
+  countReportsByProjectId,
+  listReportsByProjectId,
+} from '../repositories/citizen-report.js';
 import { HttpError, intParam, isUuid, nonNegativeNumberParam, positiveIntParam, strParam } from '../helpers/http.js';
-import type { IndicatorFindingRow, Project, ProjectFilters } from '../types/project.js';
+import type { IndicatorFindingRow, Project, ProjectDetail, ProjectFilters } from '../types/project.js';
 
 export async function listProjectsByFilters(query: Record<string, unknown>): Promise<Project[]> {
   const tahun = intParam(query.tahun_anggaran);
@@ -61,7 +65,7 @@ export async function listProjectsByFilters(query: Record<string, unknown>): Pro
   return listProjectsFromRepository(filters);
 }
 
-export async function getProject(id: string): Promise<Project> {
+export async function getProject(id: string): Promise<ProjectDetail> {
   if (!isUuid(id)) {
     throw new HttpError(400, 'id proyek harus UUID yang valid');
   }
@@ -69,7 +73,14 @@ export async function getProject(id: string): Promise<Project> {
   if (!proyek) {
     throw new HttpError(404, 'Project tidak ditemukan');
   }
-  return proyek;
+  const [items, total] = await Promise.all([
+    listReportsByProjectId(id, 20),
+    countReportsByProjectId(id),
+  ]);
+  return {
+    ...proyek,
+    laporan_warga: { total, items },
+  };
 }
 
 export async function getProjectIndicators(id: string): Promise<IndicatorFindingRow[]> {

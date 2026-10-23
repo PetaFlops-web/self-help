@@ -26,6 +26,26 @@ export async function listProyek(f) {
         params.push(f.tahun_anggaran);
         where.push(`p.tahun_anggaran = $${params.length}`);
     }
+    if (f.q) {
+        params.push(`%${f.q}%`);
+        where.push(`(p.nama ILIKE $${params.length} OR p.dinas ILIKE $${params.length})`);
+    }
+    if (f.pagu_min !== undefined) {
+        params.push(f.pagu_min);
+        where.push(`p.pagu IS NOT NULL AND p.pagu::numeric >= $${params.length}`);
+    }
+    if (f.pagu_max !== undefined) {
+        params.push(f.pagu_max);
+        where.push(`p.pagu IS NOT NULL AND p.pagu::numeric <= $${params.length}`);
+    }
+    if (f.nilai_kontrak_min !== undefined) {
+        params.push(f.nilai_kontrak_min);
+        where.push(`p.nilai_kontrak IS NOT NULL AND p.nilai_kontrak::numeric >= $${params.length}`);
+    }
+    if (f.nilai_kontrak_max !== undefined) {
+        params.push(f.nilai_kontrak_max);
+        where.push(`p.nilai_kontrak IS NOT NULL AND p.nilai_kontrak::numeric <= $${params.length}`);
+    }
     const limit = f.limit && f.limit > 0 ? Math.min(f.limit, 200) : 100;
     params.push(limit);
     const sql = `

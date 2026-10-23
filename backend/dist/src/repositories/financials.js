@@ -1,21 +1,21 @@
 import pool from '../config/database.js';
-export async function getPembayaranByProyekId(proyekId) {
+export async function getPaymentsByProjectId(projectId) {
     const res = await pool.query(`SELECT id, proyek_id, termin_ke, tanggal, jumlah, persen_kontrak,
             source_id, source_url, fetched_at, is_dummy
        FROM pembayaran
       WHERE proyek_id = $1
-      ORDER BY termin_ke NULLS LAST, tanggal NULLS LAST`, [proyekId]);
+      ORDER BY termin_ke NULLS LAST, tanggal NULLS LAST`, [projectId]);
     return res.rows;
 }
-export async function getProgresByProyekId(proyekId) {
+export async function getProgressByProjectId(projectId) {
     const res = await pool.query(`SELECT id, proyek_id, tanggal, persen_fisik, sumber,
             source_id, source_url, fetched_at, is_dummy
        FROM progres
       WHERE proyek_id = $1
-      ORDER BY tanggal DESC NULLS LAST`, [proyekId]);
+      ORDER BY tanggal DESC NULLS LAST`, [projectId]);
     return res.rows;
 }
-export async function getRabItemsByProyekId(proyekId) {
+export async function getRabItemsByProjectId(projectId) {
     const res = await pool.query(`SELECT ri.id, ri.proyek_id, ri.uraian, ri.satuan, ri.volume, ri.harga_satuan,
             ri.kode_harga_acuan,
             ha.harga AS harga_acuan,
@@ -25,6 +25,6 @@ export async function getRabItemsByProyekId(proyekId) {
        FROM rab_item ri
        LEFT JOIN harga_acuan ha ON ha.kode = ri.kode_harga_acuan
       WHERE ri.proyek_id = $1
-      ORDER BY ri.id`, [proyekId]);
+      ORDER BY ri.id`, [projectId]);
     return res.rows;
 }

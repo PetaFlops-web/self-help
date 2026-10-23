@@ -22,6 +22,9 @@ const swaggerSpec = {
         { name: 'Config', description: 'Konfigurasi scoring aktif' },
         { name: 'LLM', description: 'Penjelasan dan draf laporan berbasis LLM' },
         { name: 'Financials', description: 'Data pembayaran, progres, dan RAB proyek' },
+        { name: 'Reports', description: 'Pelaporan warga' },
+        { name: 'Admin', description: 'Panel admin untuk verifikasi laporan' },
+        { name: 'Documents', description: 'Document wajib publik dan checklist prosedur proyek' },
     ],
     paths: {
         '/ping': {
@@ -74,7 +77,8 @@ const swaggerSpec = {
                 tags: ['Projects'],
                 summary: 'Daftar proyek',
                 description: 'Mengembalikan daftar proyek infrastruktur. Mendukung filter berdasarkan ' +
-                    'kode_bps, dinas, kategori, tahun_anggaran, dan limit.',
+                    'kode_bps, dinas, kategori, tahun_anggaran, limit, pencarian teks (q), ' +
+                    'dan range nilai (pagu_min, pagu_max, nilai_kontrak_min, nilai_kontrak_max).',
                 operationId: 'listProjects',
                 parameters: [
                     {
@@ -106,6 +110,36 @@ const swaggerSpec = {
                         in: 'query',
                         description: 'Batas jumlah hasil (default: semua)',
                         schema: { type: 'integer', minimum: 1 },
+                    },
+                    {
+                        name: 'q',
+                        in: 'query',
+                        description: 'Pencarian teks pada nama proyek dan dinas (ILIKE)',
+                        schema: { type: 'string' },
+                    },
+                    {
+                        name: 'pagu_min',
+                        in: 'query',
+                        description: 'Filter pagu minimal (inklusif)',
+                        schema: { type: 'number', minimum: 0 },
+                    },
+                    {
+                        name: 'pagu_max',
+                        in: 'query',
+                        description: 'Filter pagu maksimal (inklusif)',
+                        schema: { type: 'number', minimum: 0 },
+                    },
+                    {
+                        name: 'nilai_kontrak_min',
+                        in: 'query',
+                        description: 'Filter nilai kontrak minimal (inklusif)',
+                        schema: { type: 'number', minimum: 0 },
+                    },
+                    {
+                        name: 'nilai_kontrak_max',
+                        in: 'query',
+                        description: 'Filter nilai kontrak maksimal (inklusif)',
+                        schema: { type: 'number', minimum: 0 },
                     },
                 ],
                 responses: {
@@ -145,7 +179,7 @@ const swaggerSpec = {
                         },
                     },
                     '404': {
-                        description: 'Proyek tidak ditemukan',
+                        description: 'Project tidak ditemukan',
                         content: {
                             'application/json': {
                                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -181,7 +215,7 @@ const swaggerSpec = {
                         },
                     },
                     '404': {
-                        description: 'Proyek tidak ditemukan',
+                        description: 'Project tidak ditemukan',
                         content: {
                             'application/json': {
                                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -225,7 +259,7 @@ const swaggerSpec = {
                         },
                     },
                     '404': {
-                        description: 'Proyek tidak ditemukan',
+                        description: 'Project tidak ditemukan',
                         content: {
                             'application/json': {
                                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -269,7 +303,7 @@ const swaggerSpec = {
                         },
                     },
                     '404': {
-                        description: 'Proyek tidak ditemukan',
+                        description: 'Project tidak ditemukan',
                         content: {
                             'application/json': {
                                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -313,7 +347,95 @@ const swaggerSpec = {
                         },
                     },
                     '404': {
-                        description: 'Proyek tidak ditemukan',
+                        description: 'Project tidak ditemukan',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        '/projects/{id}/documents': {
+            get: {
+                tags: ['Documents'],
+                summary: 'Daftar dokumen wajib publik proyek',
+                description: 'Mengembalikan daftar dokumen wajib publik proyek beserta status ' +
+                    'apakah dokumen sudah dipublikasikan.',
+                operationId: 'getProjectDocuments',
+                parameters: [
+                    {
+                        name: 'id',
+                        in: 'path',
+                        required: true,
+                        description: 'UUID proyek',
+                        schema: { type: 'string', format: 'uuid' },
+                    },
+                ],
+                responses: {
+                    '200': {
+                        description: 'Daftar dokumen proyek',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/DocumentsResponse' },
+                            },
+                        },
+                    },
+                    '400': {
+                        description: 'UUID tidak valid',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                    '404': {
+                        description: 'Project tidak ditemukan',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        '/projects/{id}/procedure-checklist': {
+            get: {
+                tags: ['Documents'],
+                summary: 'Daftar checklist prosedur proyek',
+                description: 'Mengembalikan daftar tahapan prosedur pengadaan proyek beserta status ' +
+                    'terpenuhi atau tidak.',
+                operationId: 'getProjectProcedureChecklist',
+                parameters: [
+                    {
+                        name: 'id',
+                        in: 'path',
+                        required: true,
+                        description: 'UUID proyek',
+                        schema: { type: 'string', format: 'uuid' },
+                    },
+                ],
+                responses: {
+                    '200': {
+                        description: 'Daftar checklist prosedur proyek',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ProcedureChecklistResponse' },
+                            },
+                        },
+                    },
+                    '400': {
+                        description: 'UUID tidak valid',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                    '404': {
+                        description: 'Project tidak ditemukan',
                         content: {
                             'application/json': {
                                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -358,7 +480,7 @@ const swaggerSpec = {
                         },
                     },
                     '404': {
-                        description: 'Proyek tidak ditemukan',
+                        description: 'Project tidak ditemukan',
                         content: {
                             'application/json': {
                                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -421,7 +543,7 @@ const swaggerSpec = {
                         },
                     },
                     '404': {
-                        description: 'Proyek tidak ditemukan',
+                        description: 'Project tidak ditemukan',
                         content: {
                             'application/json': {
                                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -482,6 +604,150 @@ const swaggerSpec = {
                         content: {
                             'application/json': {
                                 schema: { $ref: '#/components/schemas/ScoringConfigResponse' },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        '/reports': {
+            post: {
+                tags: ['Reports'],
+                summary: 'Kirim laporan warga',
+                description: 'Menerima laporan warga terkait proyek. Menghasilkan tiket unik ' +
+                    'yang bisa dipakai untuk melacak status laporan.',
+                operationId: 'createReport',
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/CreateReportRequest' },
+                        },
+                    },
+                },
+                responses: {
+                    '201': {
+                        description: 'Laporan berhasil dibuat',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ReportResponse' },
+                            },
+                        },
+                    },
+                    '400': {
+                        description: 'Input tidak valid',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                    '404': {
+                        description: 'Project tidak ditemukan',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                },
+            },
+            get: {
+                tags: ['Reports'],
+                summary: 'Lacak laporan warga',
+                description: 'Mengembalikan status laporan berdasarkan tiket.',
+                operationId: 'trackReport',
+                parameters: [
+                    {
+                        name: 'tiket',
+                        in: 'query',
+                        required: true,
+                        description: 'Tiket laporan',
+                        schema: { type: 'string' },
+                    },
+                ],
+                responses: {
+                    '200': {
+                        description: 'Status laporan',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ReportResponse' },
+                            },
+                        },
+                    },
+                    '400': {
+                        description: 'Parameter tiket tidak valid',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                    '404': {
+                        description: 'Laporan tidak ditemukan',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        '/admin/reports/{id}': {
+            patch: {
+                tags: ['Admin'],
+                summary: 'Verifikasi laporan warga',
+                description: 'Mengubah status laporan menjadi Diverifikasi atau Ditolak. ' +
+                    'Jika Diverifikasi, skor proyek terkait akan dihitung ulang.',
+                operationId: 'verifyReport',
+                parameters: [
+                    {
+                        name: 'id',
+                        in: 'path',
+                        required: true,
+                        description: 'Tiket laporan',
+                        schema: { type: 'string' },
+                    },
+                ],
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/VerifyReportRequest' },
+                        },
+                    },
+                },
+                responses: {
+                    '200': {
+                        description: 'Status laporan berhasil diperbarui',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ReportResponse' },
+                            },
+                        },
+                    },
+                    '400': {
+                        description: 'Input tidak valid',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                    '404': {
+                        description: 'Laporan tidak ditemukan',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                    '409': {
+                        description: 'Laporan sudah memiliki status yang sama',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
                             },
                         },
                     },
@@ -556,7 +822,7 @@ const swaggerSpec = {
                 },
                 required: ['status', 'regions'],
             },
-            Proyek: {
+            Project: {
                 type: 'object',
                 properties: {
                     id: { type: 'string', format: 'uuid' },
@@ -596,7 +862,7 @@ const swaggerSpec = {
                     status: { type: 'string', example: 'success' },
                     projects: {
                         type: 'array',
-                        items: { $ref: '#/components/schemas/Proyek' },
+                        items: { $ref: '#/components/schemas/Project' },
                     },
                 },
                 required: ['status', 'projects'],
@@ -605,11 +871,48 @@ const swaggerSpec = {
                 type: 'object',
                 properties: {
                     status: { type: 'string', example: 'success' },
-                    project: { $ref: '#/components/schemas/Proyek' },
+                    project: { $ref: '#/components/schemas/ProjectDetail' },
                 },
                 required: ['status', 'project'],
             },
-            IndikatorTemuan: {
+            ProjectReportItem: {
+                type: 'object',
+                properties: {
+                    tiket: { type: 'string', example: 'LPR-ABCD1234-EFGH' },
+                    kategori: { type: 'string', nullable: true, example: 'Kualitas pekerjaan' },
+                    status: {
+                        type: 'string',
+                        enum: ['Dilaporkan', 'Diverifikasi', 'Ditolak'],
+                        example: 'Diverifikasi',
+                    },
+                    dibuat_pada: { type: 'string', format: 'date-time', nullable: true },
+                },
+                required: ['tiket', 'status'],
+            },
+            ProjectDetail: {
+                allOf: [
+                    { $ref: '#/components/schemas/Project' },
+                    {
+                        type: 'object',
+                        properties: {
+                            laporan_warga: {
+                                type: 'object',
+                                properties: {
+                                    total: { type: 'integer', example: 5, description: 'Total seluruh laporan warga untuk proyek ini' },
+                                    items: {
+                                        type: 'array',
+                                        items: { $ref: '#/components/schemas/ProjectReportItem' },
+                                        description: 'Maksimal 20 item laporan warga terbaru',
+                                    },
+                                },
+                                required: ['total', 'items'],
+                            },
+                        },
+                        required: ['laporan_warga'],
+                    },
+                ],
+            },
+            IndicatorFindingRow: {
                 type: 'object',
                 properties: {
                     id: { type: 'string', format: 'uuid' },
@@ -638,12 +941,12 @@ const swaggerSpec = {
                     status: { type: 'string', example: 'success' },
                     indicators: {
                         type: 'array',
-                        items: { $ref: '#/components/schemas/IndikatorTemuan' },
+                        items: { $ref: '#/components/schemas/IndicatorFindingRow' },
                     },
                 },
                 required: ['status', 'indicators'],
             },
-            Pembayaran: {
+            Payment: {
                 type: 'object',
                 properties: {
                     id: { type: 'string', format: 'uuid' },
@@ -659,7 +962,7 @@ const swaggerSpec = {
                 },
                 required: ['id', 'proyek_id', 'is_dummy'],
             },
-            Progres: {
+            Progress: {
                 type: 'object',
                 properties: {
                     id: { type: 'string', format: 'uuid' },
@@ -684,7 +987,7 @@ const swaggerSpec = {
                             proyek_id: { type: 'string', format: 'uuid' },
                             pembayaran: {
                                 type: 'array',
-                                items: { $ref: '#/components/schemas/Pembayaran' },
+                                items: { $ref: '#/components/schemas/Payment' },
                             },
                             ringkasan: {
                                 type: 'object',
@@ -712,7 +1015,7 @@ const swaggerSpec = {
                             proyek_id: { type: 'string', format: 'uuid' },
                             progres: {
                                 type: 'array',
-                                items: { $ref: '#/components/schemas/Progres' },
+                                items: { $ref: '#/components/schemas/Progress' },
                             },
                         },
                     },
@@ -757,6 +1060,88 @@ const swaggerSpec = {
                     },
                 },
                 required: ['status', 'rab_items'],
+            },
+            Document: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    proyek_id: { type: 'string', format: 'uuid' },
+                    jenis: { type: 'string', example: 'RUP (Rencana Umum Pengadaan)' },
+                    wajib: { type: 'boolean' },
+                    dipublikasikan: { type: 'boolean' },
+                    tanggal: { type: 'string', format: 'date', nullable: true },
+                    source_id: { type: 'string', nullable: true },
+                    source_url: { type: 'string', nullable: true },
+                    fetched_at: { type: 'string', format: 'date-time', nullable: true },
+                    is_dummy: { type: 'boolean' },
+                },
+                required: ['id', 'proyek_id', 'jenis', 'wajib', 'dipublikasikan', 'is_dummy'],
+            },
+            DokumenRingkasan: {
+                type: 'object',
+                properties: {
+                    total: { type: 'integer', example: 6 },
+                    wajib: { type: 'integer', example: 6 },
+                    belum_publik: { type: 'integer', example: 4 },
+                },
+                required: ['total', 'wajib', 'belum_publik'],
+            },
+            DocumentsResponse: {
+                type: 'object',
+                properties: {
+                    status: { type: 'string', example: 'success' },
+                    documents: {
+                        type: 'object',
+                        properties: {
+                            documents: {
+                                type: 'array',
+                                items: { $ref: '#/components/schemas/Document' },
+                            },
+                            ringkasan: { $ref: '#/components/schemas/DokumenRingkasan' },
+                        },
+                    },
+                },
+                required: ['status', 'documents'],
+            },
+            ProcedureChecklist: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    proyek_id: { type: 'string', format: 'uuid' },
+                    tahapan: { type: 'string', example: 'Pengumuman RUP' },
+                    terpenuhi: { type: 'boolean' },
+                    source_id: { type: 'string', nullable: true },
+                    source_url: { type: 'string', nullable: true },
+                    fetched_at: { type: 'string', format: 'date-time', nullable: true },
+                    is_dummy: { type: 'boolean' },
+                },
+                required: ['id', 'proyek_id', 'tahapan', 'terpenuhi', 'is_dummy'],
+            },
+            ProsedurRingkasan: {
+                type: 'object',
+                properties: {
+                    total: { type: 'integer', example: 7 },
+                    terpenuhi: { type: 'integer', example: 4 },
+                    tidak_terpenuhi: { type: 'integer', example: 3 },
+                },
+                required: ['total', 'terpenuhi', 'tidak_terpenuhi'],
+            },
+            ProcedureChecklistResponse: {
+                type: 'object',
+                properties: {
+                    status: { type: 'string', example: 'success' },
+                    procedure_checklist: {
+                        type: 'object',
+                        properties: {
+                            checklist: {
+                                type: 'array',
+                                items: { $ref: '#/components/schemas/ProcedureChecklist' },
+                            },
+                            ringkasan: { $ref: '#/components/schemas/ProsedurRingkasan' },
+                        },
+                    },
+                },
+                required: ['status', 'procedure_checklist'],
             },
             LlmTemuan: {
                 type: 'object',
@@ -869,7 +1254,7 @@ const swaggerSpec = {
                 },
                 required: ['status', 'stats'],
             },
-            SumberData: {
+            DataSource: {
                 type: 'object',
                 properties: {
                     source_id: { type: 'string', example: 'SRC-06' },
@@ -889,7 +1274,7 @@ const swaggerSpec = {
                     status: { type: 'string', example: 'success' },
                     sources: {
                         type: 'array',
-                        items: { $ref: '#/components/schemas/SumberData' },
+                        items: { $ref: '#/components/schemas/DataSource' },
                     },
                 },
                 required: ['status', 'sources'],
@@ -952,6 +1337,61 @@ const swaggerSpec = {
                     },
                 },
                 required: ['status', 'scoring'],
+            },
+            CreateReportRequest: {
+                type: 'object',
+                properties: {
+                    proyek_id: { type: 'string', format: 'uuid', description: 'UUID proyek yang dilaporkan' },
+                    kategori: { type: 'string', example: 'Kualitas pekerjaan' },
+                    keterangan: { type: 'string', example: 'Jalan berlubang dan tidak sesuai spesifikasi' },
+                    lat: { type: 'number', nullable: true, example: -5.45 },
+                    lng: { type: 'number', nullable: true, example: 105.27 },
+                    foto_urls: {
+                        type: 'array',
+                        items: { type: 'string' },
+                        nullable: true,
+                    },
+                    anonim: { type: 'boolean', default: false },
+                },
+                required: ['proyek_id', 'kategori', 'keterangan'],
+            },
+            VerifyReportRequest: {
+                type: 'object',
+                properties: {
+                    status: {
+                        type: 'string',
+                        enum: ['Diverifikasi', 'Ditolak'],
+                    },
+                    catatan_verifikator: { type: 'string', nullable: true },
+                    alasan_tolak: { type: 'string', nullable: true },
+                },
+                required: ['status'],
+            },
+            Report: {
+                type: 'object',
+                properties: {
+                    tiket: { type: 'string', example: 'LPR-ABCD1234-EFGH' },
+                    proyek_id: { type: 'string', format: 'uuid', nullable: true },
+                    kategori: { type: 'string', nullable: true },
+                    status: {
+                        type: 'string',
+                        enum: ['Dilaporkan', 'Diverifikasi', 'Ditolak'],
+                    },
+                    catatan_verifikator: { type: 'string', nullable: true },
+                    alasan_tolak: { type: 'string', nullable: true },
+                    dibuat_pada: { type: 'string', format: 'date-time', nullable: true },
+                    diubah_pada: { type: 'string', format: 'date-time', nullable: true },
+                },
+                required: ['tiket', 'status'],
+            },
+            ReportResponse: {
+                type: 'object',
+                properties: {
+                    status: { type: 'string', example: 'success' },
+                    message: { type: 'string' },
+                    report: { $ref: '#/components/schemas/Report' },
+                },
+                required: ['status', 'message', 'report'],
             },
         },
     },

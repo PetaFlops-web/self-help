@@ -36,7 +36,6 @@ export interface InputSkor {
 
 export interface LlmGenerateRequest {
   versi_prompt?: string;
-  /** Jenis tugas LLM: penjelasan (T1) atau draf laporan (T2). Default: explain. */
   tugas?: 'explain' | 'draft';
   proyek?: InputProyek;
   skor?: InputSkor;
@@ -107,5 +106,14 @@ export const DraftOutputSchema = z.object({
   penafian: z.string().min(1),
   lampiran_disarankan: z.array(z.string()),
 });
+
+export interface RuleMeta {
+  nama_aturan: string;
+  satuan: string;
+  cara_baca_ambang: string;
+  arti_sederhana: string;
+  kenapa_penting: string;
+  pertanyaan_warga: string;
+}
 
 export type DraftOutput = z.infer<typeof DraftOutputSchema>;

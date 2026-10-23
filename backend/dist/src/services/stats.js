@@ -1,4 +1,4 @@
-import { getStats } from '../repositories/proyek.js';
+import { getStats } from '../repositories/project.js';
 export async function getStatsSummary() {
     const s = await getStats();
     return {
