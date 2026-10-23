@@ -1,0 +1,403 @@
+/* Dimuat SETELAH bootstrap.min.css (lihat main.js): file ini hanya menimpa variabel Bootstrap
+   dan menambah gaya khusus desain AliranTerang. */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+/* ============ Design tokens + variabel Bootstrap ============ */
+:root {
+  --font: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+  --ink: #111111;
+  --ink-soft: #2b2b2b;
+  --muted: #6f6f6f;
+  --line: #ebe7e2;
+  --bg-outer: #e9ebea;
+  --bg-soft: #f6f4f1;
+  --orange: #ff6a2b;
+  --orange-light: #ff8a3d;
+  --red: #d6341e;
+  --green: #2a8a5a;
+  --green-soft: #e3f3ea;
+  --amber: #f0a31a;
+  --amber-soft: #fdf1d6;
+  --red-soft: #fbe6e1;
+  --blue-soft: #e8f0fe;
+  --blue: #2b5bb8;
+  --radius-lg: 28px;
+  --radius-md: 20px;
+  --radius-sm: 12px;
+  --gutter: 40px;
+  --section-gap: 64px;
+  --container: 1280px;
+  --nav-h: 72px;
+
+  --bs-body-font-family: var(--font);
+  --bs-body-color: var(--ink);
+  --bs-body-bg: #fff;
+  --bs-border-color: var(--line);
+  --bs-secondary-color: var(--muted);
+}
+
+/* ============ Base ============ */
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+a,
+a:hover {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+/* ============ Shell ============ */
+.page-bg {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.site-container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  background: rgba(255, 255, 255, .92);
+  backdrop-filter: saturate(160%) blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.site-main {
+  flex: 1 0 auto;
+  padding-top: 12px;
+  padding-bottom: 8px;
+}
+
+.site-footer {
+  background: var(--bg-soft);
+  border-top: 1px solid var(--line);
+  margin-top: var(--section-gap);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 7px;
+  background: var(--orange);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.app-nav {
+  --bs-navbar-padding-y: 0;
+  --bs-navbar-padding-x: var(--gutter);
+  min-height: var(--nav-h);
+  --bs-nav-link-padding-x: 0;
+  --bs-nav-link-padding-y: .5rem;
+  --bs-nav-link-font-size: 14px;
+  --bs-nav-link-font-weight: 500;
+  --bs-nav-link-color: var(--muted);
+  --bs-nav-link-hover-color: var(--ink);
+  --bs-navbar-active-color: var(--ink);
+}
+
+.app-nav .nav-link.router-link-exact-active {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.app-nav .navbar-toggler {
+  border-color: var(--line);
+  padding: 6px 10px;
+}
+
+@media (min-width: 768px) {
+
+  /* Logo di kiri; menu dan tombol di kanan */
+  .app-nav .navbar-collapse {
+    flex-grow: 1;
+    justify-content: flex-end;
+  }
+
+  .app-nav .navbar-nav {
+    margin-right: 28px;
+  }
+
+  .app-nav .cta-wrap {
+    margin-left: 0 !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .app-nav .navbar-nav {
+    padding: 8px 0 4px;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-nav .brand {
+    font-size: 15px;
+  }
+
+  .app-nav .cta-wrap .btn-dark {
+    --bs-btn-padding-x: 14px;
+    --bs-btn-padding-y: 8px;
+    --bs-btn-font-size: 12px;
+  }
+}
+
+.app-nav .navbar-toggler:focus {
+  box-shadow: 0 0 0 3px #ff6a2b33;
+}
+
+.page-head {
+  padding: 28px 0 26px;
+}
+
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  font-weight: 700;
+  color: var(--orange);
+}
+
+.page-head h1 {
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 6px;
+}
+
+.app-footer {
+  padding-top: 28px;
+  padding-bottom: 28px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.app-footer a:hover {
+  color: var(--ink);
+}
+
+/* ============ Tombol (varian Bootstrap) ============ */
+.btn {
+  --bs-btn-border-radius: 999px;
+  --bs-btn-font-weight: 700;
+  --bs-btn-font-size: 13px;
+  --bs-btn-padding-x: 20px;
+  --bs-btn-padding-y: 10px;
+}
+
+.btn-dark {
+  --bs-btn-bg: #111;
+  --bs-btn-border-color: #111;
+  --bs-btn-hover-bg: #2b2b2b;
+  --bs-btn-hover-border-color: #2b2b2b;
+}
+
+.btn-outline-dark {
+  --bs-btn-bg: #fff;
+  --bs-btn-border-color: #111;
+}
+
+.btn-orange {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--orange);
+  --bs-btn-border-color: var(--orange);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #e85a1d;
+  --bs-btn-hover-border-color: #e85a1d;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #d94f15;
+  --bs-btn-active-border-color: #d94f15;
+}
+
+.btn-outline-orange {
+  --bs-btn-color: var(--orange);
+  --bs-btn-bg: #fff;
+  --bs-btn-border-color: var(--orange);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--orange);
+  --bs-btn-hover-border-color: var(--orange);
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #e85a1d;
+  --bs-btn-active-border-color: #e85a1d;
+}
+
+.btn-red {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--red);
+  --bs-btn-border-color: var(--red);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #b92a17;
+  --bs-btn-hover-border-color: #b92a17;
+}
+
+/* ============ Utilitas Chip ============ */
+.chip {
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 8px 18px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ============ Section & Tipografi Global ============ */
+.section {
+  margin-top: var(--section-gap);
+}
+
+.section-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.section-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.muted {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.link-orange {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--orange);
+}
+
+.link-orange:hover {
+  color: var(--orange);
+  text-decoration: underline;
+}
+
+/* ============ Kartu Lembut (card Bootstrap) ============ */
+.soft-card {
+  --bs-card-bg: var(--bg-soft);
+  --bs-card-border-color: var(--line);
+  --bs-card-border-radius: var(--radius-lg);
+  --bs-card-inner-border-radius: var(--radius-lg);
+  --bs-card-spacer-x: 26px;
+  --bs-card-spacer-y: 26px;
+}
+
+.soft-card.rounded-md {
+  --bs-card-border-radius: var(--radius-md);
+  --bs-card-inner-border-radius: var(--radius-md);
+}
+
+/* ============ Progress Bar (Bootstrap) ============ */
+.progress {
+  --bs-progress-bg: #e4dfd9;
+  --bs-progress-border-radius: 999px;
+  --bs-progress-bar-bg: var(--red);
+}
+
+.progress-bar.bar-paid {
+  background: linear-gradient(90deg, var(--orange-light), var(--red));
+}
+
+.progress-bar.bar-done {
+  background: linear-gradient(90deg, #3bb27a, var(--green));
+}
+
+.progress-bar.bar-red {
+  background: var(--red);
+}
+
+/* ============ Form & List Global ============ */
+.list-group.plain {
+  --bs-list-group-bg: transparent;
+  --bs-list-group-border-color: var(--line);
+}
+
+.form-control,
+.form-select {
+  border-radius: var(--radius-sm);
+  border-color: var(--line);
+  padding: 12px 14px;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px #ff6a2b22;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (max-width: 991.98px) {
+  :root {
+    --gutter: 24px;
+    --section-gap: 48px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  :root {
+    --gutter: 16px;
+    --section-gap: 40px;
+    --nav-h: 64px;
+  }
+
+  .section-title {
+    font-size: 22px;
+  }
+}
+
+/* ============ Penyesuaian per device ============ */
+/* Layar sentuh: target sentuh min. 44px; font input 16px agar iOS tidak auto-zoom */
+@media (pointer: coarse) {
+
+  .btn,
+  .app-nav .nav-link {
+    min-height: 44px;
+  }
+
+  .form-control,
+  .form-select {
+    font-size: 16px;
+  }
+}
+
+/* Notch / gesture bar */
+.site-header {
+  padding-top: env(safe-area-inset-top);
+}
+
+.site-footer {
+  padding-bottom: env(safe-area-inset-bottom);
+}
