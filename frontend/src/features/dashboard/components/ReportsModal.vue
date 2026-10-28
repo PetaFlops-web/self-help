@@ -176,6 +176,8 @@ watch(() => props.data?.id, () => { activeFilter.value = 'all' })
 .d-low { background: var(--green); }
 .d-attention { background: var(--amber); }
 .d-high { background: var(--red); }
+.d-info { background: var(--blue); }
+.d-progress { background: var(--orange); }
 .rm-foot {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
   padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--bg-soft);

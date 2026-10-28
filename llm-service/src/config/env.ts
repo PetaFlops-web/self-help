@@ -6,6 +6,7 @@ export interface LlmConfig {
   model: string;
   timeoutMs: number;
   maxTokens: number;
+  apiUrl: string;
 }
 
 const DEFAULT_MODELS: Record<Provider, string> = {
@@ -24,6 +25,7 @@ export function loadLlmConfig(): LlmConfig {
   const model = process.env.AI_MODEL || DEFAULT_MODELS[provider];
   const timeoutMs = Number(process.env.AI_TIMEOUT_MS) || 10000;
   const maxTokens = Number(process.env.AI_MAX_TOKENS) || 4096;
+  const apiUrl = process.env.AI_API_URL || '';
 
-  return { provider, apiKey, model, timeoutMs, maxTokens };
+  return { provider, apiKey, model, timeoutMs, maxTokens, apiUrl };
 }

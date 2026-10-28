@@ -1,9 +1,10 @@
 import type { LlmConfig } from '../../config/env.js';
 import type { Prompt } from '../prompt.js';
 
+
 /** OpenAI Chat Completions — keluaran JSON ketat via response_format. */
 export async function callOpenAi(config: LlmConfig, prompt: Prompt): Promise<string> {
-  const res = await fetch('https://api.deepseek.com/chat/completions', {
+  const res = await fetch(config.apiUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

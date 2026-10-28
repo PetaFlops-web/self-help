@@ -220,4 +220,6 @@ function onMarkerClick(marker) {
 .d-low { background: var(--green); box-shadow: 0 0 0 4px #2a8a5a22; }
 .d-attention { background: var(--amber); box-shadow: 0 0 0 4px #f0a31a2b; }
 .d-high { background: var(--red); box-shadow: 0 0 0 4px #d6341e2b; }
+.d-info { background: var(--blue); box-shadow: 0 0 0 4px #2b5bb82b; }
+.d-progress { background: var(--orange); box-shadow: 0 0 0 4px #ff6a2b2b; }
 </style>
