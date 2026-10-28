@@ -6,7 +6,11 @@
 import { getRiskLabel } from '@/utils/riskScoring'
 
 defineProps({
-  level: { type: String, required: true, validator: (v) => ['low', 'attention', 'high'].includes(v) },
+  level: {
+    type: String,
+    required: true,
+    validator: (v) => ['low', 'attention', 'high', 'info', 'progress'].includes(v),
+  },
   label: { type: String, default: '' },
 })
 </script>
@@ -16,4 +20,6 @@ defineProps({
 .risk-high { background: var(--red); }
 .risk-attention { background: var(--amber); }
 .risk-low { background: var(--green); }
+.risk-info { background: var(--blue); }
+.risk-progress { background: var(--orange); }
 </style>

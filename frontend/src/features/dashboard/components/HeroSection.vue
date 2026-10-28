@@ -29,6 +29,7 @@
               <circle cx="0" cy="-29" r="7" fill="#e8441e" />
             </symbol>
           </defs>
+          
           <circle cx="607" cy="215" r="150" fill="#fff" opacity=".1" />
           <circle cx="607" cy="215" r="88" fill="#fff" opacity=".12" />
           <path d="M520 340C540 262 622 252 662 202C712 140 716 78 800 10" fill="none" stroke="#5d1618" stroke-opacity=".35" stroke-width="84" stroke-linecap="round" />

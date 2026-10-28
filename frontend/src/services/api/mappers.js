@@ -287,7 +287,20 @@ export function toProjectReportsPanel(raw) {
     const category = item?.kategori ?? '-'
     const status = item?.status ?? '-'
     const statusNorm = String(status).toLowerCase().trim()
-    const level = statusNorm === 'selesai' ? 'low' : 'attention'
+    // Pemetaan warna badge status laporan warga:
+    //  - Dilaporkan      → amber   (menunggu verifikasi)
+    //  - Diverifikasi    → hijau   (sudah valid)
+    //  - Diteruskan      → biru    (dialihkan ke pihak terkait)
+    //  - Ditindaklanjuti → oranye  (sedang dieksekusi)
+    //  - Selesai         → hijau   (tuntas)
+    const STATUS_LEVEL = {
+      dilaporkan: 'attention',
+      diverifikasi: 'low',
+      diteruskan: 'info',
+      ditindaklanjuti: 'progress',
+      selesai: 'low',
+    }
+    const level = STATUS_LEVEL[statusNorm] ?? 'attention'
 
     let dateLabel = '-'
     if (item?.dibuat_pada) {
