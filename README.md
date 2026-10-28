@@ -23,55 +23,49 @@ LLM Service
 - Zod untuk validasi payload
 
 Infrastruktur
-- Docker + Docker Compose (backend, llm, db Postgres, redis)
+- Docker + Docker Compose (frontend, backend, llm, db Postgres, redis)
 
 ## Cara Menjalankan Project
 
-Prasyarat: Git, Docker + Docker Compose, Node.js 22+ (hanya untuk mode dev frontend lokal).
+Prasyarat: Git, Docker + Docker Compose.
 
 1. Clone repository
    ```sh
-   git clone <url-repo> clearsight
-   cd clearsight
+   git clone <url-repo>
+   cd <nama-folder>
    ```
 
 2. Siapkan environment file
    ```sh
    cp backend/.env.example backend/.env
+   cp llm-service/.env.example llm-service/.env
    # sesuaikan nilai bila perlu
    ```
 
-3. Jalankan backend stack (API, LLM service, Postgres, Redis)
+3. Jalankan seluruh stack
    ```sh
    docker compose up -d --build
    ```
    Service yang terangkat:
+   - Frontend: http://localhost:5173
    - Backend API: http://localhost:3000
    - LLM Service: http://localhost:3001
    - Postgres: localhost:5433
    - Redis: localhost:6379
 
-4. Seed data awal (opsional, dari host)
-   ```sh
-   cd backend
-   npm install
-   npm run migrate up
-   npm run seed
-   ```
+   Migrasi database dan seed data awal berjalan otomatis via service `backend-init` sebelum backend start.
 
-5. Jalankan frontend
-   ```sh
-   cd frontend
-   npm install
-   npm run dev
-   ```
-   Buka http://localhost:5173.
+### Opsional: Dev mode frontend lokal
 
-6. Build frontend untuk produksi
-   ```sh
-   npm run build
-   npm run preview
-   ```
+Butuh Node.js 22+.
+
+```sh
+cd frontend
+npm install
+npm run dev        # http://localhost:5173
+npm run build      # build produksi
+npm run preview
+```
 
 ## Progress Saat Ini
 
@@ -99,3 +93,4 @@ Yang Belum
 - [ ] Integrasi Redis untuk cache
 - [ ] Upload gambar dan video untuk laporan warga
 - [ ] Pengiriman laporan berdasarkan analisis LLM (sekadar copy and paste)
+- [ ] Penggunaan .env docker compose secara secret untuk keamanan
