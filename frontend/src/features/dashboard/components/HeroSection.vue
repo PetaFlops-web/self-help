@@ -4,7 +4,7 @@
       <span v-for="t in project.tags" :key="t" class="badge rounded-pill chip">{{ t }}</span>
     </div>
     <h1 class="hero-title" v-html="project.titleHtml || project.title" />
-    <p class="hero-meta">{{ project.meta }}</p>
+    
 
     <div class="banner-wrap">
       <div class="cta-float">
@@ -20,15 +20,7 @@
             </Transition>
           </span>
         </span>
-        <span class="b-chip b-right badge rounded-pill">
-          <i class="dot" />
-          <span class="b-chip-text b-chip-reports">
-            <Transition name="fade-fast" mode="out-in">
-              <SkeletonBlock v-if="showSkeleton" tone="light" width="100px" height="13px" radius="4px" />
-              <span v-else key="content">{{ project.reportCount != null ? `${project.reportCount} laporan warga` : '–' }}</span>
-            </Transition>
-          </span>
-        </span>
+        
 
         <svg class="scene" viewBox="0 0 1026 312" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
           <defs>
@@ -117,7 +109,7 @@ const gaugeFill = computed(() => {
   letter-spacing: -0.035em; margin-top: 26px;
 }
 .hero-title :deep(em) { font-style: normal; color: var(--red); }
-.hero-meta { margin-top: 16px; font-size: 14px; color: var(--muted); }
+
 
 .banner-wrap { position: relative; margin-top: 44px; }
 .banner {
