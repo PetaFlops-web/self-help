@@ -62,25 +62,42 @@
               <RiskBadge :level="it.level" :label="it.status" />
             </li>
           </ul>
+          <button
+            v-if="selected?.items?.length"
+            type="button"
+            class="btn btn-outline-dark w-100 py-2 mb-2"
+            @click="modalOpen = true"
+          >
+            Lihat semua {{ selected.total }} laporan
+          </button>
           <button type="button" class="btn btn-dark w-100 py-3" @click="expandMap">
             Buka peta besar
           </button>
         </aside>
       </div>
     </div>
+
+    <ReportsModal
+      v-model="modalOpen"
+      :data="selected"
+      :loading="panelLoading"
+      :error="panelError"
+    />
   </section>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 import AppMap from '@/components/map/AppMap.vue'
 import RiskBadge from '@/components/ui/RiskBadge.vue'
+import ReportsModal from './ReportsModal.vue'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import { useDevice } from '@/composables/useDevice'
 import { LEVEL_COLOR, PROJECT_COLOR } from '@/config/map'
 import { projectsApi } from '@/services/api/projects.api'
 import { toProjectReportsPanel } from '@/services/api/mappers'
 import { pinIcon } from '@/utils/mapIcons'
+import { getRiskLabel, getRiskLevel } from '@/utils/riskScoring'
 import { useDashboardData } from '../composables/useDashboardData'
 
 const { project, nearbyReports, error, loadData } = useDashboardData()
@@ -88,6 +105,7 @@ const { isMobile } = useDevice()
 const appMapRef = ref(null)
 
 const selected = ref(null)
+const modalOpen = ref(false)
 const panelLoading = ref(false)
 const panelError = ref('')
 let requestSeq = 0
@@ -121,27 +139,53 @@ watch(
   { immediate: true },
 )
 
+// Tingkat risiko proyek utama (untuk warna pin dan tooltip)
+const projectLevel = computed(
+  () => project.riskLevel || (project.riskScore != null ? getRiskLevel(project.riskScore) : 'attention'),
+)
+
 const markers = computed(() => [
   {
-    id: project?.id, // <-- Tambahan ID proyek utama
+    id: project?.id,
     key: 'project',
     lat: project.lat,
     lng: project.lng,
     z: 1000,
     title: project.title,
     keywords: project.title,
-    icon: pinIcon(PROJECT_COLOR, { main: true, label: `Proyek ini, ${project.riskLabel}` }),
+    icon: pinIcon(LEVEL_COLOR[projectLevel.value] || PROJECT_COLOR, {
+      main: true,
+      label: `Proyek ini, ${project.riskLabel}`,
+    }),
+    tip: {
+      title: project.title,
+      subtitle: 'Proyek yang dipantau',
+      level: projectLevel.value,
+      label: project.riskLabel || getRiskLabel(projectLevel.value),
+      score: project.riskScore,
+    },
   },
-  ...nearbyReports.map((r) => ({
-    id: r.id, // <-- Tambahan ID untuk pin yang lain
-    key: r.id || r.code,
-    lat: r.lat,
-    lng: r.lng,
-    z: 0,
-    title: r.title || `${r.code} - ${r.distance}`,
-    keywords: r.title || `${r.code} ${r.status}`,
-    icon: pinIcon(LEVEL_COLOR[r.level] || LEVEL_COLOR.attention),
-  })),
+  ...nearbyReports.map((r) => {
+    const level = r.level || 'attention'
+    const title = r.title || `${r.code} - ${r.distance}`
+    return {
+      id: r.id, // ID proyek untuk memuat laporan warga saat pin diklik
+      key: r.id || r.code,
+      lat: r.lat,
+      lng: r.lng,
+      z: 0,
+      title,
+      keywords: r.title || `${r.code} ${r.status}`,
+      icon: pinIcon(LEVEL_COLOR[level] || LEVEL_COLOR.attention),
+      tip: {
+        title,
+        subtitle: r.location || r.status || '',
+        level,
+        label: getRiskLabel(level),
+        score: r.riskScore ?? null,
+      },
+    }
+  }),
 ])
 
 function expandMap() {
@@ -150,9 +194,18 @@ function expandMap() {
 
 // <-- Tambahan fungsi klik marker
 function onMarkerClick(marker) {
-  if (marker?.id) {
+  if (!marker?.id) return
+  if (marker.id === project.id) {
+    // Pin proyek utama: tampilkan modal laporan warga
     showReports(marker.id)
+    modalOpen.value = true
+    return
   }
+  // Pin proyek lain: pindah analisis dashboard ke proyek tersebut
+  loadData(marker.id).then(async () => {
+    await nextTick()
+    appMapRef.value?.focusOn?.(project.lat, project.lng, 14)
+  })
 }
 </script>
 
@@ -166,5 +219,5 @@ function onMarkerClick(marker) {
 .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .d-low { background: var(--green); box-shadow: 0 0 0 4px #2a8a5a22; }
 .d-attention { background: var(--amber); box-shadow: 0 0 0 4px #f0a31a2b; }
-.d-high { background: var(--orange); box-shadow: 0 0 0 4px #ff6a2b2b; }
+.d-high { background: var(--red); box-shadow: 0 0 0 4px #d6341e2b; }
 </style>

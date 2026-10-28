@@ -42,8 +42,9 @@
           :key="m.key"
           :lat-lng="[m.lat, m.lng]"
           :icon="m.icon"
-          :options="{ title: m.title, zIndexOffset: m.z }"
+          :options="{ alt: m.title, zIndexOffset: m.z }"
           @click="handleMarkerClick(m)"
+          @ready="(mk) => bindTip(mk, m)"
         />
       </LMap>
 
@@ -97,6 +98,12 @@
         {{ searchMsg }}
       </p>
 
+      <ul class="legend" aria-label="Keterangan warna pin">
+        <li><i :style="{ background: LEVEL_COLOR.high }" />Risiko tinggi</li>
+        <li><i :style="{ background: LEVEL_COLOR.attention }" />Perlu perhatian</li>
+        <li><i :style="{ background: LEVEL_COLOR.low }" />Risiko rendah</li>
+      </ul>
+
       <div class="zoom btn-group-vertical shadow-sm">
         <button type="button" class="btn btn-light btn-sm" aria-label="Perbesar" @click="zoomBy(1)">+</button>
         <button type="button" class="btn btn-light btn-sm" aria-label="Perkecil" @click="zoomBy(-1)">−</button>
@@ -119,7 +126,8 @@ import { ref, watch } from 'vue'
 import 'leaflet/dist/leaflet.css'
 import '@/assets/styles/map.css'
 import { LMap, LMarker, LTileLayer } from '@vue-leaflet/vue-leaflet'
-import { LAMPUNG_BOUNDS, MIN_ZOOM, START_ZOOM, TILES, LABELS } from '@/config/map'
+import { LAMPUNG_BOUNDS, MIN_ZOOM, START_ZOOM, TILES, LABELS, LEVEL_COLOR } from '@/config/map'
+import { escapeHtml } from '@/utils/formatters'
 import { useMinLoading } from '@/composables/useMinLoading'
 import { useMapSearch } from '@/composables/useMapSearch'
 import { useMapFullscreen } from '@/composables/useMapFullscreen'
@@ -224,7 +232,47 @@ function handleSearch() {
   })
 }
 
-function handleMarkerClick(m) {
+// Tooltip hover memakai bindTooltip bawaan Leaflet (stabil untuk banyak marker).
+// Marker disimpan per key agar isi tooltip ikut diperbarui saat data dari API tiba.
+const leafletMarkers = new Map()
+
+function tipHtml(t) {
+  const color = LEVEL_COLOR[t.level] || '#999'
+  return (
+    `<div class="risk-tip" style="--c:${color}">` +
+    `<b class="risk-tip__title">${escapeHtml(t.title)}</b>` +
+    (t.subtitle ? `<span class="risk-tip__sub">${escapeHtml(t.subtitle)}</span>` : '') +
+    `<span class="risk-tip__row"><span class="risk-tip__badge">${escapeHtml(t.label)}</span>` +
+    (t.score != null ? `<span class="risk-tip__score">Skor ${escapeHtml(t.score)}/100</span>` : '') +
+    `</span><span class="risk-tip__hint">Klik untuk melihat laporan warga</span></div>`
+  )
+}
+
+function applyTip(marker, m) {
+  if (!m.tip || !marker?.bindTooltip) return
+  marker.unbindTooltip()
+  marker.bindTooltip(tipHtml(m.tip), { direction: 'top', offset: [0, -4], opacity: 1, className: 'risk-tip-wrap' })
+}
+
+function bindTip(marker, m) {
+  leafletMarkers.set(m.key, marker)
+  applyTip(marker, m)
+}
+
+watch(
+  () => props.markers,
+  (list) => {
+    for (const m of list) {
+      const mk = leafletMarkers.get(m.key)
+      if (mk) applyTip(mk, m)
+    }
+  },
+)
+
+// vue-leaflet memasang listener sekali saat marker dibuat, jadi `m` dari template bisa basi
+// (mis. pin proyek utama dibuat sebelum data API tiba). Selalu cari data terbaru lewat key.
+function handleMarkerClick(stale) {
+  const m = props.markers.find((x) => x.key === stale.key) ?? stale
   focusOn(m.lat, m.lng)
   emit('marker-click', m)
 }
@@ -317,6 +365,15 @@ defineExpose({
   position: absolute; z-index: 1000; top: 62px; left: 12px; background: #fff; color: var(--red);
   border: 1px solid #f0c9c2; padding: 7px 14px; font-size: 11px; font-weight: 700; margin: 0;
 }
+
+.legend {
+  position: absolute; z-index: 1000; left: 12px; bottom: 28px; margin: 0; padding: 8px 12px;
+  list-style: none; display: grid; gap: 4px; font-size: 11px; font-weight: 600;
+  background: rgba(255, 255, 255, 0.94); border: 1px solid var(--line); border-radius: 12px;
+}
+.legend li { display: flex; align-items: center; gap: 8px; }
+.legend i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.map--full .legend { left: 20px; bottom: calc(76px + env(safe-area-inset-bottom)); }
 
 /* HP: kolom pencarian lebih lebar, kontrol lebih besar */
 @media (max-width: 575.98px) {

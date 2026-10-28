@@ -22,6 +22,7 @@ export function pinIcon(color, { main = false, label = '' } = {}) {
       className: 'lf-pin',
       iconSize: [w, h],
       iconAnchor: [w / 2, h], // Ujung bawah pin tepat berada di titik koordinat
+      tooltipAnchor: [0, -h], // Tooltip hover muncul tepat di atas kepala pin
       html:
         `<div class="gm-pin${main ? ' gm-pin--main' : ''}">` +
         `<span class="gm-pin__halo" style="--c:${color};--halo:${color}2b;--halo-sat:${color}80"></span>` +

@@ -34,7 +34,7 @@ export const LABELS = {
 export const LEVEL_COLOR = {
   low: '#2a8a5a',
   attention: '#f0a31a',
-  high: '#ff6a2b',
+  high: '#d6341e',
 }
 
-export const PROJECT_COLOR = '#d6341e'
+export const PROJECT_COLOR = '#d6341e' // cadangan jika tingkat risiko proyek tidak diketahui

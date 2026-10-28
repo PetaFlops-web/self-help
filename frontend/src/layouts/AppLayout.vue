@@ -3,8 +3,8 @@
     <header class="site-header">
       <nav class="navbar navbar-expand-md app-nav site-container" aria-label="Navigasi utama">
         <RouterLink class="navbar-brand brand m-0" to="/">
-          <span class="brand-mark">A</span>
-          <span>AliranTerang</span>
+          <img class="brand-mark" src="/clearsight-mark-light.svg" alt="Clearsight" />
+          <span>Clearsight</span>
         </RouterLink>
 
         <div class="cta-wrap order-md-3 d-flex align-items-center gap-2 ms-auto">
@@ -68,7 +68,7 @@ const links = [
   { to: '/lacak-laporan', label: 'Lacak laporan' },
 ]
 
-const title = computed(() => route.meta.title || 'AliranTerang')
+const title = computed(() => route.meta.title || 'Clearsight')
 const isHome = computed(() => Boolean(route.meta.hideHeader))
 
 // Menu mobile otomatis menutup setelah berpindah halaman

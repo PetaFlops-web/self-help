@@ -270,7 +270,7 @@ export function toReportResult(response) {
  */
 export function toProjectReportsPanel(raw) {
   if (!raw || typeof raw !== 'object') {
-    return { id: '', name: '', location: '', total: 0, items: [] }
+    return { id: '', name: '', location: '', total: 0, items: [], riskScore: null, riskLevel: 'low' }
   }
 
   const proj = raw.project && typeof raw.project === 'object' ? raw.project : raw
@@ -308,12 +308,17 @@ export function toProjectReportsPanel(raw) {
 
   const total = toNumber(laporanWarga.total) ?? items.length
 
+  const riskScoreNum = toNumber(proj.skor_total)
+  const riskLevel = kategoriToLevel(proj.kategori, riskScoreNum)
+
   return {
     id,
     name,
     location,
     total,
     items,
+    riskScore: riskScoreNum === null ? null : Math.round(riskScoreNum),
+    riskLevel,
   }
 }
 

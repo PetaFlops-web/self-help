@@ -16,6 +16,7 @@
  * @property {number} lng - Longitude koordinat proyek
  * @property {number} riskScore - Skor risiko (0-100)
  * @property {string} riskLabel - Label tingkat risiko (Tinggi/Perlu Perhatian/Rendah)
+ * @property {RiskLevel} [riskLevel] - Tingkat risiko untuk warna pin ('low' | 'attention' | 'high')
  * @property {string} disclaimer - Catatan keabsahan data simulasi
  */
 

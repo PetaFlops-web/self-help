@@ -4,6 +4,7 @@ import { collectScoreInput } from './project-scoring.js';
 import { scoreProject } from './scoring.js';
 import { loadScoringConfig } from '../config/scoring.js';
 import { callLlmService, LlmServiceUnavailableError } from './llm-client.js';
+import { getProjectRabItems } from './financials.js';
 import { HttpError } from '../helpers/http.js';
 import { toNum } from '../helpers/number.js';
 import pool from '../config/database.js';
@@ -66,6 +67,7 @@ function buildPayload(
   task: LlmTask,
   readerPurpose: string,
   reports: VerifiedReport[],
+  rabItems: { uraian: string | null; satuan: string | null; volume: string | null; harga_satuan: string | null; harga_acuan: string | null; total: string | null; deviasi_pct: string | null }[],
 ): LlmGeneratePayload {
   const indicators = result.indikator_temuan.map((f) => ({
     kode_aturan: f.kode_aturan,
@@ -97,6 +99,7 @@ function buildPayload(
       dimensi: result.dimensi,
     },
     indikator: indicators,
+    rab_items: rabItems,
     dimensi_data_belum_cukup: result.dimensi_data_belum_cukup,
     laporan_terverifikasi: reports as unknown as Array<Record<string, unknown>>,
     tujuan_pembaca: readerPurpose,
@@ -166,7 +169,8 @@ export function buildFallbackDraft(
 export async function explainProject(id: string): Promise<ExplainResult> {
   const { project, result } = await loadProjectAndScore(id);
   const reports = await listVerifiedReportsByProjectId(id);
-  const payload = buildPayload(project, result, 'explain', 'warga awam', reports);
+  const rab = await getProjectRabItems(id);
+  const payload = buildPayload(project, result, 'explain', 'warga awam', reports, rab.items);
 
   try {
     const output = (await callLlmService(payload)) as LlmExplainOutput;
@@ -182,7 +186,8 @@ export async function explainProject(id: string): Promise<ExplainResult> {
 export async function draftProject(id: string, targetInstitution: LlmTargetInstitution): Promise<DraftResult> {
   const { project, result } = await loadProjectAndScore(id);
   const reports = await listVerifiedReportsByProjectId(id);
-  const payload = buildPayload(project, result, 'draft', targetInstitution, reports);
+  const rab = await getProjectRabItems(id);
+  const payload = buildPayload(project, result, 'draft', targetInstitution, reports, rab.items);
 
   try {
     const output = (await callLlmService(payload)) as LlmDraftOutput;

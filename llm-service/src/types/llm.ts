@@ -15,6 +15,17 @@ export interface InputIndicator {
   [key: string]: unknown;
 }
 
+export interface InputRabItem {
+  uraian?: string | null;
+  satuan?: string | null;
+  volume?: string | null;
+  harga_satuan?: string | null;
+  harga_acuan?: string | null;
+  total?: string | null;
+  deviasi_pct?: string | null;
+  [key: string]: unknown;
+}
+
 export interface InputProyek {
   id?: string;
   nama?: string;
@@ -40,6 +51,7 @@ export interface LlmGenerateRequest {
   proyek?: InputProyek;
   skor?: InputSkor;
   indikator?: InputIndicator[];
+  rab_items?: InputRabItem[];
   dimensi_data_belum_cukup?: string[];
   laporan_terverifikasi?: Array<Record<string, unknown>>;
   tujuan_pembaca?: string;
@@ -53,6 +65,7 @@ export const GenerateInputSchema = z
     proyek: z.record(z.string(), z.unknown()).optional(),
     skor: z.record(z.string(), z.unknown()).optional(),
     indikator: z.array(z.record(z.string(), z.unknown())).optional(),
+    rab_items: z.array(z.record(z.string(), z.unknown())).optional(),
     dimensi_data_belum_cukup: z.array(z.string()).optional(),
     laporan_terverifikasi: z.array(z.record(z.string(), z.unknown())).optional(),
     tujuan_pembaca: z.string().optional(),
@@ -69,8 +82,8 @@ export const LembagaSchema = z.enum([
 
 export const TemuanSchema = z.object({
   kode_aturan: z.string().min(1),
-  penjelasan: z.string().min(1).max(300),
-  arti_bagi_warga: z.string().min(1).max(200),
+  penjelasan: z.string().min(1).max(400),
+  arti_bagi_warga: z.string().min(1).max(250),
 });
 
 export const SaranTindakLanjutSchema = z.object({
@@ -80,7 +93,7 @@ export const SaranTindakLanjutSchema = z.object({
 
 export const OutputSchema = z.object({
   ringkasan: z.string().min(1).max(400),
-  temuan: z.array(TemuanSchema).min(1).max(6),
+  temuan: z.array(TemuanSchema).min(1),
   keterbatasan: z.array(z.string()),
   saran_tindak_lanjut: z.array(SaranTindakLanjutSchema),
   penafian: z.string().min(1),
@@ -92,15 +105,15 @@ export type Lembaga = z.infer<typeof LembagaSchema>;
 /** Skema keluaran T2 (draf laporan tindak lanjut), SRS 6.5. */
 export const UraianIndikatorSchema = z.object({
   kode_aturan: z.string().min(1),
-  penjelasan: z.string().min(1).max(300),
-  arti_bagi_warga: z.string().min(1).max(200),
+  penjelasan: z.string().min(1).max(400),
+  arti_bagi_warga: z.string().min(1).max(250),
 });
 
 export const DraftOutputSchema = z.object({
   kepada: z.string().min(1),
   perihal: z.string().min(1),
   pembuka: z.string().min(1),
-  uraian_indikator: z.array(UraianIndikatorSchema).min(1).max(6),
+  uraian_indikator: z.array(UraianIndikatorSchema).min(1),
   permohonan: z.string().min(1),
   penutup: z.string().min(1),
   penafian: z.string().min(1),

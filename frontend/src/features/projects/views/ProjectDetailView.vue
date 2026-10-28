@@ -144,7 +144,7 @@
     <section class="card soft-card rounded-md">
       <div class="card-body">
         <h2 class="fs-5 fw-bold">Enam dimensi indikator risiko</h2>
-        <p class="muted">Kerangka penilaian risiko AliranTerang untuk memantau integritas pengadaan infrastruktur.</p>
+        <p class="muted">Kerangka penilaian risiko Clearsight untuk memantau integritas pengadaan infrastruktur.</p>
         <ul class="list-group list-group-flush plain mb-0">
           <li v-for="d in dimensions" :key="d.name" class="list-group-item d-flex justify-content-between gap-3 px-0 py-3 small">
             <b>{{ d.name }}</b><span>{{ d.weight }}% bobot</span>

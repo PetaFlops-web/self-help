@@ -10,7 +10,7 @@ import {
   ValidationError,
 } from './validation.js';
 
-const MAX_ATTEMPTS = 2; // satu percobaan + satu percobaan ulang (LLM-06)
+const MAX_ATTEMPTS = 2; 
 
 type Tugas = 'explain' | 'draft';
 

@@ -188,7 +188,7 @@
             </li>
             <li>
               <span class="step-no">2</span>
-              <div><strong>Investigasi Admin</strong><small>Laporan diverifikasi oleh tim AliranTerang</small></div>
+              <div><strong>Investigasi Admin</strong><small>Laporan diverifikasi oleh tim Clearsight</small></div>
             </li>
             <li>
               <span class="step-no">3</span>
@@ -202,10 +202,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { reportsApi } from '@/services/api/reports.api'
 import { useProjectsStore } from '@/stores/projects'
 
+const route = useRoute()
+const router = useRouter()
 const MAX_FILE_BYTES = 10 * 1024 * 1024 // 10MB per berkas
 const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'mp4']
 const MAX_OPTIONS = 50
@@ -340,10 +343,15 @@ async function submit() {
   sending.value = true
   try {
     const result = await reportsApi.create(form)
+    const trackingCode = result?.trackingCode || result?.code || result?.tiket
     setMessage(
       'success',
-      result?.trackingCode ? `Laporan terkirim. Kode pelacakan: ${result.trackingCode}` : 'Laporan terkirim.',
+      trackingCode ? `Laporan terkirim. Kode pelacakan: ${trackingCode}` : 'Laporan terkirim.',
     )
+    if (trackingCode) {
+      router.push({ path: '/lacak-laporan', query: { code: trackingCode } })
+      return
+    }
     form.title = ''
     form.projectId = ''
     form.description = ''
@@ -369,8 +377,28 @@ async function submit() {
 }
 
 
-onMounted(() => {
-  if (!projectsStore.projects.length) projectsStore.fetchProjects()
+async function applyQueryParams() {
+  const q = route.query
+  if (!q?.description) return
+
+  if (q.title && typeof q.title === 'string') {
+    form.title = q.title
+  }
+  if (q.category && categories.some((c) => c.value === q.category)) {
+    form.category = q.category
+  }
+  if (q.description && typeof q.description === 'string') {
+    form.description = q.description
+  }
+  if (q.projectId && typeof q.projectId === 'string') {
+    form.projectId = q.projectId
+    projectQuery.value = q.projectName && typeof q.projectName === 'string' ? q.projectName : ''
+  }
+}
+
+onMounted(async () => {
+  if (!projectsStore.projects.length) await projectsStore.fetchProjects()
+  await applyQueryParams()
 })
 </script>
 

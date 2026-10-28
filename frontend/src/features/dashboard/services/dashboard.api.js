@@ -86,6 +86,7 @@ export const dashboardApi = {
       lng: toNumber(raw.lng) ?? toNumber(featured.lng) ?? 0,
       riskScore,
       riskLabel,
+      riskLevel: featured.riskLevel,
       disclaimer,
     }
 
@@ -109,10 +110,13 @@ export const dashboardApi = {
 
         return {
           id: p.id,
-          title: p.nama,
+          title: p.name,
           lat: (toNumber(p.lat) ?? 0) + offsetLat,
           lng: (toNumber(p.lng) ?? 0) + offsetLng,
-          type: 'project'
+          type: 'project',
+          level: p.riskLevel,
+          riskScore: p.riskScore,
+          location: p.location,
         };
       })
 

@@ -17,6 +17,7 @@ export const mockDashboardData = {
     lng: 105.1833,
     riskScore: 69,
     riskLabel: 'Tinggi',
+    riskLevel: 'high',
     disclaimer: 'Data simulasi. Skor adalah indikator risiko untuk diperiksa, bukan bukti pelanggaran.',
   },
 

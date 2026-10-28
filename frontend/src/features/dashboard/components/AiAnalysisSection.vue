@@ -84,7 +84,9 @@
             </template>
           </article>
           <div class="d-flex flex-wrap gap-2 mt-3">
-            <button type="button" class="btn btn-orange flex-grow-1">Buat draf laporan</button>
+            <button type="button" class="btn btn-orange flex-grow-1" @click="createDraft" :disabled="draftLoading">
+              {{ draftLoading ? 'Menyiapkan draf...' : 'Buat draf laporan' }}
+            </button>
             <button type="button" class="btn btn-outline-dark flex-fill" @click="copyText">{{ copied ? 'Tersalin' : 'Salin' }}</button>
             <RouterLink class="btn btn-outline-dark flex-fill" to="/lapor">Teruskan</RouterLink>
           </div>
@@ -96,15 +98,69 @@
 
 <script setup>
 import { ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import RiskBadge from '@/components/ui/RiskBadge.vue'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import { useMinLoading } from '@/composables/useMinLoading'
 import { useDashboardData } from '../composables/useDashboardData'
+import { projectsApi } from '@/services/api'
 
-const { ai, loading } = useDashboardData()
+const { ai, loading, project } = useDashboardData()
 const showSkeleton = useMinLoading(loading)
+const router = useRouter()
 const copied = ref(false)
+const draftLoading = ref(false)
+
+async function createDraft() {
+  if (!project.value?.id) return
+  draftLoading.value = true
+  try {
+    const data = await projectsApi.draft(project.value.id)
+    const description = formatDraftText(data)
+    navigateToReport(description)
+  } catch (err) {
+    // Jika backend gagal, gunakan penjelasan AI yang sudah tersedia
+    navigateToReport(ai.explanation?.join('\n\n') || '')
+  } finally {
+    draftLoading.value = false
+  }
+}
+
+function formatDraftText(d) {
+  const lines = [
+    `Kepada: ${d.kepada || ''}`,
+    `Perihal: ${d.perihal || ''}`,
+    '',
+    d.pembuka || '',
+    '',
+    'Uraian indikator:',
+    ...(d.uraian_indikator || []).map((u) => `- ${u.kode_aturan}: ${u.penjelasan}\n  Arti bagi warga: ${u.arti_bagi_warga}`),
+    '',
+    `Permohonan: ${d.permohonan || ''}`,
+    '',
+    d.penutup || '',
+  ]
+  if (d.lampiran_disarankan?.length) {
+    lines.push('', 'Lampiran yang disarankan:', ...d.lampiran_disarankan.map((l) => `- ${l}`))
+  }
+  lines.push('', d.penafian || '')
+  return lines.join('\n')
+}
+
+function navigateToReport(description) {
+  const title = `Draf laporan tindak lanjut - ${project.value.name || ''}`.trim()
+  router.push({
+    path: '/lapor',
+    query: {
+      projectId: project.value.id,
+      projectName: project.value.name || '',
+      title,
+      category: 'fund_flow',
+      description,
+    },
+  })
+}
+
 async function copyText() {
   try {
     await navigator.clipboard.writeText(ai.explanation.join('\n\n'))

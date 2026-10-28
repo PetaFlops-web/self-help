@@ -9,7 +9,6 @@ import { findForbiddenPhrases } from './forbidden-phrases.js';
 export const STANDARD_DISCLAIMER =
   'Ini indikator risiko untuk diperiksa, bukan bukti pelanggaran atau kesimpulan hukum.';
 
-/** Galat validasi keluaran LLM; dipetakan ke HTTP 422 oleh controller. */
 export class ValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -17,7 +16,6 @@ export class ValidationError extends Error {
   }
 }
 
-/** Galat provider/koneksi LLM; dipetakan ke HTTP 503 oleh controller. */
 export class ProviderError extends Error {
   constructor(message: string) {
     super(message);
@@ -25,14 +23,12 @@ export class ProviderError extends Error {
   }
 }
 
-/** Mengubah teks mentah LLM menjadi objek JSON (toleran markdown fence). */
 export function parseLlmJson(raw: string): unknown {
   let text = raw.trim();
 
   const fence = text.match(/^```(?:json)?\s*([\s\S]*?)```$/);
   if (fence) text = fence[1].trim();
 
-  // Bila model membungkus dengan teks sebelum/sesudah JSON, ambil bagian JSON.
   if (!text.startsWith('{')) {
     const start = text.indexOf('{');
     const end = text.lastIndexOf('}');
@@ -61,24 +57,18 @@ function ensurePenafian(output: LlmOutput): LlmOutput {
   };
 }
 
-// ---------- Pemeriksaan angka (SRS 6.7 langkah 3, LLM-05) ----------
-
-/** Pola angka yang toleran terhadap pemisah ribuan/desimal (mis. 6.980.867.932, 99,5). */
 const NUMBER_RE = /\d+(?:[.,]\d+)*/g;
 
-/** Tanda digit sebuah angka (pemisah dihapus) agar "6.980.867.932" == "6980867932". */
 function digitSignature(token: string): string {
   return token.replace(/[^0-9]/g, '');
 }
 
-/** Nilai numerik token; >1 pemisah dianggap ribuan, 1 pemisah dianggap desimal. */
 function numericValue(token: string): number | null {
   const seps = (token.match(/[.,]/g) ?? []).length;
   const n = seps > 1 ? Number(token.replace(/[.,]/g, '')) : Number(token.replace(',', '.'));
   return Number.isFinite(n) ? n : null;
 }
 
-/** Mengumpulkan tanda digit semua angka yang muncul di masukan (nilai angka maupun angka di dalam string). */
 export function collectNumbers(input: unknown): Set<string> {
   const set = new Set<string>();
   const walk = (v: unknown): void => {
@@ -98,11 +88,6 @@ export function collectNumbers(input: unknown): Set<string> {
   return set;
 }
 
-/**
- * Mencari angka pada teks yang TIDAK ada di masukan.
- * Angka di bawah 10 selalu diizinkan karena lazim muncul pada kode aturan
- * (mis. "D2-01") dan nomor urut, sehingga tidak menimbulkan salah tolak.
- */
 export function findUnknownNumbers(text: string, allowed: Set<string>): string[] {
   const unknown: string[] = [];
   for (const m of text.match(NUMBER_RE) ?? []) {
@@ -118,15 +103,6 @@ export interface ValidateOptions {
   allowedNumbers: Set<string>;
 }
 
-/**
- * Validasi lengkap keluaran LLM (SRS 6.7):
- * 1) JSON valid + sesuai skema 6.5 (Zod),
- * 2) kode_aturan ada di masukan (item tak cocok dibuang; kosong = tolak),
- * 3) angka di teks harus ada di masukan,
- * 5) penafian wajib memuat "bukan bukti" (ditambahkan bila absen).
- *
- * Langkah 4 (frasa terlarang) dilakukan terpisah via checkForbiddenPhrases.
- */
 export function validateOutput(
   raw: string,
   opts: ValidateOptions,
@@ -149,6 +125,15 @@ export function validateOutput(
     throw new ValidationError('Semua temuan memiliki kode_aturan yang tidak ada di masukan');
   }
 
+  // Pastikan jumlah temuan tidak melebihi batas yang dijanjikan (maks 6)
+  output.temuan = output.temuan.slice(0, 6);
+
+  // Pastikan tiap teks tidak melebihi batas skema
+  for (const t of output.temuan) {
+    if (t.penjelasan.length > 400) t.penjelasan = t.penjelasan.slice(0, 400);
+    if (t.arti_bagi_warga.length > 250) t.arti_bagi_warga = t.arti_bagi_warga.slice(0, 250);
+  }
+
   const unknown = findUnknownNumbers(JSON.stringify(output), opts.allowedNumbers);
   if (unknown.length > 0) {
     throw new ValidationError(
@@ -161,7 +146,6 @@ export function validateOutput(
   return output;
 }
 
-/** Langkah 4 SRS 6.7: tolak keluaran yang memuat frasa terlarang. */
 export function checkForbiddenPhrases(output: unknown): void {
   const text = JSON.stringify(output);
   const found = findForbiddenPhrases(text);
@@ -170,10 +154,6 @@ export function checkForbiddenPhrases(output: unknown): void {
   }
 }
 
-/**
- * Validasi lengkap keluaran T2 (draf laporan, SRS 6.7) — sama dengan T1,
- * tetapi memakai skema 6.5 T2 dan menyaring `uraian_indikator`.
- */
 export function validateDraftOutput(raw: string, opts: ValidateOptions): DraftOutput {
   const parsed = parseLlmJson(raw);
 
@@ -196,6 +176,15 @@ export function validateDraftOutput(raw: string, opts: ValidateOptions): DraftOu
   };
   if (output.uraian_indikator.length === 0) {
     throw new ValidationError('Semua uraian_indikator memiliki kode_aturan yang tidak ada di masukan');
+  }
+
+  // Pastikan jumlah uraian indikator tidak melebihi batas yang dijanjikan (maks 6)
+  output.uraian_indikator = output.uraian_indikator.slice(0, 6);
+
+  // Pastikan tiap teks tidak melebihi batas skema
+  for (const u of output.uraian_indikator) {
+    if (u.penjelasan.length > 400) u.penjelasan = u.penjelasan.slice(0, 400);
+    if (u.arti_bagi_warga.length > 250) u.arti_bagi_warga = u.arti_bagi_warga.slice(0, 250);
   }
 
   const unknown = findUnknownNumbers(JSON.stringify(output), opts.allowedNumbers);

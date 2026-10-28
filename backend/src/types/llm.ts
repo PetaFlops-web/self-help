@@ -26,6 +26,16 @@ export interface LlmIndicatorInput {
   tanggal_data?: string;
 }
 
+export interface LlmRabItemInput {
+  uraian: string | null;
+  satuan: string | null;
+  volume: string | null;
+  harga_satuan: string | null;
+  harga_acuan: string | null;
+  total: string | null;
+  deviasi_pct: string | null;
+}
+
 /** Payload yang dikirim ke POST /internal/generate (SRS 6.4). */
 export interface LlmGeneratePayload {
   versi_prompt: string;
@@ -37,6 +47,7 @@ export interface LlmGeneratePayload {
     dimensi: Record<string, number | null>;
   };
   indikator: LlmIndicatorInput[];
+  rab_items: LlmRabItemInput[];
   dimensi_data_belum_cukup: string[];
   laporan_terverifikasi: Array<Record<string, unknown>>;
   tujuan_pembaca: string;

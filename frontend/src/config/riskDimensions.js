@@ -1,5 +1,5 @@
 /**
- * Bobot 6 dimensi indikator risiko proyek AliranTerang.
+ * Bobot 6 dimensi indikator risiko proyek Clearsight.
  */
 export const RISK_DIMENSIONS = [
   { name: 'D1 — RAB', weight: 15 },

@@ -1,5 +1,4 @@
 import pool from '../config/database.js';
-/** Daftar laporan warga berstatus Diverifikasi untuk proyek (LLM-02). */
 export async function listVerifiedReportsByProjectId(projectId) {
     const res = await pool.query(`SELECT tiket, kategori, keterangan
        FROM laporan_warga
@@ -12,7 +11,6 @@ export async function listVerifiedReportsByProjectId(projectId) {
         ringkasan: wrapReporterData(r.keterangan),
     }));
 }
-/** Daftar laporan warga untuk ditampilkan di detail proyek (20 item terbaru). */
 export async function listReportsByProjectId(projectId, limit = 20) {
     const res = await pool.query(`SELECT tiket, kategori, status, dibuat_pada
        FROM laporan_warga
@@ -21,17 +19,12 @@ export async function listReportsByProjectId(projectId, limit = 20) {
       LIMIT $2`, [projectId, limit]);
     return res.rows;
 }
-/** Total jumlah laporan warga untuk satu proyek. */
 export async function countReportsByProjectId(projectId) {
     const res = await pool.query(`SELECT COUNT(*)::int AS count
        FROM laporan_warga
       WHERE proyek_id = $1`, [projectId]);
     return res.rows[0]?.count ?? 0;
 }
-/**
- * Teks pelapor dibungkus sebagai data tak tepercaya sebelum dikirim ke LLM
- * (SRS 6.8): tag/instruksi dibersihkan dan dibatasi 500 karakter.
- */
 function wrapReporterData(keterangan) {
     if (!keterangan)
         return null;
@@ -42,17 +35,30 @@ function wrapReporterData(keterangan) {
         .slice(0, 500);
     return cleaned.length > 0 ? `<data_pelapor>${cleaned}</data_pelapor>` : null;
 }
-function toPublicView(row) {
+function toPublicView(row, projectDetail) {
+    const showKeterangan = row.status === 'Diverifikasi' || row.status === 'Ditolak';
     return {
         tiket: row.tiket,
         proyek_id: row.proyek_id,
         kategori: row.kategori,
         status: row.status,
+        keterangan: showKeterangan ? row.keterangan : null,
         catatan_verifikator: row.catatan_verifikator,
         alasan_tolak: row.alasan_tolak,
         dibuat_pada: row.dibuat_pada,
         diubah_pada: row.diubah_pada,
+        proyek: projectDetail ?? null,
     };
+}
+export async function getProjectDetailForReport(projectId) {
+    if (!projectId)
+        return null;
+    const res = await pool.query(`SELECT p.nama,
+            w.nama AS kabupaten
+       FROM proyek p
+       LEFT JOIN wilayah w ON w.kode_bps = p.kode_bps
+      WHERE p.id = $1`, [projectId]);
+    return res.rows[0] ?? null;
 }
 function generateTiket() {
     const ts = Date.now().toString(36).toUpperCase();
@@ -74,16 +80,19 @@ export async function createReport(input) {
         input.foto_urls ?? null,
         input.anonim ?? false,
     ]);
-    return toPublicView(res.rows[0]);
+    const projectDetail = await getProjectDetailForReport(input.proyek_id);
+    return toPublicView(res.rows[0], projectDetail);
 }
 export async function getReportByTiket(tiket) {
     const res = await pool.query(`SELECT tiket, proyek_id, kategori, keterangan, lat, lng, foto_urls, anonim,
             status, alasan_tolak, catatan_verifikator, dibuat_pada, diubah_pada
        FROM laporan_warga
       WHERE tiket = $1`, [tiket]);
-    return res.rows[0] ? toPublicView(res.rows[0]) : null;
+    if (!res.rows[0])
+        return null;
+    const projectDetail = await getProjectDetailForReport(res.rows[0].proyek_id);
+    return toPublicView(res.rows[0], projectDetail);
 }
-/** Ambil laporan lengkap (termasuk proyek_id) untuk proses verifikasi. */
 export async function getReportInternal(tiket) {
     const res = await pool.query(`SELECT tiket, proyek_id, kategori, keterangan, lat, lng, foto_urls, anonim,
             status, alasan_tolak, catatan_verifikator, dibuat_pada, diubah_pada
@@ -99,5 +108,8 @@ export async function verifyReport(tiket, input) {
             diubah_pada = now()
       WHERE tiket = $1
      RETURNING *`, [tiket, input.status, input.catatan_verifikator ?? null, input.alasan_tolak ?? null]);
-    return res.rows[0] ? toPublicView(res.rows[0]) : null;
+    if (!res.rows[0])
+        return null;
+    const projectDetail = await getProjectDetailForReport(res.rows[0].proyek_id);
+    return toPublicView(res.rows[0], projectDetail);
 }

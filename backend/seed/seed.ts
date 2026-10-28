@@ -192,6 +192,98 @@ interface ScenarioParams {
   laporan: number;
 }
 
+interface RabTemplate {
+  uraian: string;
+  satuan: string;
+  baseVolume: number;
+}
+
+const RAB_TEMPLATES: RabTemplate[] = [
+  { uraian: 'Pekerjaan persiapan dan pengamanan lokasi', satuan: 'ls', baseVolume: 1 },
+  { uraian: 'Galian tanah dan urugan padat', satuan: 'm3', baseVolume: 250 },
+  { uraian: 'Beton struktur (ready mix + bekisting)', satuan: 'm3', baseVolume: 80 },
+  { uraian: 'Pemasangan material utama (aspal/pipa/batu)', satuan: 'm', baseVolume: 1000 },
+  { uraian: 'Pekerjaan finishing dan perapihan', satuan: 'm2', baseVolume: 500 },
+  { uraian: 'Pengawasan teknis dan dokumentasi', satuan: 'ls', baseVolume: 1 },
+];
+
+function pseudoRandom(seed: number, index: number): number {
+  const x = Math.sin(seed * 9999 + index * 9973) * 10000;
+  return x - Math.floor(x);
+}
+
+function splitAmount(total: number, count: number, seed: number): number[] {
+  const weights = Array.from({ length: count }, (_, i) => 0.6 + pseudoRandom(seed, i) * 0.8);
+  const weightSum = weights.reduce((a, b) => a + b, 0);
+  const portions = weights.map((w) => Math.floor(total * (w / weightSum)));
+  const remainder = total - portions.reduce((a, b) => a + b, 0);
+  if (remainder !== 0) portions[portions.length - 1] += remainder;
+  return portions;
+}
+
+function buildRabSchedule(referenceTotal: number, risk: RiskLevel, projectNum: number): Array<{ uraian: string; satuan: string; volume: number; harga_satuan: number; harga_acuan: number; kode_acuan: string }> {
+  const count = 3 + (projectNum % 3); // 3, 4, atau 5 item
+  const itemDeviations = [5, 0, -3, -7, -10];
+  const baseAcuanPct = risk === 'tinggi' ? 22 : risk === 'perlu_perhatian' ? 14 : -5;
+  const portions = splitAmount(referenceTotal, count, projectNum);
+
+  return Array.from({ length: count }, (_, i) => {
+    const tpl = RAB_TEMPLATES[i % RAB_TEMPLATES.length];
+    const deviationPct = baseAcuanPct + itemDeviations[i];
+    const hargaAcuan = Math.max(1, Math.round(portions[i] / tpl.baseVolume));
+    const hargaSatuan = Math.max(1, Math.round(hargaAcuan * (1 + deviationPct / 100)));
+    return {
+      uraian: `${tpl.uraian} (paket ${projectNum}.${i + 1})`,
+      satuan: tpl.satuan,
+      volume: tpl.baseVolume,
+      harga_satuan: hargaSatuan,
+      harga_acuan: hargaAcuan,
+      kode_acuan: `HAC-${projectNum}-${i + 1}`,
+    };
+  });
+}
+
+function buildPaymentSchedule(cairPct: number, status: SeedProject['status'], tahun: number): Array<{ termin_ke: number; tanggal: string; persen: number }> {
+  const schedules: number[] = [];
+  if (status === 'selesai') {
+    if (cairPct >= 60) {
+      schedules.push(30, 30, cairPct - 60);
+    } else {
+      schedules.push(Math.round(cairPct / 2), cairPct - Math.round(cairPct / 2));
+    }
+  } else {
+    schedules.push(Math.round(cairPct / 2), cairPct - Math.round(cairPct / 2));
+  }
+
+  const baseDate = new Date(`${tahun}-01-15T00:00:00`);
+  return schedules.map((persen, i) => {
+    const d = new Date(baseDate);
+    d.setMonth(d.getMonth() + (i + 1) * 3);
+    return {
+      termin_ke: i + 1,
+      tanggal: d.toISOString().split('T')[0],
+      persen,
+    };
+  });
+}
+
+function buildProgressSchedule(fisikPct: number, status: SeedProject['status'], tahun: number): Array<{ tanggal: string; persen: number }> {
+  const count = status === 'selesai' ? 3 : 2;
+  const step = Math.round(fisikPct / count);
+  const persens = Array.from({ length: count }, (_, i) => Math.min(fisikPct, step * (i + 1)));
+  persens[persens.length - 1] = fisikPct;
+
+  const baseDate = new Date(`${tahun}-01-15T00:00:00`);
+  return persens.map((persen, i) => {
+    const d = new Date(baseDate);
+    d.setMonth(d.getMonth() + (i + 1) * 3 + 1);
+    return {
+      tanggal: d.toISOString().split('T')[0],
+      persen,
+    };
+  });
+}
+
 const RISK_BY_PROJECT: Record<number, RiskLevel> = {
   1: 'tinggi', 2: 'tinggi', 3: 'tinggi', 4: 'tinggi',
   5: 'perlu_perhatian', 6: 'perlu_perhatian', 7: 'perlu_perhatian', 8: 'perlu_perhatian',
@@ -315,21 +407,22 @@ async function run(): Promise<void> {
     );
 
     const referenceTotal = Math.round(hps / (1 + scenario.acuanMargin));
-    const referencePriceCode = `HAC-${p.n}`;
-    await pool.query(
-      `INSERT INTO harga_acuan (kode, uraian, satuan, harga, kode_bps, tahun, source_id, is_dummy)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,true)
-       ON CONFLICT (kode) DO UPDATE SET harga = EXCLUDED.harga`,
-      [referencePriceCode, `Acuan dummy proyek ${p.n}`, 'paket', 1, p.kode_bps, p.tahun, 'SRC-SEED'],
-    );
-    await pool.query(
-      `INSERT INTO rab_item (proyek_id, uraian, satuan, volume, harga_satuan, kode_harga_acuan, source_id, is_dummy)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,false)`,
-      [
-        uuid(p.n), `RAB dummy proyek ${p.n}`, 'paket', referenceTotal, 1,
-        referencePriceCode, 'SRC-SEED',
-      ],
-    );
+
+    // Seed harga acuan & item RAB yang lebih realistis (3-5 item per proyek)
+    const rabSchedule = buildRabSchedule(referenceTotal, risk, p.n);
+    for (const item of rabSchedule) {
+      await pool.query(
+        `INSERT INTO harga_acuan (kode, uraian, satuan, harga, kode_bps, tahun, source_id, is_dummy)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,true)
+         ON CONFLICT (kode) DO UPDATE SET harga = EXCLUDED.harga`,
+        [item.kode_acuan, item.uraian, item.satuan, item.harga_acuan, p.kode_bps, p.tahun, 'SRC-SEED'],
+      );
+      await pool.query(
+        `INSERT INTO rab_item (proyek_id, uraian, satuan, volume, harga_satuan, kode_harga_acuan, source_id, is_dummy)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,false)`,
+        [uuid(p.n), item.uraian, item.satuan, item.volume, item.harga_satuan, item.kode_acuan, 'SRC-SEED'],
+      );
+    }
 
     // Tender dummy agar D2 & D6 bisa dihitung
     const announcementDate = addDays(rupAnnouncementDate, scenario.hari_rup);
@@ -343,16 +436,25 @@ async function run(): Promise<void> {
       ],
     );
 
-    await pool.query(
-      `INSERT INTO pembayaran (proyek_id, termin_ke, tanggal, jumlah, persen_kontrak, source_id, is_dummy)
-       VALUES ($1,$2,$3,$4,$5,$6,false)`,
-      [uuid(p.n), 1, `${p.tahun}-06-01`, Math.round(hps * (scenario.cair / 100)), scenario.cair, 'SRC-SEED'],
-    );
-    await pool.query(
-      `INSERT INTO progres (proyek_id, tanggal, persen_fisik, sumber, source_id, is_dummy)
-       VALUES ($1,$2,$3,$4,$5,false)`,
-      [uuid(p.n), `${p.tahun}-06-01`, scenario.fisik, 'verifikasi lapangan', 'SRC-SEED'],
-    );
+    // Seed pembayaran termin (2-3 tahap) agar aliran dana & stages lebih realistis
+    const paymentSchedule = buildPaymentSchedule(scenario.cair, p.status, p.tahun);
+    for (const term of paymentSchedule) {
+      await pool.query(
+        `INSERT INTO pembayaran (proyek_id, termin_ke, tanggal, jumlah, persen_kontrak, source_id, is_dummy)
+         VALUES ($1,$2,$3,$4,$5,$6,false)`,
+        [uuid(p.n), term.termin_ke, term.tanggal, Math.round(contractValue * (term.persen / 100)), term.persen, 'SRC-SEED'],
+      );
+    }
+
+    // Seed riwayat progres fisik (2-3 snapshot)
+    const progressSchedule = buildProgressSchedule(scenario.fisik, p.status, p.tahun);
+    for (const prog of progressSchedule) {
+      await pool.query(
+        `INSERT INTO progres (proyek_id, tanggal, persen_fisik, sumber, source_id, is_dummy)
+         VALUES ($1,$2,$3,$4,$5,false)`,
+        [uuid(p.n), prog.tanggal, prog.persen, 'verifikasi lapangan', 'SRC-SEED'],
+      );
+    }
 
     for (let i = 0; i < scenario.laporan; i += 1) {
       await pool.query(

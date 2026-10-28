@@ -1377,12 +1377,26 @@ const swaggerSpec = {
                         type: 'string',
                         enum: ['Dilaporkan', 'Diverifikasi', 'Ditolak'],
                     },
+                    keterangan: {
+                        type: 'string',
+                        nullable: true,
+                        description: 'Keterangan pelapor; hanya muncul bila status Diverifikasi atau Ditolak',
+                    },
                     catatan_verifikator: { type: 'string', nullable: true },
                     alasan_tolak: { type: 'string', nullable: true },
                     dibuat_pada: { type: 'string', format: 'date-time', nullable: true },
                     diubah_pada: { type: 'string', format: 'date-time', nullable: true },
+                    proyek: {
+                        type: 'object',
+                        nullable: true,
+                        description: 'Detail proyek terkait',
+                        properties: {
+                            nama: { type: 'string', nullable: true, example: 'Pembangunan Embung Kemiling' },
+                            kabupaten: { type: 'string', nullable: true, example: 'Kota Bandar Lampung' },
+                        },
+                    },
                 },
-                required: ['tiket', 'status'],
+                required: ['tiket', 'status', 'keterangan', 'proyek'],
             },
             ReportResponse: {
                 type: 'object',

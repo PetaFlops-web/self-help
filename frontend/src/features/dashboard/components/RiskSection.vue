@@ -5,28 +5,33 @@
         <h2>Profil risiko</h2>
         <p class="sub">Enam dimensi, makin jauh dari pusat makin berisiko</p>
 
-        <svg class="radar" viewBox="0 0 400 360" role="img" aria-label="Diagram radar enam dimensi risiko">
-          <polygon v-for="r in rings" :key="r" :points="ringPoints(r)" fill="none" stroke="#ffffff" stroke-opacity=".14" />
-          <line v-for="(_, i) in dimensions" :key="`a${i}`" :x1="cx" :y1="cy" :x2="pt(i, R).x" :y2="pt(i, R).y" stroke="#fff" stroke-opacity=".1" />
-          <template v-if="!showSkeleton">
+        <template v-if="showSkeleton">
+          <SkeletonBlock width="100%" height="260px" radius="18px" class="my-2" />
+          <div class="foot d-flex flex-wrap align-items-center gap-2">
+            <SkeletonBlock width="14px" height="14px" radius="50%" />
+            <SkeletonBlock width="160px" height="15px" radius="3px" />
+          </div>
+        </template>
+        <template v-else>
+          <svg class="radar" viewBox="0 0 400 360" role="img" aria-label="Diagram radar enam dimensi risiko">
+            <polygon v-for="r in rings" :key="r" :points="ringPoints(r)" fill="none" stroke="#ffffff" stroke-opacity=".14" />
+            <line v-for="(_, i) in dimensions" :key="`a${i}`" :x1="cx" :y1="cy" :x2="pt(i, R).x" :y2="pt(i, R).y" stroke="#fff" stroke-opacity=".1" />
             <polygon :points="dataPoints" fill="#ff6a2b" fill-opacity=".55" stroke="#ffb02e" stroke-width="2" stroke-linejoin="round" />
             <circle v-for="(d, i) in dimensions" :key="`p${i}`" :cx="pt(i, scale(d.value)).x" :cy="pt(i, scale(d.value)).y" r="5" fill="#111" :stroke="dotColor(d.value)" stroke-width="2.5" />
-          </template>
-          <g v-for="l in labels" :key="l.label" :text-anchor="l.anchor" font-weight="700">
-            <text :x="l.x" :y="l.y" fill="#fff" font-size="12">{{ l.label }}</text>
-            <text v-if="!showSkeleton" :x="l.x" :y="l.y + 17" fill="#ffb02e" font-size="14" font-weight="800">{{ l.value }}</text>
-          </g>
-        </svg>
-
-        <div class="foot d-flex flex-wrap align-items-center gap-2">
-          <span class="dot" />
-          <b class="flex-grow-1 d-inline-flex align-items-center gap-1">
-            <span>Tinggi:</span>
-            <SkeletonBlock v-if="showSkeleton" width="22px" height="15px" radius="3px" class="bg-dark-subtle" />
-            <span v-else>{{ highCount }}</span>
-            <span>dimensi di atas 66</span>
-          </b>
-        </div>
+            <g v-for="l in labels" :key="l.label" :text-anchor="l.anchor" font-weight="700">
+              <text :x="l.x" :y="l.y" fill="#fff" font-size="12">{{ l.label }}</text>
+              <text :x="l.x" :y="l.y + 17" fill="#ffb02e" font-size="14" font-weight="800">{{ l.value }}</text>
+            </g>
+          </svg>
+          <div class="foot d-flex flex-wrap align-items-center gap-2">
+            <span class="dot" />
+            <b class="flex-grow-1 d-inline-flex align-items-center gap-1">
+              <span>Tinggi:</span>
+              <span>{{ highCount }}</span>
+              <span>dimensi di atas 66</span>
+            </b>
+          </div>
+        </template>
       </article>
     </div>
 
@@ -34,14 +39,25 @@
       <h2 class="section-title">Indikator yang terdeteksi</h2>
       <p class="section-sub">Diurutkan dari tingkat risiko tertinggi</p>
       <ul class="list-group list-group-flush plain indicators mt-3">
-        <li v-for="(it, i) in indicators" :key="it.key" class="list-group-item d-flex flex-wrap align-items-center gap-3 px-3 py-3" :class="{ first: i === 0 }">
-          <span class="ico" :class="`ico-${it.level}`">{{ it.icon }}</span>
-          <div class="txt"><b>{{ it.title }}</b><p>{{ it.description }}</p></div>
-          <SkeletonBlock v-if="showSkeleton" width="70px" height="14px" radius="4px" />
-          <span v-else class="meta text-nowrap">{{ it.meta }}</span>
-          <SkeletonBlock v-if="showSkeleton" width="78px" height="26px" radius="999px" />
-          <RiskBadge v-else :level="it.level" :label="it.label" />
-        </li>
+        <template v-if="showSkeleton">
+          <li v-for="i in 5" :key="i" class="list-group-item d-flex flex-wrap align-items-center gap-3 px-3 py-3 skeleton-row">
+            <SkeletonBlock width="38px" height="38px" radius="50%" />
+            <div class="txt">
+              <SkeletonBlock width="60%" height="15px" radius="4px" />
+              <SkeletonBlock width="90%" height="12px" radius="4px" class="mt-2" />
+            </div>
+            <SkeletonBlock width="70px" height="14px" radius="4px" />
+            <SkeletonBlock width="78px" height="26px" radius="999px" />
+          </li>
+        </template>
+        <template v-else>
+          <li v-for="(it, i) in indicators" :key="it.key" class="list-group-item d-flex flex-wrap align-items-center gap-3 px-3 py-3" :class="{ first: i === 0 }">
+            <span class="ico" :class="`ico-${it.level}`">{{ it.icon }}</span>
+            <div class="txt"><b>{{ it.title }}</b><p>{{ it.description }}</p></div>
+            <span class="meta text-nowrap">{{ it.meta }}</span>
+            <RiskBadge :level="it.level" :label="it.label" />
+          </li>
+        </template>
       </ul>
     </div>
   </section>
@@ -94,6 +110,8 @@ const labels = computed(() =>
 .dot { width: 10px; height: 10px; border-radius: 50%; background: #ff4a2e; flex: none; }
 
 .indicators .list-group-item.first { background: var(--bg-soft); border-radius: var(--radius-sm); border-bottom-color: transparent; }
+.skeleton-row { align-items: center; }
+.skeleton-row .txt { flex: 1 1 260px; min-width: 0; }
 .ico { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; font-size: 13px; font-weight: 800; flex: none; }
 .ico-high { background: var(--red-soft); color: var(--red); }
 .ico-attention { background: var(--amber-soft); color: var(--amber); }

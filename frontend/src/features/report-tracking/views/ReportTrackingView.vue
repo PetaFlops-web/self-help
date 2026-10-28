@@ -51,7 +51,7 @@
         <div class="ticket-main">
           <span class="ticket-kicker">Nomor tiket</span>
           <strong class="ticket-code">{{ view.code }}</strong>
-          <span class="ticket-status"><i class="ticket-dot" aria-hidden="true"></i>{{ view.statusLabel }}</span>
+          <span class="ticket-status" :class="view.statusClass"><i class="ticket-dot" aria-hidden="true"></i>{{ view.statusLabel }}</span>
           <ul class="ticket-tags">
             <li v-for="t in view.tags" :key="t">{{ t }}</li>
           </ul>
@@ -146,8 +146,8 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import { useMinLoading } from '@/composables/useMinLoading'
 import { reportsApi } from '@/services/api/reports.api'
@@ -160,6 +160,7 @@ const result = ref(null)
 const copied = ref(false)
 const actionNote = ref('')
 const showSkeleton = useMinLoading(loading, { error: message, initial: false })
+const route = useRoute()
 
 // ---------- Konstanta tampilan ----------
 const STEP_LABELS = ['Dilaporkan', 'Diverifikasi', 'Diteruskan', 'Ditindaklanjuti', 'Selesai']
@@ -217,7 +218,9 @@ function safeUrl(u) {
  */
 function normalize(raw, fallbackCode) {
   const d = raw?.report ?? raw?.data ?? raw ?? {}
-  const rejected = REJECTED_STATUS.has(String(d.status ?? '').toLowerCase().trim())
+  const normalizedStatus = String(d.status ?? '').toLowerCase().trim()
+  const rejected = REJECTED_STATUS.has(normalizedStatus)
+  const verified = ['diverifikasi', 'verified', 'selesai', 'done', 'completed'].includes(normalizedStatus)
   // Laporan ditolak dianggap berhenti di tahap verifikasi
   const current = rejected ? 2 : Math.min(5, Math.max(1, stepOf(pick(d.step, d.currentStep, d.status)) || 1))
   const createdAtRaw = pick(d.createdAt, d.created_at, d.dibuat_pada)
@@ -293,6 +296,7 @@ function normalize(raw, fallbackCode) {
   return {
     code: String(pick(d.tiket, d.code, d.trackingCode, d.ticket, d.ticketNumber, fallbackCode)),
     current,
+    statusClass: rejected ? 'is-rejected' : verified ? 'is-verified' : 'is-pending',
     statusLabel: pick(d.statusLabel, rejected ? d.status : undefined) ?? STEP_LABELS[current - 1],
     updatedLabel: fmtDate(updatedAtRaw),
     tags,
@@ -349,6 +353,14 @@ function forward() {
   // TODO: backend belum menyediakan endpoint untuk meneruskan laporan ke pihak berwenang.
   actionNote.value = 'Fitur penerusan ke pihak berwenang belum tersedia.'
 }
+
+onMounted(() => {
+  const initialCode = route.query?.code
+  if (initialCode && typeof initialCode === 'string') {
+    code.value = initialCode
+    track()
+  }
+})
 </script>
 
 <style scoped>
@@ -495,6 +507,12 @@ function forward() {
   font-weight: 700;
 }
 .ticket-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff5a2b; }
+.ticket-status.is-verified { background: #e3f3ea; color: #1f7a4d; }
+.ticket-status.is-verified .ticket-dot { background: #34b36b; }
+.ticket-status.is-rejected { background: #fbe6e1; color: #b3321b; }
+.ticket-status.is-rejected .ticket-dot { background: #d6341e; }
+.ticket-status.is-pending { background: #fff7e6; color: #b67800; }
+.ticket-status.is-pending .ticket-dot { background: #f0a31a; }
 .ticket-tags { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 18px 0 0; padding: 0; list-style: none; }
 .ticket-tags li { padding: 5px 16px; border-radius: 999px; background: rgba(120, 35, 12, 0.5); font-size: 12.5px; line-height: 16px; font-weight: 700; }
 

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" role="img" aria-label="Clearsight">
+  <path d="M5 40Q40 4 75 40Q40 76 5 40z" fill="none" stroke="#14110f" stroke-width="5" stroke-linejoin="round"/>
+  <g fill="none" stroke-width="7" transform="rotate(-90 40 40)">
+    <circle cx="40" cy="40" r="15" stroke="#2a8a5a" stroke-dasharray="28 66.2"/>
+    <circle cx="40" cy="40" r="15" stroke="#f0a31a" stroke-dasharray="28 66.2" stroke-dashoffset="-31.4"/>
+    <circle cx="40" cy="40" r="15" stroke="#d6341e" stroke-dasharray="28 66.2" stroke-dashoffset="-62.8"/>
+  </g>
+  <circle cx="40" cy="40" r="5" fill="#14110f"/>
+</svg>

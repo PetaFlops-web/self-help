@@ -8,7 +8,6 @@ import type {
   VerifyReportInput,
 } from '../types/citizen-report.js';
 
-/** Daftar laporan warga berstatus Diverifikasi untuk proyek (LLM-02). */
 export async function listVerifiedReportsByProjectId(projectId: string): Promise<VerifiedReport[]> {
   const res = await pool.query<{ tiket: string; kategori: string | null; keterangan: string | null }>(
     `SELECT tiket, kategori, keterangan
@@ -26,7 +25,6 @@ export async function listVerifiedReportsByProjectId(projectId: string): Promise
   }));
 }
 
-/** Daftar laporan warga untuk ditampilkan di detail proyek (20 item terbaru). */
 export async function listReportsByProjectId(
   projectId: string,
   limit = 20,
@@ -42,7 +40,6 @@ export async function listReportsByProjectId(
   return res.rows;
 }
 
-/** Total jumlah laporan warga untuk satu proyek. */
 export async function countReportsByProjectId(projectId: string): Promise<number> {
   const res = await pool.query<{ count: number }>(
     `SELECT COUNT(*)::int AS count
@@ -53,10 +50,6 @@ export async function countReportsByProjectId(projectId: string): Promise<number
   return res.rows[0]?.count ?? 0;
 }
 
-/**
- * Teks pelapor dibungkus sebagai data tak tepercaya sebelum dikirim ke LLM
- * (SRS 6.8): tag/instruksi dibersihkan dan dibatasi 500 karakter.
- */
 function wrapReporterData(keterangan: string | null): string | null {
   if (!keterangan) return null;
   const cleaned = keterangan
@@ -86,7 +79,6 @@ function toPublicView(
   };
 }
 
-/** Ambil nama dan kabupaten proyek untuk ditampilkan di laporan publik. */
 export async function getProjectDetailForReport(
   projectId: string | null,
 ): Promise<{ nama: string | null; kabupaten: string | null } | null> {
@@ -143,7 +135,6 @@ export async function getReportByTiket(tiket: string): Promise<ReportPublicView 
   return toPublicView(res.rows[0], projectDetail);
 }
 
-/** Ambil laporan lengkap (termasuk proyek_id) untuk proses verifikasi. */
 export async function getReportInternal(tiket: string): Promise<CitizenReport | null> {
   const res = await pool.query<CitizenReport>(
     `SELECT tiket, proyek_id, kategori, keterangan, lat, lng, foto_urls, anonim,

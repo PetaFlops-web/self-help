@@ -115,6 +115,9 @@ Verifikasi: Matikan LLM Microservice, lalu jalankan curl -X POST .../explain ke 
 - [x] **6.3** `GET /api/projects/{id}` → detail proyek sekarang menyertakan `laporan_warga` dengan `total` count dan daftar `items` (maksimal 20 item terbaru, semua status).
   - **Verifikasi:** `curl /api/projects/{id}` menampilkan field `laporan_warga.total` dan `laporan_warga.items[]` dengan field `tiket`, `kategori`, `status`, `dibuat_pada`.
 
+- [x] **6.4** `GET /api/reports?tiket=...` → lacak laporan sekarang menampilkan `keterangan` (hanya jika status Diverifikasi/Ditolak) dan detail proyek (`nama`, `kabupaten`).
+  - **Verifikasi:** `curl /api/reports?tiket=...` mengembalikan `report.keterangan`, `report.proyek.nama`, dan `report.proyek.kabupaten`.
+
 ---
 
 ## Fase 7 — ETL Data Publik (prioritas S, bisa menyusul)
@@ -316,3 +319,42 @@ Ubah nama setiap `function`, `interface`, `type`, dan variabel lokal yang masih 
 
 - [x] **13.6** Perbarui dokumentasi Swagger bila ada referensi nama tipe/schema yang berubah.
   - **Verifikasi:** `curl http://localhost:3000/docs.json` tetap valid dan spesifikasi endpoint tidak rusak.
+
+---
+
+## Fase 14 — Perbaikan Prompt LLM dan Integrasi RAB
+
+Berdasarkan hasil uji coba penjelasan LLM, prompt perlu diperjelas agar keluaran lebih awam, terstruktur, dan tidak membuat RAB sebagai penentu risiko.
+
+- [x] **14.1** Tambahkan contoh pola penjelasan ke system prompt `llm-service/src/services/prompt.ts` agar LLM menghasilkan ringkasan dan temuan seperti contoh hasil yang diinginkan (gaya bahasa awam, kalimat pendek, pola "apa yang terlihat + angka + batas perhatian + wajar ditanyakan").
+  - **Verifikasi:** `npm run build` dan `npm test` di llm-service lolos.
+
+- [x] **14.2** Pastikan prompt tidak menganggap RAB sebagai pengambil keputusan awal: RAB items hanya bahan penjelasan tambahan untuk temuan D1/D2/D4 yang sudah tercantum; skor final dari DATA; jangan menghitung ulang.
+  - **Verifikasi:** prompt memuat aturan eksplisit di atas.
+
+- [x] **14.3** Backend mengirimkan `rab_items` ke llm-service pada payload `/explain` dan `/draft`.
+  - **Verifikasi:** payload backend ke `/internal/generate` memuat field `rab_items` dengan 3–5 item.
+
+- [x] **14.4** Tangani keluaran LLM yang menghasilkan lebih dari 6 temuan dengan memotong array ke 6 elemen setelah filter kode aturan, agar tidak gagal validasi skema.
+  - **Verifikasi:** uji validasi dengan 8 temuan berhasil dipotong menjadi 6; `npm test` lolos.
+
+- [x] **14.5** Perbaiki peta dashboard agar pin proyek di sekitar membaca data backend yang sudah dipetakan (\`name\`, \`riskLevel\`, \`riskScore\`, \`location\`) dan tidak menampilkan \`undefined\`.
+  - **Verifikasi:** `npm run build` frontend lolos; pin tooltip menampilkan nama, lokasi, dan label risiko proyek.
+
+- [x] **14.6** Klik pin proyek di peta akan memindahkan analisis dashboard ke proyek yang dipilih (memuat ulang data dashboard untuk proyek tersebut dan menyorot peta ke koordinat proyek baru).
+  - **Verifikasi:** klik pin proyek selain proyek utama memicu pembaruan seluruh dashboard; `npm run build` frontend lolos.
+
+- [x] **14.7** Sambungkan tombol "Buat draf laporan" pada dashboard ke backend `/projects/:id/draft`, lalu arahkan pengguna ke halaman **Lapor Warga** (`/lapor`) dengan field `title`, `projectId`, `projectName`, `category`, dan `description` sudah terisi dari draf hasil AI.
+  - **Verifikasi:** `npm run build` frontend lolos; klik tombol memicu pembuatan draf dan navigasi ke form laporan dengan isian awal.
+
+- [x] **14.8** Ganti logo dan nama brand frontend dari **AliranTerang** menjadi **Clearsight**: gunakan `clearsight-mark-light.svg` sebagai logo, perbarui judul halaman, teks navbar, dan seluruh referensi brand di frontend.
+  - **Verifikasi:** `npm run build` frontend lolos; tidak ada sisa teks "AliranTerang" di dalam folder `frontend`.
+
+- [x] **14.9** Perbaiki warna badge status pada halaman **Lacak Laporan** agar sesuai makna: `Diverifikasi`/`Selesai` hijau, `Ditolak` merah, status lain kuning/oranye.
+  - **Verifikasi:** `npm run build` frontend lolos; badge `ticket-status` sekarang memiliki class `is-verified`, `is-rejected`, atau `is-pending`.
+
+- [x] **14.10** Tambahkan skeleton loading untuk bagian **Profil risiko** dan **Indikator yang terdeteksi** di dashboard, sehingga tidak menampilkan data kosong saat data masih dimuat.
+  - **Verifikasi:** `npm run build` frontend lolos; `RiskSection.vue` menampilkan placeholder skeleton saat `showSkeleton` aktif.
+
+- [x] **14.11** Setelah laporan warga berhasil dikirim, arahkan ke halaman **Lacak Laporan** (`/lacak-laporan?code=...`) dan tampilkan skeleton loading saat data laporan sedang dimuat.
+  - **Verifikasi:** `npm run build` frontend lolos; `ReportTrackingView` otomatis melacak laporan dari query `code` dan menampilkan skeleton selama fetching.
