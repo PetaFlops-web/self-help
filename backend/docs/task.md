@@ -415,3 +415,13 @@ Keputusan owner: (1) media dapat difilter Diverifikasi vs Belum Diverifikasi unt
 
 - [ ] **15.11** Privasi EXIF/geotag: PRD §246 menjanjikan metadata foto dibersihkan, tetapi backend belum strip EXIF. Putuskan: tambah strip metadata (mis. `sharp`) sebelum tayang publik, atau tegaskan di UI bahwa metadata belum dibersihkan.
 - [ ] **15.12** Moderasi media belum-diverifikasi: menayangkan media semua status berisiko konten mentah/tidak pantas tampil sebelum diperiksa. Putuskan: perlukah tombol admin sembunyikan/hapus media.
+
+---
+
+## Fase 16 — Fix Packaging LLM Service (config/forbidden_phrases.json)
+
+- [x] **16.1** (WAJIB) `llm-service/Dockerfile` hanya meng-copy `dist/` ke image final, sehingga `config/forbidden_phrases.json` tidak ikut dan `loadForbiddenPhrases()` (dibaca dari `process.cwd()/config/`) melempar ENOENT. Error ini mengenai SEMUA provider (mock/openai/gemini) karena `checkForbiddenPhrases()` divalidasi di setiap keluaran LLM — bukan khusus mode mock. Perbaikan: tambah `COPY --from=builder /app/config ./config` di stage final.
+  - **PITFALL:** `docker compose up -d` TIDAK me-recreate container bila image tag (`:latest`) sama walau image sudah di-rebuild. Wajib `docker rm -f ml_service_self-help` lalu `docker compose up -d --force-recreate llm`.
+  - **Verifikasi:** `docker exec ml_service_self-help ls config/forbidden_phrases.json` ada; `POST /api/projects/{id}/explain` dan `/draft` (mode mock) → `200 success`, log llm bersih tanpa ENOENT/forbidden.
+
+- [x] **16.2** Mode `openai` siap digunakan setelah fix 16.1. Env container sudah lengkap: `AI_API_KEY`, `AI_MODEL=deepseek-chat`, `AI_API_URL=https://api.deepseek.com/chat/completions`. Ganti `AI_PROVIDER=mock` → `openai` di `llm-service/.env` lalu recreate container. Syarat: endpoint mendukung `response_format: json_object`; perhatikan `AI_TIMEOUT_MS` (10s) dan `AI_MAX_TOKENS` (4096) untuk model reasoning. Fix config phrases 16.1 tetap prasyarat karena validasi berlaku untuk semua provider.
