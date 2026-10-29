@@ -1,17 +1,32 @@
+# --- Stage 1: Build ---
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+# --- Stage 2: Production ---
 FROM node:20-alpine
 
+ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
 
 WORKDIR /app
 
 COPY package*.json ./
+RUN npm ci --omit=dev
 
-RUN npm install
+# Copy build output dan config JSON (tsc tidak copy JSON ke dist/)
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/config ./config
 
-COPY . .
+# Copy migration files (untuk backend-init service)
+COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/seed ./seed
 
-RUN npm run build
-
-
-CMD ["npm", "run", "start"]
+CMD ["node", "dist/server.js"]

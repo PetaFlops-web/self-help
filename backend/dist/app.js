@@ -1,7 +1,9 @@
 import express from 'express';
 import cors from 'cors';
+import { config, isDev, isProd } from './src/config/env.js';
 import { HttpError } from './src/helpers/http.js';
 import { sendError } from './src/middlewares/response.js';
+import { generalLimiter } from './src/middlewares/rate-limit.js';
 import pingRouter from './src/routes/ping.js';
 import regionsRouter from './src/routes/regions.js';
 import projectsRouter from './src/routes/projects.js';
@@ -15,9 +17,23 @@ import reportsRouter from './src/routes/reports.js';
 import adminReportsRouter from './src/routes/admin-reports.js';
 import documentsRouter from './src/routes/documents.js';
 const app = express();
-app.use(cors());
+app.set('trust proxy', 1);
+if (isProd && config.allowedOrigins.length > 0) {
+    app.use(cors({ origin: config.allowedOrigins }));
+}
+else {
+    app.use(cors());
+}
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+if (isDev) {
+    app.use((req, _res, next) => {
+        console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+        next();
+    });
+}
+// --- Routes ---
+app.use('/api', generalLimiter);
 app.use('/api', pingRouter);
 app.use('/api', regionsRouter);
 app.use('/api', projectsRouter);
@@ -29,10 +45,23 @@ app.use('/api', llmRouter);
 app.use('/api', reportsRouter);
 app.use('/api', adminReportsRouter);
 app.use('/api', documentsRouter);
-app.use('/', docsRouter);
+if (isDev) {
+    app.use('/', docsRouter);
+}
 app.use((err, _req, res, _next) => {
     if (err instanceof HttpError) {
         sendError(res, err.status, err.message);
+        return;
+    }
+    if (isDev) {
+        const message = err instanceof Error ? err.message : String(err);
+        const stack = err instanceof Error ? err.stack : undefined;
+        console.error('Unhandled error:', err);
+        res.status(500).json({
+            status: 'error',
+            message,
+            stack,
+        });
         return;
     }
     console.error('Unhandled error:', err);

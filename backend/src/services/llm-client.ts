@@ -1,10 +1,8 @@
 import type { LlmGeneratePayload, LlmOutput } from '../types/llm.js';
+import { config } from '../config/env.js';
 
-const DEFAULT_URL = 'http://localhost:3001';
-// Cukup longgar untuk menampung retry internal llm-service (10 detik + 1 retry, LLM-06).
-const DEFAULT_TIMEOUT_MS = 30000;
 // Retry 10 detik + 1 percobaan ulang dilakukan di llm-service; backend cukup sekali panggil.
-const DEFAULT_MAX_ATTEMPTS = 1;
+const MAX_ATTEMPTS = 1;
 
 export class LlmServiceUnavailableError extends Error {
   constructor(message: string) {
@@ -13,25 +11,16 @@ export class LlmServiceUnavailableError extends Error {
   }
 }
 
-function baseUrl(): string {
-  return (process.env.LLM_SERVICE_URL || DEFAULT_URL).replace(/\/+$/, '');
-}
-
-function timeoutMs(): number {
-  const n = Number(process.env.LLM_SERVICE_TIMEOUT_MS);
-  return Number.isFinite(n) && n > 0 ? n : DEFAULT_TIMEOUT_MS;
-}
-
 /**
  * Panggil llm-service dari server saja (LLM-01); kunci API hanya ada di
  * llm-service. Batas waktu 10 detik + satu retry (LLM-06).
  */
 export async function callLlmService(payload: LlmGeneratePayload): Promise<LlmOutput> {
-  const url = `${baseUrl()}/internal/generate`;
-  const timeout = timeoutMs();
+  const url = `${config.llmServiceUrl}/internal/generate`;
+  const timeout = config.llmServiceTimeoutMs;
 
   let lastError: unknown = null;
-  for (let attempt = 1; attempt <= DEFAULT_MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       const res = await fetch(url, {
         method: 'POST',

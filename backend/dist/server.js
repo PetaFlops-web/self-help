@@ -1,11 +1,9 @@
-import dotenv from 'dotenv';
+// env.ts harus di-import pertama agar dotenv.config() jalan sebelum modul lain
+import { config } from './src/config/env.js';
 import app from './app.js';
 import { connectRedis } from './src/config/redis.js';
-dotenv.config();
-const port = process.env.PORT || 3000;
-const host = process.env.HOST || '0.0.0.0';
 connectRedis().then(() => {
-    app.listen(port, host, () => {
-        console.log(`Server is running at http://${host}:${port}`);
+    app.listen(config.port, config.host, () => {
+        console.log(`Server running in ${config.nodeEnv} mode at http://${config.host}:${config.port}`);
     });
 });
