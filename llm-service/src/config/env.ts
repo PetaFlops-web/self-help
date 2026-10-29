@@ -1,4 +1,13 @@
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 export type Provider = 'openai' | 'gemini' | 'mock';
+
+const nodeEnv: string = process.env.NODE_ENV || 'development';
+
+export const isDev: boolean = nodeEnv === 'development';
+export const isProd: boolean = nodeEnv === 'production';
 
 export interface LlmConfig {
   provider: Provider;
@@ -29,3 +38,23 @@ export function loadLlmConfig(): LlmConfig {
 
   return { provider, apiKey, model, timeoutMs, maxTokens, apiUrl };
 }
+
+export interface AppConfig {
+  nodeEnv: string;
+  port: number;
+  host: string;
+  allowedOrigins: string[];
+  llm: LlmConfig;
+}
+
+export const config: AppConfig = {
+  nodeEnv,
+  port: Number(process.env.PORT) || 3001,
+  host: process.env.HOST || '0.0.0.0',
+  allowedOrigins: process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+    : [],
+  llm: loadLlmConfig(),
+};
+
+export default config;
