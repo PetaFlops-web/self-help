@@ -22,7 +22,38 @@
         </span>
         
 
-        <RoadScene3D class="scene" />
+        <svg class="scene" viewBox="0 0 1026 312" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
+          <defs>
+            <symbol id="pin" viewBox="-18 -40 36 44" overflow="visible">
+              <path d="M0 0C-9-12-17-20-17-29a17 17 0 1 1 34 0C17-20 9-12 0 0z" fill="#fff" />
+              <circle cx="0" cy="-29" r="7" fill="#e8441e" />
+            </symbol>
+          </defs>
+
+          <circle cx="607" cy="215" r="150" fill="#fff" opacity=".1" />
+          <circle cx="607" cy="215" r="88" fill="#fff" opacity=".12" />
+          <path d="M520 340C540 262 622 252 662 202C712 140 716 78 800 10" fill="none" stroke="#5d1618" stroke-opacity=".35" stroke-width="84" stroke-linecap="round" />
+          <path d="M520 340C540 262 622 252 662 202C712 140 716 78 800 10" fill="none" stroke="#7a1f21" stroke-width="68" stroke-linecap="round" />
+          <path class="road-dash" d="M520 340C540 262 622 252 662 202C712 140 716 78 800 10" fill="none" stroke="#f7c6b4" stroke-width="3" stroke-dasharray="16 16" stroke-linecap="round" />
+
+          <!-- Pin dengan efek radar + kemunculan berjeda (dari jauh/kecil ke dekat/besar) -->
+          <g class="pin-group pin-1">
+            <circle class="radar" cx="702" cy="131" r="12" fill="none" stroke="#fff" stroke-width="2.5" />
+            <use href="#pin" x="687" y="112" width="30" height="38" />
+          </g>
+          <g class="pin-group pin-2">
+            <circle class="radar" cx="718" cy="189" r="12" fill="none" stroke="#fff" stroke-width="2.5" />
+            <use href="#pin" x="703" y="170" width="30" height="38" />
+          </g>
+          <g class="pin-group pin-3">
+            <circle class="radar" cx="627" cy="204" r="16" fill="none" stroke="#fff" stroke-width="3" />
+            <use href="#pin" x="606" y="178" width="42" height="52" />
+          </g>
+          <g class="pin-group pin-4">
+            <circle class="radar" cx="571" cy="251" r="12" fill="none" stroke="#fff" stroke-width="2.5" />
+            <use href="#pin" x="556" y="232" width="30" height="38" />
+          </g>
+        </svg>
 
         <div
           class="gauge"
@@ -69,14 +100,11 @@
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent } from 'vue'
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import { useMinLoading } from '@/composables/useMinLoading'
 import { useDashboardData } from '../composables/useDashboardData'
-
-// Lazy-load: Three.js jadi chunk terpisah, tidak membebani bundle dashboard awal.
-const RoadScene3D = defineAsyncComponent(() => import('./RoadScene3D.vue'))
 
 const { project, loading } = useDashboardData()
 const showSkeleton = useMinLoading(loading)
@@ -140,6 +168,50 @@ const gaugeFill = computed(() => {
 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--amber); }
 
 .scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* Garis tengah jalan mengalir maju (efek berjalan) */
+.road-dash { animation: road-flow 1.1s linear infinite; }
+@keyframes road-flow { to { stroke-dashoffset: -32; } }
+
+/* Pin muncul berurutan dengan jeda, lalu berulang */
+.pin-group {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: pin-pop 5.6s ease-in-out infinite;
+  opacity: 0;
+}
+.pin-1 { animation-delay: 0s; }
+.pin-2 { animation-delay: 1.1s; }
+.pin-3 { animation-delay: 2.2s; }
+.pin-4 { animation-delay: 3.3s; }
+@keyframes pin-pop {
+  0%        { opacity: 0; transform: translateY(10px) scale(0.3); }
+  8%        { opacity: 1; transform: translateY(-3px) scale(1.08); }
+  12%       { transform: translateY(0) scale(1); }
+  70%       { opacity: 1; transform: translateY(0) scale(1); }
+  82%, 100% { opacity: 0; transform: translateY(0) scale(0.9); }
+}
+
+/* Cincin radar memuai & memudar di tiap pin */
+.radar {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: radar-pulse 1.8s ease-out infinite;
+}
+.pin-1 .radar { animation-delay: 0.3s; }
+.pin-2 .radar { animation-delay: 1.4s; }
+.pin-3 .radar { animation-delay: 2.5s; }
+.pin-4 .radar { animation-delay: 3.6s; }
+@keyframes radar-pulse {
+  0%   { transform: scale(0.4); opacity: 0.7; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .road-dash, .pin-group, .radar { animation: none; }
+  .pin-group { opacity: 1; }
+  .radar { opacity: 0; }
+}
 .gauge { position: absolute; z-index: 2; right: 56px; top: 50%; transform: translateY(-46%); width: 164px; height: 164px; }
 .gauge svg { width: 100%; height: 100%; display: block; }
 .gauge-arc {
