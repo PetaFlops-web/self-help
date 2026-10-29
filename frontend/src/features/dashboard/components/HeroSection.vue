@@ -120,7 +120,7 @@ const gaugeFill = computed(() => {
 .hero { text-align: center; padding-top: 18px; }
 .hero :deep(.chip) { padding: 8px 18px; }
 .hero-title {
-  font-size: clamp(30px, 6.2vw, 68px); line-height: 1.04; font-weight: 800;
+  font-size: clamp(26px, 5.2vw, 56px); line-height: 1.06; font-weight: 800;
   letter-spacing: -0.035em; margin-top: 26px;
 }
 .hero-title :deep(em) { font-style: normal; color: var(--red); }
@@ -132,12 +132,6 @@ const gaugeFill = computed(() => {
   /* Oranye solid (tanpa gradient), sama dengan kartu tiket di halaman Lacak Laporan */
   background: var(--orange, #ff6a2b);
   text-align: left; color: #fff;
-}
-.banner::before { /* grid titik di kanan atas */
-  content: ''; position: absolute; top: 0; right: 0; width: 46%; height: 55%;
-  background: radial-gradient(circle, #ffffff55 1.4px, transparent 1.6px) 0 0 / 22px 22px;
-  -webkit-mask-image: linear-gradient(to left, #000 20%, transparent);
-  mask-image: linear-gradient(to left, #000 20%, transparent);
 }
 .cta-float {
   position: absolute; z-index: 5; left: 50%; top: 0; transform: translate(-50%, -50%);
