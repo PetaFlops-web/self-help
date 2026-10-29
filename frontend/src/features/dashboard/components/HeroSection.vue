@@ -22,24 +22,7 @@
         </span>
         
 
-        <svg class="scene" viewBox="0 0 1026 312" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
-          <defs>
-            <symbol id="pin" viewBox="-18 -40 36 44" overflow="visible">
-              <path d="M0 0C-9-12-17-20-17-29a17 17 0 1 1 34 0C17-20 9-12 0 0z" fill="#fff" />
-              <circle cx="0" cy="-29" r="7" fill="#e8441e" />
-            </symbol>
-          </defs>
-          
-          <circle cx="607" cy="215" r="150" fill="#fff" opacity=".1" />
-          <circle cx="607" cy="215" r="88" fill="#fff" opacity=".12" />
-          <path d="M520 340C540 262 622 252 662 202C712 140 716 78 800 10" fill="none" stroke="#5d1618" stroke-opacity=".35" stroke-width="84" stroke-linecap="round" />
-          <path d="M520 340C540 262 622 252 662 202C712 140 716 78 800 10" fill="none" stroke="#7a1f21" stroke-width="68" stroke-linecap="round" />
-          <path d="M520 340C540 262 622 252 662 202C712 140 716 78 800 10" fill="none" stroke="#f7c6b4" stroke-width="3" stroke-dasharray="16 16" stroke-linecap="round" />
-          <use href="#pin" x="687" y="112" width="30" height="38" />
-          <use href="#pin" x="703" y="170" width="30" height="38" />
-          <use href="#pin" x="606" y="178" width="42" height="52" />
-          <use href="#pin" x="556" y="232" width="30" height="38" />
-        </svg>
+        <RoadScene3D class="scene" />
 
         <div
           class="gauge"
@@ -86,11 +69,14 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import { RouterLink } from 'vue-router'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import { useMinLoading } from '@/composables/useMinLoading'
 import { useDashboardData } from '../composables/useDashboardData'
+
+// Lazy-load: Three.js jadi chunk terpisah, tidak membebani bundle dashboard awal.
+const RoadScene3D = defineAsyncComponent(() => import('./RoadScene3D.vue'))
 
 const { project, loading } = useDashboardData()
 const showSkeleton = useMinLoading(loading)
