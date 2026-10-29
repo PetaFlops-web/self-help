@@ -19,7 +19,7 @@ ENV HOST=0.0.0.0
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev && npm install -g tsx node-pg-migrate
 
 # Copy build output dan config JSON (tsc tidak copy JSON ke dist/)
 COPY --from=builder /app/dist ./dist
