@@ -30,12 +30,35 @@ export async function listReportsByProjectId(
   limit = 20,
 ): Promise<ProjectReportItem[]> {
   const res = await pool.query<ProjectReportItem>(
-    `SELECT tiket, kategori, status, dibuat_pada
+    `SELECT tiket, kategori, status, dibuat_pada, foto_urls, keterangan, anonim
        FROM laporan_warga
       WHERE proyek_id = $1
       ORDER BY dibuat_pada DESC
       LIMIT $2`,
     [projectId, limit],
+  );
+  return res.rows;
+}
+
+export async function listPublicReportsByProjectId(
+  projectId: string,
+  status?: string,
+  limit = 100,
+): Promise<ProjectReportItem[]> {
+  const params: unknown[] = [projectId];
+  let where = 'proyek_id = $1';
+  if (status) {
+    params.push(status);
+    where += ` AND status = $${params.length}`;
+  }
+  params.push(limit);
+  const res = await pool.query<ProjectReportItem>(
+    `SELECT tiket, kategori, status, dibuat_pada, foto_urls, keterangan, anonim
+       FROM laporan_warga
+      WHERE ${where}
+      ORDER BY dibuat_pada DESC
+      LIMIT $${params.length}`,
+    params,
   );
   return res.rows;
 }
@@ -73,6 +96,10 @@ function toPublicView(
     keterangan: showKeterangan ? row.keterangan : null,
     catatan_verifikator: row.catatan_verifikator,
     alasan_tolak: row.alasan_tolak,
+    foto_urls: row.foto_urls,
+    anonim: row.anonim,
+    lat: row.lat,
+    lng: row.lng,
     dibuat_pada: row.dibuat_pada,
     diubah_pada: row.diubah_pada,
     proyek: projectDetail ?? null,

@@ -12,11 +12,26 @@ export async function listVerifiedReportsByProjectId(projectId) {
     }));
 }
 export async function listReportsByProjectId(projectId, limit = 20) {
-    const res = await pool.query(`SELECT tiket, kategori, status, dibuat_pada
+    const res = await pool.query(`SELECT tiket, kategori, status, dibuat_pada, foto_urls, keterangan, anonim
        FROM laporan_warga
       WHERE proyek_id = $1
       ORDER BY dibuat_pada DESC
       LIMIT $2`, [projectId, limit]);
+    return res.rows;
+}
+export async function listPublicReportsByProjectId(projectId, status, limit = 100) {
+    const params = [projectId];
+    let where = 'proyek_id = $1';
+    if (status) {
+        params.push(status);
+        where += ` AND status = $${params.length}`;
+    }
+    params.push(limit);
+    const res = await pool.query(`SELECT tiket, kategori, status, dibuat_pada, foto_urls, keterangan, anonim
+       FROM laporan_warga
+      WHERE ${where}
+      ORDER BY dibuat_pada DESC
+      LIMIT $${params.length}`, params);
     return res.rows;
 }
 export async function countReportsByProjectId(projectId) {
@@ -45,6 +60,10 @@ function toPublicView(row, projectDetail) {
         keterangan: showKeterangan ? row.keterangan : null,
         catatan_verifikator: row.catatan_verifikator,
         alasan_tolak: row.alasan_tolak,
+        foto_urls: row.foto_urls,
+        anonim: row.anonim,
+        lat: row.lat,
+        lng: row.lng,
         dibuat_pada: row.dibuat_pada,
         diubah_pada: row.diubah_pada,
         proyek: projectDetail ?? null,

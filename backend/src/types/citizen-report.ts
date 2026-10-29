@@ -53,6 +53,10 @@ export interface ReportPublicView {
   keterangan: string | null;
   catatan_verifikator: string | null;
   alasan_tolak: string | null;
+  foto_urls: string[] | null;
+  anonim: boolean;
+  lat: string | null;
+  lng: string | null;
   dibuat_pada: Date | null;
   diubah_pada: Date | null;
   proyek: {

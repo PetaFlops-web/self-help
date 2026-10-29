@@ -2,9 +2,11 @@ import { getProjectById } from '../repositories/project.js';
 import {
   createReport,
   getReportByTiket,
+  listPublicReportsByProjectId,
 } from '../repositories/citizen-report.js';
 import { HttpError, isUuid } from '../helpers/http.js';
 import type { CreateReportInput, ReportPublicView } from '../types/citizen-report.js';
+import type { ProjectReportItem } from '../types/project.js';
 
 async function assertProjectExists(id: string): Promise<void> {
   if (!isUuid(id)) {
@@ -38,6 +40,14 @@ export async function submitReport(input: CreateReportInput): Promise<ReportPubl
     foto_urls: input.foto_urls ?? [],
     anonim: input.anonim ?? false,
   });
+}
+
+export async function getProjectReports(
+  projectId: string,
+  status?: string,
+): Promise<ProjectReportItem[]> {
+  await assertProjectExists(projectId);
+  return listPublicReportsByProjectId(projectId, status);
 }
 
 export async function trackReport(tiket: string): Promise<ReportPublicView> {

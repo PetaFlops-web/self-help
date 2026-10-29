@@ -11,7 +11,9 @@ const app: Application = express();
 if (isProd && config.allowedOrigins.length > 0) {
   app.use(cors({ origin: config.allowedOrigins }));
 } else {
-  app.use(cors());
+  app.use(cors(
+    
+  ));
 }
 
 app.use(express.json({ limit: '1mb' }));

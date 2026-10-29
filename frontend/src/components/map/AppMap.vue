@@ -160,7 +160,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['marker-click', 'update:mode', 'expand', 'collapse'])
+const emit = defineEmits(['marker-click', 'marker-action', 'update:mode', 'expand', 'collapse'])
 
 const mapRef = ref(null)
 const currentMode = ref(props.mode)
@@ -244,7 +244,7 @@ function tipHtml(t) {
     (t.subtitle ? `<span class="risk-tip__sub">${escapeHtml(t.subtitle)}</span>` : '') +
     `<span class="risk-tip__row"><span class="risk-tip__badge">${escapeHtml(t.label)}</span>` +
     (t.score != null ? `<span class="risk-tip__score">Skor ${escapeHtml(t.score)}/100</span>` : '') +
-    `</span><span class="risk-tip__hint">Klik untuk melihat laporan warga</span></div>`
+    `</span><span class="risk-tip__hint">Klik pin untuk lihat proyek atau detail laporan warga</span></div>`
   )
 }
 
@@ -254,9 +254,48 @@ function applyTip(marker, m) {
   marker.bindTooltip(tipHtml(m.tip), { direction: 'top', offset: [0, -4], opacity: 1, className: 'risk-tip-wrap' })
 }
 
+// Popup interaktif saat pin diklik: dua aksi — lihat proyek & detail laporan warga.
+function popupHtml(t) {
+  const color = LEVEL_COLOR[t.level] || '#999'
+  const count = t.reportCount != null ? t.reportCount : null
+  return (
+    `<div class="pin-pop" style="--c:${color}">` +
+    `<b class="pin-pop__title">${escapeHtml(t.title)}</b>` +
+    (t.subtitle ? `<span class="pin-pop__sub">${escapeHtml(t.subtitle)}</span>` : '') +
+    `<div class="pin-pop__actions">` +
+    `<button type="button" class="pin-pop__btn" data-action="project">Lihat proyek</button>` +
+    `<button type="button" class="pin-pop__btn pin-pop__btn--primary" data-action="reports">` +
+    `Detail laporan warga${count != null ? ` (${escapeHtml(count)})` : ''}</button>` +
+    `</div></div>`
+  )
+}
+
+function applyPopup(marker, m) {
+  if (!m.tip || !marker?.bindPopup) return
+  marker.unbindPopup()
+  marker.bindPopup(popupHtml(m.tip), { className: 'pin-pop-wrap', closeButton: true, offset: [0, -6], minWidth: 210 })
+}
+
 function bindTip(marker, m) {
   leafletMarkers.set(m.key, marker)
   applyTip(marker, m)
+  applyPopup(marker, m)
+  // Delegasikan klik tombol di dalam popup ke emit marker-action.
+  marker.on('popupopen', (e) => {
+    const node = e.popup?.getElement?.()
+    if (!node) return
+    node.querySelectorAll('[data-action]').forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        () => {
+          const latest = props.markers.find((x) => x.key === m.key) ?? m
+          emit('marker-action', { action: btn.getAttribute('data-action'), marker: latest })
+          marker.closePopup()
+        },
+        { once: true },
+      )
+    })
+  })
 }
 
 watch(
@@ -264,7 +303,10 @@ watch(
   (list) => {
     for (const m of list) {
       const mk = leafletMarkers.get(m.key)
-      if (mk) applyTip(mk, m)
+      if (mk) {
+        applyTip(mk, m)
+        applyPopup(mk, m)
+      }
     }
   },
 )
@@ -375,10 +417,12 @@ defineExpose({
 .legend i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .map--full .legend { left: 20px; bottom: calc(76px + env(safe-area-inset-bottom)); }
 
-/* HP: kolom pencarian lebih lebar, kontrol lebih besar */
+/* HP: perkecil kolom pencarian & tombol toggle agar tidak memenuhi lebar peta */
 @media (max-width: 575.98px) {
-  .search { width: calc(100% - 140px); }
-  .map--full .search { width: calc(100% - 150px); top: calc(12px + env(safe-area-inset-top)); }
+  .search { width: min(150px, 42%); font-size: 11px; padding: 8px 14px; }
+  .toggle { padding: 2px; }
+  .toggle .btn { --bs-btn-padding-x: 10px; --bs-btn-padding-y: 5px; --bs-btn-font-size: 10px; }
+  .map--full .search { width: min(170px, 48%); top: calc(12px + env(safe-area-inset-top)); }
   .map--full .toggle { top: calc(12px + env(safe-area-inset-top)); right: 12px; }
 }
 @media (pointer: coarse) {

@@ -1,4 +1,5 @@
 import { getRiskLevel } from '../../utils/riskScoring.js'
+import { toMediaItems } from '../../utils/media.js'
 
 /**
  * @typedef {import('@/services/api/projects.api').RiskLevel} RiskLevel
@@ -86,27 +87,35 @@ export function toProject(apiProyek, options = {}) {
 }
 
 /**
- * Peta ikon per dimensi indikator risiko.
+ * Definisi tunggal 6 dimensi indikator risiko (ikon + label fallback).
+ * Dipakai oleh toIndicators (icon/name) dan toDimensions (urutan + label radar).
  */
-const DIMENSION_ICONS = {
-  D1: '%',
-  D2: '1',
-  D3: '!',
-  D4: 'Rp',
-  D5: '✓',
-  D6: 'i',
-}
+const DIMENSIONS = [
+  { key: 'D1', label: 'Anggaran', icon: '%' },
+  { key: 'D2', label: 'Pengadaan', icon: '1' },
+  { key: 'D3', label: 'Pengawasan', icon: '!' },
+  { key: 'D4', label: 'Pembayaran', icon: 'Rp' },
+  { key: 'D5', label: 'Prosedur', icon: '✓' },
+  { key: 'D6', label: 'Keterbukaan', icon: 'i' },
+]
+
+const DIMENSION_ICONS = Object.fromEntries(DIMENSIONS.map((d) => [d.key, d.icon]))
+const DIMENSION_NAMES = Object.fromEntries(DIMENSIONS.map((d) => [d.key, d.label]))
 
 /**
- * Peta nama dimensi cadangan jika konfigurasi scoring belum memuat nama aturan.
+ * Pemetaan warna badge status laporan warga:
+ *  - Dilaporkan      → amber   (menunggu verifikasi)
+ *  - Diverifikasi    → hijau   (sudah valid)
+ *  - Diteruskan      → biru    (dialihkan ke pihak terkait)
+ *  - Ditindaklanjuti → oranye  (sedang dieksekusi)
+ *  - Selesai         → hijau   (tuntas)
  */
-const DIMENSION_NAMES = {
-  D1: 'Anggaran',
-  D2: 'Pengadaan',
-  D3: 'Pengawasan',
-  D4: 'Pembayaran',
-  D5: 'Prosedur',
-  D6: 'Keterbukaan',
+const STATUS_LEVEL = {
+  dilaporkan: 'attention',
+  diverifikasi: 'low',
+  diteruskan: 'info',
+  ditindaklanjuti: 'progress',
+  selesai: 'low',
 }
 
 /**
@@ -181,18 +190,9 @@ export function toIndicators(listIndikator, scoringConfig) {
 export function toDimensions(indicators, scoringConfig) {
   const pointsConfig = scoringConfig?.level_points || { rendah: 10, sedang: 50, tinggi: 100 }
 
-  const dimensionDefs = [
-    { key: 'D1', label: 'Anggaran' },
-    { key: 'D2', label: 'Pengadaan' },
-    { key: 'D3', label: 'Pengawasan' },
-    { key: 'D4', label: 'Pembayaran' },
-    { key: 'D5', label: 'Prosedur' },
-    { key: 'D6', label: 'Keterbukaan' },
-  ]
-
   const indList = Array.isArray(indicators) ? indicators : []
 
-  return dimensionDefs.map((def) => {
+  return DIMENSIONS.map((def) => {
     const matched = indList.filter((it) => (it?.dimensi || '').toUpperCase() === def.key)
     if (matched.length === 0) {
       return { label: def.label, value: 0 }
@@ -221,31 +221,28 @@ export const KATEGORI_BACKEND = {
 }
 
 /**
- * Memetakan data form laporan warga dari frontend ke payload API backend (POST /reports).
+ * Memetakan data form laporan warga ke payload multipart (FormData) untuk POST /reports.
  * Keterangan diisi judul di baris pertama, baris kosong, lalu deskripsi agar judul tidak hilang.
- * JANGAN mengirim anonim, kontak, maupun lampiran sampai backend mengonfirmasi field-nya.
+ * Media (foto/video) dikirim pada field `media` (backend wajib minimal 1 file, jpg/mp4, 5MB).
  *
  * @param {Record<string, any>} form
- * @returns {{ proyek_id: string, kategori: string, keterangan: string }}
+ * @param {File[]} [files]
+ * @returns {FormData}
  */
-export function toReportPayload(form) {
+export function toReportPayload(form, files = []) {
   const judul = (form?.title || '').trim()
   const deskripsi = (form?.description || '').trim()
   const keterangan = judul ? `${judul}\n\n${deskripsi}` : deskripsi
 
-
-  // Konfirmasi nilai sah ke tim backend melalui pemetaan KATEGORI_BACKEND
   const kategori = KATEGORI_BACKEND[form?.category] || form?.category || 'infrastructure'
 
-  // TODO: Field anonim, kontak, dan lampiran (attachments) sengaja TIDAK dikirim
-  // karena backend saat ini belum memiliki field tersebut pada skema POST /reports.
-  // Hanya mengirim field wajib: proyek_id, kategori, dan keterangan.
-
-  return {
-    proyek_id: form?.projectId,
-    kategori,
-    keterangan,
-  }
+  const fd = new FormData()
+  fd.append('proyek_id', form?.projectId ?? '')
+  fd.append('kategori', kategori)
+  fd.append('keterangan', keterangan)
+  fd.append('anonim', String(!!form?.anonymous))
+  for (const f of files) fd.append('media', f)
+  return fd
 }
 
 /**
@@ -287,19 +284,6 @@ export function toProjectReportsPanel(raw) {
     const category = item?.kategori ?? '-'
     const status = item?.status ?? '-'
     const statusNorm = String(status).toLowerCase().trim()
-    // Pemetaan warna badge status laporan warga:
-    //  - Dilaporkan      → amber   (menunggu verifikasi)
-    //  - Diverifikasi    → hijau   (sudah valid)
-    //  - Diteruskan      → biru    (dialihkan ke pihak terkait)
-    //  - Ditindaklanjuti → oranye  (sedang dieksekusi)
-    //  - Selesai         → hijau   (tuntas)
-    const STATUS_LEVEL = {
-      dilaporkan: 'attention',
-      diverifikasi: 'low',
-      diteruskan: 'info',
-      ditindaklanjuti: 'progress',
-      selesai: 'low',
-    }
     const level = STATUS_LEVEL[statusNorm] ?? 'attention'
 
     let dateLabel = '-'
@@ -316,6 +300,10 @@ export function toProjectReportsPanel(raw) {
       status,
       level,
       dateLabel,
+      media: toMediaItems(item?.foto_urls),
+      verified: statusNorm === 'diverifikasi',
+      anonim: Boolean(item?.anonim),
+      description: item?.keterangan ?? null,
     }
   })
 

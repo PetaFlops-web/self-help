@@ -106,11 +106,11 @@
               class="visually-hidden"
               type="file"
               multiple
-              accept=".jpg,.jpeg,.png,.mp4,image/jpeg,image/png,video/mp4"
+              accept=".jpg,.jpeg,.mp4,image/jpeg,video/mp4"
               @change="onPick"
             />
             <span class="dropzone-title">Upload Foto / Video Bukti</span>
-            <span class="dropzone-sub">Maksimal 10MB (Format: JPG, PNG, MP4)</span>
+            <span class="dropzone-sub">Wajib minimal 1 berkas · maksimal 5MB per berkas (Format: JPG, MP4)</span>
           </label>
           <ul v-if="files.length" class="file-list">
             <li v-for="(f, i) in files" :key="f.name + f.size" class="file-item">
@@ -120,11 +120,6 @@
             </li>
           </ul>
           <p v-if="fileError" class="file-error" role="alert">{{ fileError }}</p>
-          <p class="dropzone-sub" style="margin-top: 8px; text-align: left;">
-            Catatan: Unggah berkas bukti belum tersedia saat ini. Laporan tetap bisa dikirim tanpa berkas.
-          </p>
-
-
         </div>
 
         <!-- Anonim -->
@@ -209,8 +204,9 @@ import { useProjectsStore } from '@/stores/projects'
 
 const route = useRoute()
 const router = useRouter()
-const MAX_FILE_BYTES = 10 * 1024 * 1024 // 10MB per berkas
-const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'mp4']
+const MAX_FILE_BYTES = 5 * 1024 * 1024 // 5MB per berkas (sesuai batas backend)
+const MAX_FILES = 5
+const ALLOWED_EXT = ['jpg', 'jpeg', 'mp4']
 const MAX_OPTIONS = 50
 
 const categories = [
@@ -285,13 +281,17 @@ const dragging = ref(false)
 function addFiles(list) {
   const errors = []
   for (const f of list) {
+    if (files.value.length >= MAX_FILES) {
+      errors.push(`Maksimal ${MAX_FILES} berkas`)
+      break
+    }
     const ext = f.name.split('.').pop().toLowerCase()
     if (!ALLOWED_EXT.includes(ext)) {
-      errors.push(`${f.name}: format tidak didukung`)
+      errors.push(`${f.name}: format tidak didukung (hanya JPG, MP4)`)
       continue
     }
     if (f.size > MAX_FILE_BYTES) {
-      errors.push(`${f.name}: melebihi 10MB`)
+      errors.push(`${f.name}: melebihi 5MB`)
       continue
     }
     if (files.value.some((x) => x.name === f.name && x.size === f.size)) continue
@@ -340,9 +340,15 @@ async function submit() {
     return
   }
 
+  // Backend mewajibkan minimal 1 media (foto/video) pada setiap laporan
+  if (!files.value.length) {
+    setMessage('error', 'Unggah minimal 1 foto atau video bukti.')
+    return
+  }
+
   sending.value = true
   try {
-    const result = await reportsApi.create(form)
+    const result = await reportsApi.create(form, files.value)
     const trackingCode = result?.trackingCode || result?.code || result?.tiket
     setMessage(
       'success',

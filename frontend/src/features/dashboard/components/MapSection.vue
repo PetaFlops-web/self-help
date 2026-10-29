@@ -18,6 +18,7 @@
             :markers="markers"
             :center="[project.lat, project.lng]"
             @marker-click="onMarkerClick"
+            @marker-action="onMarkerAction"
           />
         </div>
 
@@ -163,6 +164,7 @@ const markers = computed(() => [
       level: projectLevel.value,
       label: project.riskLabel || getRiskLabel(projectLevel.value),
       score: project.riskScore,
+      reportCount: selected.value && selected.value.id === project.id ? selected.value.total : null,
     },
   },
   ...nearbyReports.map((r) => {
@@ -192,16 +194,31 @@ function expandMap() {
   appMapRef.value?.expand()
 }
 
-// <-- Tambahan fungsi klik marker
+// Klik marker (fallback, mis. tap mobile): buka popup ditangani Leaflet; jika id ada,
+// perlakukan seperti aksi default "detail laporan" untuk pin proyek utama.
 function onMarkerClick(marker) {
   if (!marker?.id) return
   if (marker.id === project.id) {
-    // Pin proyek utama: tampilkan modal laporan warga
+    showReports(marker.id)
+    modalOpen.value = true
+  }
+}
+
+// Aksi dari popup pin: 'project' (lihat/pindah proyek) atau 'reports' (detail laporan warga).
+function onMarkerAction({ action, marker }) {
+  if (!marker?.id) return
+  if (action === 'reports') {
     showReports(marker.id)
     modalOpen.value = true
     return
   }
-  // Pin proyek lain: pindah analisis dashboard ke proyek tersebut
+  // action === 'project'
+  if (marker.id === project.id) {
+    // Sudah di proyek ini; cukup sorot koordinatnya.
+    appMapRef.value?.focusOn?.(project.lat, project.lng, 14)
+    return
+  }
+  // Pin proyek lain: pindah analisis dashboard ke proyek tersebut.
   loadData(marker.id).then(async () => {
     await nextTick()
     appMapRef.value?.focusOn?.(project.lat, project.lng, 14)

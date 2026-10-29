@@ -5,6 +5,7 @@ import { config, isDev, isProd } from './src/config/env.js';
 import { HttpError } from './src/helpers/http.js';
 import { sendError } from './src/middlewares/response.js';
 import { generalLimiter } from './src/middlewares/rate-limit.js';
+import { UPLOAD_ROOT } from './src/middlewares/upload.js';
 import pingRouter from './src/routes/ping.js';
 import regionsRouter from './src/routes/regions.js';
 import projectsRouter from './src/routes/projects.js';
@@ -30,6 +31,9 @@ if (isProd && config.allowedOrigins.length > 0) {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Sajikan media laporan yang diunggah (dev: disk lokal uploads/).
+app.use('/uploads', express.static(UPLOAD_ROOT));
 
 if (isDev) {
   app.use((req: Request, _res: Response, next: NextFunction) => {

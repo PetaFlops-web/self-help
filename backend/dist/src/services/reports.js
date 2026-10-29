@@ -1,5 +1,5 @@
 import { getProjectById } from '../repositories/project.js';
-import { createReport, getReportByTiket, } from '../repositories/citizen-report.js';
+import { createReport, getReportByTiket, listPublicReportsByProjectId, } from '../repositories/citizen-report.js';
 import { HttpError, isUuid } from '../helpers/http.js';
 async function assertProjectExists(id) {
     if (!isUuid(id)) {
@@ -30,6 +30,10 @@ export async function submitReport(input) {
         foto_urls: input.foto_urls ?? [],
         anonim: input.anonim ?? false,
     });
+}
+export async function getProjectReports(projectId, status) {
+    await assertProjectExists(projectId);
+    return listPublicReportsByProjectId(projectId, status);
 }
 export async function trackReport(tiket) {
     if (!tiket || tiket.trim().length === 0) {

@@ -118,6 +118,9 @@ Verifikasi: Matikan LLM Microservice, lalu jalankan curl -X POST .../explain ke 
 - [x] **6.4** `GET /api/reports?tiket=...` → lacak laporan sekarang menampilkan `keterangan` (hanya jika status Diverifikasi/Ditolak) dan detail proyek (`nama`, `kabupaten`).
   - **Verifikasi:** `curl /api/reports?tiket=...` mengembalikan `report.keterangan`, `report.proyek.nama`, dan `report.proyek.kabupaten`.
 
+- [x] **6.5** Upload media (foto/video) pada `POST /api/reports` via multer (PRD §208 Formulir foto, SRS SRC-09). `POST /api/reports` menerima `multipart/form-data` dengan field file `media` (maks 5 file) + field teks laporan. Middleware `src/middlewares/upload.ts`: validasi MIME `image/jpeg` dan `video/mp4`, batas 5 MB/file, disk storage `uploads/reports/` (nama acak), disajikan via `GET /uploads/...`. Error multer (ukuran/jumlah/tipe) diterjemahkan ke `HttpError` format response standar. `foto_urls[]` diisi otomatis dari URL file hasil upload.
+  - **Verifikasi:** `npm run build` lolos; curl multipart — JPG valid → 201, MP4 valid → 201, PNG → 400 "Tipe file tidak didukung", file >5MB → 400 "Ukuran file melebihi batas maksimal 5 MB". File tersimpan di `uploads/reports/`, `foto_urls` ter-persist di DB, dan `GET /uploads/reports/<file>` → HTTP 200 `image/jpeg`.
+
 ---
 
 ## Fase 7 — ETL Data Publik (prioritas S, bisa menyusul)
@@ -261,27 +264,28 @@ Berdasarkan SRS §6.1, LLM-07, LLM-08, dan NFR-11, endpoint LLM perlu cache hasi
 
 Berdasarkan kebutuhan menjaga konsistensi dan keamanan input pada endpoint mutasi, seluruh request **POST**, **PATCH/UPDATE**, dan **DELETE** wajib divalidasi menggunakan package `zod` sebelum masuk ke controller/service. Endpoint GET tetap menggunakan helper manual yang ada.
 
-- [ ] **12.1** Instalasi dependency dan fondasi middleware validasi.
-  - Tambahkan `zod` ke `dependencies` di `package.json` dan jalankan `npm install`.
-  - Buat `src/middlewares/validate.ts` berisi middleware generik `validateBody(schema)` dan `validateParams(schema)` yang mem-parse input dengan Zod, melempar `HttpError(400)` dengan pesan error terformat saat gagal, dan mengisi `req.body`/`req.params` dengan hasil parse.
-  - **Verifikasi:** `npm run build` lolos; middleware dapat dipasang di route tanpa error.
+- [x] **12.1** Instalasi dependency dan fondasi middleware validasi.
+  - `zod@^4.6.7` ditambahkan ke `dependencies`.
+  - `src/middlewares/validate.ts` berisi `validateBody(schema)` dan `validateParams(schema)`: parse dengan Zod, gagal → `HttpError(400)` dengan pesan terformat `field: pesan`, sukses → `req.body`/`req.params` diisi hasil parse (sudah di-coerce).
+  - **Verifikasi:** `npm run build` lolos; middleware terpasang di route tanpa error.
 
-- [ ] **12.2** Buat schema Zod di `src/utils/validators/`.
-  - `src/utils/validators/reports.ts` — schema `CreateReportBodySchema` untuk `POST /api/reports` (proyek_id UUID, kategori wajib, keterangan 1–4000 karakter, lat/lng opsional number, foto_urls opsional array string, anonim opsional boolean).
-  - `src/utils/validators/admin-reports.ts` — schema `VerifyReportBodySchema` untuk `PATCH /api/admin/reports/:id` (status enum Diverifikasi/Ditolak, alasan_tolak wajib jika status Ditolak).
-  - `src/utils/validators/llm.ts` — schema `DraftBodySchema` untuk `POST /api/projects/:id/draft` (tujuan enum lembaga, default 'inspektorat').
-  - **Verifikasi:** `npm run build` lolos; schema dapat di-import di route.
+- [x] **12.2** Schema Zod di `src/utils/validators/`.
+  - `reports.ts` — `CreateReportBodySchema`: proyek_id UUID wajib, kategori wajib non-kosong, keterangan 1–4000 karakter, lat/lng opsional number (coerce dari string multipart, rentang valid), anonim opsional boolean (coerce). `foto_urls` diisi dari upload multer, bukan dari body.
+  - `admin-reports.ts` — `VerifyReportBodySchema`: status enum Diverifikasi/Ditolak wajib, alasan_tolak wajib jika status Ditolak (refine), catatan_verifikator opsional.
+  - `llm.ts` — `DraftBodySchema`: tujuan enum lembaga, default 'inspektorat'.
+  - `common.ts` — `IdParamSchema`: param `:id` UUID.
+  - **Verifikasi:** `npm run build` lolos; schema di-import di route.
 
-- [ ] **12.3** Pasang middleware validasi pada route POST/PATCH dan hapus validasi manual yang redundan.
-  - Pasang `validateBody` di `src/routes/reports.ts`, `src/routes/admin-reports.ts`, dan `src/routes/llm.ts`.
-  - Hapus atau kurangi validasi manual di `src/services/reports.ts`, `src/services/admin-reports.ts`, dan `src/controllers/llm.ts` yang sudah tercover Zod.
-  - **Verifikasi:** `curl -X POST /api/reports -H 'Content-Type: application/json' -d '{"proyek_id":"not-uuid","kategori":""}'` mengembalikan HTTP 400 dengan pesan validasi; request valid tetap berhasil.
+- [x] **12.3** Pasang middleware validasi pada route POST/PATCH dan rampingkan validasi redundan.
+  - `validateBody` terpasang di `reports.ts`, `admin-reports.ts`, `llm.ts`; `validateParams(IdParamSchema)` di route `:id` LLM. `POST /api/reports` juga punya `requireReportMedia` (minimal 1 file wajib) sebelum validateBody.
+  - Validasi manual di `controllers/llm.ts` dan `controllers/admin-reports.ts` dihapus; `controllers/reports.ts` kini baca body yang sudah ter-parse. Cek bisnis di service layer (eksistensi proyek, 404/409) dipertahankan sebagai defense-in-depth.
+  - **Verifikasi:** `POST /api/reports` proyek_id non-UUID → 400 "proyek_id: proyek_id harus UUID yang valid"; request valid → 201.
 
-- [ ] **12.4** Verifikasi endpoint existing tetap berfungsi.
-  - `POST /api/reports` dengan data valid membuat tiket.
-  - `PATCH /api/admin/reports/:id` dengan data valid mengubah status laporan.
-  - `POST /api/projects/:id/draft` dengan tujuan valid menghasilkan draf.
-  - **Verifikasi:** `npm run build` lolos; curl ke endpoint mutasi valid mengembalikan 200/201 seperti sebelumnya.
+- [x] **12.4** Verifikasi endpoint mutasi berfungsi (server lokal port 3002, DB db_wialmb port 5433).
+  - POST /api/reports: valid → 201; proyek_id non-UUID → 400; keterangan kosong → 400; lat non-angka → 400; tanpa media → 400.
+  - PATCH /api/admin/reports/:id: status invalid → 400; Ditolak tanpa alasan_tolak → 400; body kosong → 400.
+  - POST /api/projects/:id/draft: id param non-UUID → 400; tujuan invalid → 400 (menampilkan daftar enum valid).
+  - **Verifikasi:** `npm run build` lolos; 10 kasus curl sesuai ekspektasi (invalid → 400 dengan pesan, valid → 201).
 
 ---
 
@@ -358,3 +362,56 @@ Berdasarkan hasil uji coba penjelasan LLM, prompt perlu diperjelas agar keluaran
 
 - [x] **14.11** Setelah laporan warga berhasil dikirim, arahkan ke halaman **Lacak Laporan** (`/lacak-laporan?code=...`) dan tampilkan skeleton loading saat data laporan sedang dimuat.
   - **Verifikasi:** `npm run build` frontend lolos; `ReportTrackingView` otomatis melacak laporan dari query `code` dan menampilkan skeleton selama fetching.
+
+---
+
+## Fase 15 — Media Laporan Warga Publik (Backend + Frontend)
+
+Menampilkan foto/video laporan warga secara transparan ke publik — di tooltip pin peta yang bisa diklik (2 aksi: lihat proyek / detail laporan warga), di modal "Lihat semua laporan", dan di halaman Lacak Laporan — dengan filter media Diverifikasi vs Belum Diverifikasi untuk perbandingan. Sekaligus menyelaraskan form laporan agar benar-benar mengunggah media (multipart, wajib ≥1 file, jpg/mp4, 5MB). Rujukan: PRD §171, §208, §244–246; SRS SRC-09; melanjutkan Fase 6.5 (upload) dan Fase 12 (validasi). Rencana lengkap: `.hermes/plans/2026-10-29_170400-media-laporan-warga-publik.md`.
+
+Keputusan owner: (1) media dapat difilter Diverifikasi vs Belum Diverifikasi untuk perbandingan; (2) tooltip pin jadi popup yang bisa diklik dengan 2 pilihan (Lihat proyek, Detail laporan warga berisi jumlah laporan + galeri image/video); (3) galeri publik tampil di modal peta + halaman Lacak Laporan; (4) pendekatan terpadu backend + frontend.
+
+### Backend — ekspos data media
+
+- [x] **15.1** Tambahkan `foto_urls`, `keterangan`, `anonim` ke `ProjectReportItem` (`src/types/project.ts`) dan ambil kolom tersebut pada query `listReportsByProjectId` (`src/repositories/citizen-report.ts`).
+  - **Verifikasi:** `npm run build` lolos; `curl /api/projects/<uuid>` menampilkan `laporan_warga.items[].foto_urls` (teruji: 10 item, foto_urls terisi).
+
+- [x] **15.2** Tambahkan `foto_urls`, `anonim`, `lat`, `lng` ke `ReportPublicView` (`src/types/citizen-report.ts`) dan isi di `toPublicView` (`src/repositories/citizen-report.ts`).
+  - **Verifikasi:** `npm run build` lolos; `curl "/api/reports?tiket=<tiket>"` menampilkan `report.foto_urls` (teruji: jpg + mp4).
+
+- [x] **15.3** Endpoint publik daftar laporan per proyek dengan filter status: `GET /api/projects/:id/reports?status=` (`listProjectReports` controller, `getProjectReports` service, `listPublicReportsByProjectId` repo, route + `validateParams(IdParamSchema)`). Mendukung filter perbandingan dan "Lihat semua N laporan" tanpa batas 20 item.
+  - **Verifikasi:** `npm run build` lolos; teruji — total=10, `?status=Dilaporkan`=7, `?status=Diverifikasi`=3, id non-UUID → 400.
+
+### Frontend — konsumsi & tampilan
+
+- [x] **15.4** Helper origin media di `src/config/api.js` (`API_ORIGIN`, `mediaUrl(path)`) dan util pembeda image/video di `src/utils/media.js` (`toMediaItem`, `toMediaItems`).
+  - **Verifikasi:** `npm run build` lolos; teruji `API_ORIGIN` menghapus `/api` dari base URL.
+
+- [x] **15.5** Komponen galeri media reusable `src/components/ui/MediaGallery.vue` (grid thumbnail gambar + `<video>` + lightbox dengan navigasi prev/next, tanpa dependensi baru, gambar `loading="lazy"`, video thumbnail `preload="metadata"`).
+  - **Verifikasi:** `npm run build` lolos; ter-bundle sebagai chunk `MediaGallery`.
+
+- [x] **15.6** Mapper `toProjectReportsPanel` (`src/services/api/mappers.js`) menyertakan `media` (dari `foto_urls`), `verified`, `anonim`, dan `description` per item laporan.
+  - **Verifikasi:** `npm run build` lolos.
+
+- [x] **15.7** `ReportsModal.vue` menampilkan galeri media per laporan + filter perbandingan status (Semua / Diverifikasi / Belum diverifikasi) dengan badge "Media belum diverifikasi" untuk yang belum.
+  - **Verifikasi:** `npm run build` lolos; filter verified/unverified mengubah daftar; `<MediaGallery>` dirender per item.
+
+- [x] **15.8** Tooltip pin pada `AppMap.vue` dilengkapi popup interaktif 2 aksi (`bindPopup` + `popupopen` delegasi klik) emit `marker-action`: "Lihat proyek" dan "Detail laporan warga (N)"; handler `onMarkerAction` di `MapSection.vue`. Tooltip hover dipertahankan untuk ringkasan; `reportCount` diisi dari `selected.total` pin proyek utama. CSS popup di `assets/styles/map.css`.
+  - **Verifikasi:** `npm run build` lolos; aksi `project` memindah/sorot proyek, aksi `reports` membuka modal galeri.
+
+- [x] **15.9** Form laporan (`CitizenReportView.vue` + `mappers.js` `toReportPayload` + `reports.api.js` `create`) kirim `FormData` multipart (header `multipart/form-data`); unggah wajib ≥1 file; batas diselaraskan 5MB + jpg/mp4 + maks 5 berkas (`accept`, `MAX_FILE_BYTES`, `MAX_FILES`, `ALLOWED_EXT`); catatan "unggah belum tersedia" dihapus; field `anonim` ikut dikirim.
+  - **Verifikasi:** `npm run build` lolos; validasi submit menolak tanpa file; batas FE selaras backend (teruji di Fase 6.5: PNG/>5MB ditolak backend).
+
+- [x] **15.10** `ReportTrackingView.vue` menampilkan media nyata dari `foto_urls` (gambar + video) via `MediaGallery`; `safeUrl`/blok `.photos` lama dihapus.
+  - **Verifikasi:** `npm run build` lolos; media jpg → 200 image/jpeg, mp4 → 200 video/mp4 (static serving teruji).
+
+- [x] **15.13** (WAJIB) Konfigurasi reverse proxy nginx untuk media laporan. Ditambahkan ke `nginx/dev.conf` dan `nginx/nginx.conf` (prod):
+  - `location /uploads` → `proxy_pass http://backend:3000` agar media dapat diakses publik. Tanpa rute ini, request `/uploads/...` jatuh ke `location /` (SPA) dan mengembalikan `index.html` (HTTP 200 `text/html`), sehingga `<img>`/`<video>` rusak. (prod + cache 7 hari).
+  - `client_max_body_size 30m` di level server (default nginx 1MB) agar upload media (maks 5 file × 5MB) tidak ditolak `413 Request Entity Too Large` sebelum mencapai backend.
+  - **PITFALL:** `dev.conf`/`nginx.conf` di-bind-mount sebagai SATU file (`:ro`). Mengedit file di host mengganti inode-nya, tetapi container masih memegang inode lama — `nginx -s reload` TIDAK melihat perubahan. Wajib `docker restart nginx_proxy_self-help` agar file ter-mount ulang.
+  - **Verifikasi:** setelah restart nginx, `curl http://localhost/uploads/reports/<file>` → `[200] image/jpeg` (bukan `text/html`); upload ~4MB via `POST http://localhost/api/reports` → `201` (bukan 413); gambar tampil di FE.
+
+### Open question (perlu keputusan owner sebelum go-live publik)
+
+- [ ] **15.11** Privasi EXIF/geotag: PRD §246 menjanjikan metadata foto dibersihkan, tetapi backend belum strip EXIF. Putuskan: tambah strip metadata (mis. `sharp`) sebelum tayang publik, atau tegaskan di UI bahwa metadata belum dibersihkan.
+- [ ] **15.12** Moderasi media belum-diverifikasi: menayangkan media semua status berisiko konten mentah/tidak pantas tampil sebelum diperiksa. Putuskan: perlukah tombol admin sembunyikan/hapus media.

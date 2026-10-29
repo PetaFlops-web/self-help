@@ -59,6 +59,9 @@ export interface ProjectReportItem {
   kategori: string | null;
   status: string;
   dibuat_pada: Date | null;
+  foto_urls: string[] | null;
+  keterangan: string | null;
+  anonim: boolean;
 }
 
 /** Detail proyek lengkap termasuk laporan warga terkait. */

@@ -28,5 +28,6 @@ COPY --from=builder /app/config ./config
 # Copy migration files (untuk backend-init service)
 COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/seed ./seed
+COPY --from=builder /app/src ./src
 
 CMD ["node", "dist/server.js"]

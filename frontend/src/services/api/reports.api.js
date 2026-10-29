@@ -8,9 +8,12 @@ export const reportsApi = {
    * @param {Record<string, any>} form
    * @returns {Promise<{ trackingCode: string, status: string }>}
    */
-  async create(form) {
-    const payload = toReportPayload(form)
-    const { data } = await http.post(endpoints.reports, payload)
+  async create(form, files = []) {
+    const payload = toReportPayload(form, files)
+    // Override default JSON header: set multipart + biarkan axios/browser isi boundary.
+    const { data } = await http.post(endpoints.reports, payload, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
     return toReportResult(data)
   },
 

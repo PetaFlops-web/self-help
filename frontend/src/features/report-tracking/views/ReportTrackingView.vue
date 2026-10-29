@@ -126,20 +126,8 @@
           </div>
         </dl>
 
-        <div v-if="view.photos.length" class="photos">
-          <figure v-for="(p, i) in view.photos" :key="i" class="photo">
-            <img v-if="p.url" :src="p.url" :alt="`Foto bukti ${i + 1}`" loading="lazy" />
-            <template v-else>
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="4" width="18" height="16" rx="3" />
-                <circle cx="9" cy="10" r="1.6" />
-                <path d="m4 18 5.5-5.5L13 16l3-3 4 4" />
-              </svg>
-              <figcaption>Foto {{ i + 1 }}</figcaption>
-            </template>
-          </figure>
-        </div>
-        <p v-if="view.photos.length" class="photo-note">Metadata foto sudah dibersihkan. Lokasi diambil dari titik yang Anda tandai.</p>
+        <MediaGallery v-if="view.media.length" :items="view.media" class="track-media" />
+        <p v-if="view.media.length" class="photo-note">Foto/video bukti dari pelapor. Lokasi diambil dari titik yang ditandai.</p>
       </section>
     </div>
   </section>
@@ -149,8 +137,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
+import MediaGallery from '@/components/ui/MediaGallery.vue'
 import { useMinLoading } from '@/composables/useMinLoading'
 import { reportsApi } from '@/services/api/reports.api'
+import { toMediaItems } from '@/utils/media'
 
 const code = ref('')
 const lastCode = ref('')
@@ -204,10 +194,6 @@ function stepOf(v) {
   const key = String(v ?? '').toLowerCase().trim().replace(/[\s-]+/g, '_')
   const n = Number(key)
   return STATUS_TO_STEP[key] ?? (n >= 1 && n <= 5 ? n : 0)
-}
-/** Hanya izinkan URL gambar http(s) atau path relatif; selain itu tampilkan placeholder. */
-function safeUrl(u) {
-  return typeof u === 'string' && /^(https?:\/\/|\/)/.test(u) ? u : ''
 }
 
 /**
@@ -290,8 +276,8 @@ function normalize(raw, fallbackCode) {
     .filter((x) => x.value)
     .map((x) => ({ label: x.label, value: String(x.value), wide: !!x.wide }))
 
-  const rawPhotos = pick(d.photos, d.attachments, d.media)
-  const photos = (Array.isArray(rawPhotos) ? rawPhotos : []).map((x) => ({ url: safeUrl(typeof x === 'string' ? x : x?.url) }))
+  const rawMedia = pick(d.foto_urls, d.photos, d.attachments, d.media)
+  const media = toMediaItems(Array.isArray(rawMedia) ? rawMedia : [])
 
   return {
     code: String(pick(d.tiket, d.code, d.trackingCode, d.ticket, d.ticketNumber, fallbackCode)),
@@ -310,7 +296,7 @@ function normalize(raw, fallbackCode) {
       .filter(Boolean)
       .join(' · '),
     details,
-    photos,
+    media,
   }
 }
 
@@ -651,6 +637,7 @@ onMounted(() => {
 .detail dt { font-size: 12px; line-height: 16px; font-weight: 600; color: #6f6f6f; }
 .detail dd { margin: 4px 0 0; font-size: 15px; font-weight: 700; line-height: 1.3; white-space: pre-line; overflow-wrap: anywhere; }
 
+.track-media { margin-top: 15px; }
 .photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 15px; }
 .photo {
   display: grid;

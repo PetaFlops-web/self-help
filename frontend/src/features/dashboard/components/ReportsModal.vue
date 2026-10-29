@@ -36,7 +36,7 @@
               Belum ada laporan warga untuk proyek ini.
             </p>
             <template v-else>
-              <div class="rm-filters" role="group" aria-label="Saring status laporan">
+              <div class="rm-filters" role="group" aria-label="Saring laporan berdasarkan verifikasi">
                 <button
                   v-for="f in filters"
                   :key="f.value"
@@ -49,15 +49,27 @@
                   {{ f.label }} <b>{{ f.count }}</b>
                 </button>
               </div>
+              <p class="rm-compare-note">
+                Bandingkan media laporan yang sudah diverifikasi dengan yang belum.
+              </p>
 
               <ul class="rm-list">
                 <li v-for="it in visibleItems" :key="it.code" class="rm-item">
-                  <span class="rm-dot" :class="`d-${it.level}`" />
-                  <div class="flex-grow-1 min-w-0">
-                    <b class="d-block rm-code">{{ it.code }}</b>
-                    <small class="rm-meta">{{ it.category }} · {{ it.dateLabel }}</small>
+                  <div class="rm-item-head">
+                    <span class="rm-dot" :class="`d-${it.level}`" />
+                    <div class="flex-grow-1 min-w-0">
+                      <b class="d-block rm-code">{{ it.code }}</b>
+                      <small class="rm-meta">{{ it.category }} · {{ it.dateLabel }}</small>
+                    </div>
+                    <RiskBadge :level="it.level" :label="it.status" />
                   </div>
-                  <RiskBadge :level="it.level" :label="it.status" />
+                  <span v-if="!it.verified" class="rm-unverified">Media belum diverifikasi</span>
+                  <MediaGallery
+                    v-if="it.media && it.media.length"
+                    :items="it.media"
+                    size="sm"
+                    class="rm-media"
+                  />
                 </li>
               </ul>
             </template>
@@ -87,6 +99,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import RiskBadge from '@/components/ui/RiskBadge.vue'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
+import MediaGallery from '@/components/ui/MediaGallery.vue'
 import { LEVEL_COLOR } from '@/config/map'
 
 const props = defineProps({
@@ -105,18 +118,20 @@ let lastFocused = null
 const items = computed(() => props.data?.items ?? [])
 const level = computed(() => props.data?.riskLevel ?? 'low')
 
-const filters = computed(() => {
-  const counts = new Map()
-  for (const it of items.value) counts.set(it.status, (counts.get(it.status) || 0) + 1)
-  return [
-    { value: 'all', label: 'Semua', count: items.value.length },
-    ...[...counts].map(([status, count]) => ({ value: status, label: status, count })),
-  ]
-})
+const verifiedCount = computed(() => items.value.filter((i) => i.verified).length)
+const unverifiedCount = computed(() => items.value.length - verifiedCount.value)
 
-const visibleItems = computed(() =>
-  activeFilter.value === 'all' ? items.value : items.value.filter((i) => i.status === activeFilter.value),
-)
+const filters = computed(() => [
+  { value: 'all', label: 'Semua', count: items.value.length },
+  { value: 'verified', label: 'Diverifikasi', count: verifiedCount.value },
+  { value: 'unverified', label: 'Belum diverifikasi', count: unverifiedCount.value },
+])
+
+const visibleItems = computed(() => {
+  if (activeFilter.value === 'verified') return items.value.filter((i) => i.verified)
+  if (activeFilter.value === 'unverified') return items.value.filter((i) => !i.verified)
+  return items.value
+})
 
 function close() {
   emit('update:modelValue', false)
@@ -168,8 +183,15 @@ watch(() => props.data?.id, () => { activeFilter.value = 'all' })
 .rm-chip b { color: #222; margin-left: 4px; }
 .rm-chip.is-active { background: #222; border-color: #222; color: #fff; }
 .rm-chip.is-active b { color: #fff; }
+.rm-compare-note { margin: 0 0 12px; font-size: 11.5px; color: var(--muted); }
 .rm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.rm-item { display: flex; align-items: center; gap: 12px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 12px; }
+.rm-item { display: flex; flex-direction: column; gap: 10px; padding: 11px 14px; border: 1px solid var(--line); border-radius: 12px; }
+.rm-item-head { display: flex; align-items: center; gap: 12px; }
+.rm-unverified {
+  align-self: flex-start; padding: 2px 10px; border-radius: 999px;
+  background: #fff7e6; color: #b67800; font-size: 10.5px; font-weight: 700;
+}
+.rm-media { margin-top: 2px; }
 .rm-code { font-size: 13px; }
 .rm-meta { font-size: 11px; color: var(--muted); }
 .rm-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }

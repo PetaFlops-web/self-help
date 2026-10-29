@@ -2,3 +2,5 @@ node_modules/
 docs/
 .env
 AGENTS.md
+# Media upload laporan warga (dev: disk lokal)
+uploads/

@@ -10,9 +10,9 @@ export const dashboardApi = {
   /**
    * Mengambil dan merangkum data dashboard dari berbagai endpoint API backend.
    * Tidak lagi menyembunyikan error dengan fallback mock agar composable dapat mendeteksi status backend.
+   * @param {string | null} [requestedId] - ID proyek yang diminta; jika null, pakai VITE_FEATURED_PROJECT_ID atau proyek skor tertinggi.
    * @returns {Promise<DashboardData>}
    */
-  // Tambahkan parameter requestedId
   async getDashboard(requestedId = null) {
     // Prioritaskan ID yang diminta/diklik. Jika tidak ada, baru pakai ID default.
     const featuredId = requestedId || import.meta.env.VITE_FEATURED_PROJECT_ID
@@ -41,15 +41,12 @@ export const dashboardApi = {
     }
 
     const raw = featured.raw || featured
-    console.log("Cek Data Peta:", raw)
 
     // Ambil indikator proyek tsb + /config/scoring (gunakan cache)
     const [rawIndicators, scoringConfig] = await Promise.all([
       projectsApi.indicators(featured.id),
       projectsApi.scoringConfig(),
     ])
-
-    console.log("Cek Data Indikator dari Backend:", rawIndicators)
 
     const nama = raw.nama || featured.name || ''
     const dinas = raw.dinas || featured.agency
@@ -58,8 +55,7 @@ export const dashboardApi = {
     const kabupaten = raw.kabupaten || featured.location || '-'
     const tahunAnggaran = raw.tahun_anggaran
     const isDummy = Boolean(raw.is_dummy || featured.is_dummy)
-    const skorNum = toNumber(raw.skor_total) ?? featured.riskScore ?? 0
-    const riskScore = Math.round(skorNum)
+    const riskScore = featured.riskScore
     const riskLabel = raw.kategori || getRiskLabel(featured.riskLevel) || 'Rendah'
 
     // Format meta: lewati bagian yang null
@@ -90,24 +86,18 @@ export const dashboardApi = {
       disclaimer,
     }
 
-
-    // Menggunakan data asli dari backend yang dipetakan oleh fungsi toIndicators
+    // Pemetaan indikator & dimensi radar dari data backend
     const indicators = toIndicators(rawIndicators, scoringConfig)
-
-    // Menggunakan data asli dari backend yang dipetakan oleh fungsi toDimensions
     const dimensions = toDimensions(rawIndicators, scoringConfig)
 
-    // Mengambil semua data proyek dari endpoint /api/projects
+    // Ambil semua proyek untuk pin peta sekitar; proyek unggulan dikecualikan
     const allProjects = await projectsApi.list()
-
-    /// Mengolah data proyek menjadi pin dengan tambahan jarak geser acak
     const nearbyReports = allProjects
-      .filter(p => p.id !== featured.id)
+      .filter((p) => p.id !== featured.id)
       .map((p) => {
-        // Angkanya diperbesar dari 0.015 menjadi 0.08 agar jarak sebarannya makin lebar
-        const offsetLat = (Math.random() - 0.5) * 0.08;
-        const offsetLng = (Math.random() - 0.5) * 0.08;
-
+        // Jarak geser acak agar sebaran pin lebih jelas (±0.04 derajat ≈ ±4 km)
+        const offsetLat = (Math.random() - 0.5) * 0.08
+        const offsetLng = (Math.random() - 0.5) * 0.08
         return {
           id: p.id,
           title: p.name,
@@ -117,132 +107,83 @@ export const dashboardApi = {
           level: p.riskLevel,
           riskScore: p.riskScore,
           location: p.location,
-        };
+        }
       })
 
+    // Fetch progress, payments, dan rab-items secara paralel via projectsApi (satu putaran, bukan tiga)
+    const [progRes, payRes, rabRes] = await Promise.all([
+      projectsApi.progress(featured.id),
+      projectsApi.payments(featured.id),
+      projectsApi.rabItems(featured.id),
+    ])
+
+    // Aliran dana + tahapan pembayaran
     let fund = { ...mockDashboardData.fund }
     let stages = [...mockDashboardData.stages]
 
-    try {
-      // Mengambil data progress fisik dan pembayaran dari backend
-      const [progRes, payRes] = await Promise.all([
-        fetch(`http://localhost:3000/api/projects/${featured.id}/progress`).then(r => r.json()).catch(() => null),
-        fetch(`http://localhost:3000/api/projects/${featured.id}/payments`).then(r => r.json()).catch(() => null)
-      ])
+    if (payRes?.status === 'success' && payRes.payments) {
+      const ringkasan = payRes.payments.ringkasan
+      const nilaiKontrak = Number(ringkasan.nilai_kontrak) || 0
+      const totalDibayar = Number(ringkasan.total_dibayar) || 0
+      const sisa = nilaiKontrak - totalDibayar
+      const persen = ringkasan.persen_dibayar || 0
 
-      if (payRes?.status === 'success' && payRes.payments) {
-        const ringkasan = payRes.payments.ringkasan
-
-        // Memasukkan data ke kartu Aliran Dana Proyek
-        fund = {
-          budget: pagu,
-          contract: ringkasan.nilai_kontrak,
-          paid: ringkasan.total_dibayar,
-          paidPercentage: ringkasan.persen_dibayar,
-          unpaid: ringkasan.nilai_kontrak - ringkasan.total_dibayar
-        }
-
-        // Memasukkan data ke kartu Uang Dibayarkan & Pekerjaan Selesai
-        stages = payRes.payments.pembayaran.map((p, index) => {
-          const fisik = progRes?.progress?.progres?.[index]?.persen_fisik || 0
-          return {
-            label: `Pembayaran tahap ${p.termin_ke}`,
-            paymentPct: Number(p.persen_kontrak),
-            workPct: Number(fisik)
-          }
-        })
+      fund = {
+        steps: [
+          { label: '1. Anggaran daerah', value: formatRupiahRingkas(pagu || 0) },
+          { label: '2. Nilai kontrak', value: formatRupiahRingkas(nilaiKontrak) },
+          { label: '3. Uang yang sudah dibayarkan', value: `${formatRupiahRingkas(totalDibayar)} (${persen}%)`, accent: true },
+        ],
+        paidPercent: persen,
+        paidLabel: `Sudah dibayarkan: ${formatRupiahRingkas(totalDibayar)}`,
+        unpaidLabel: `Belum dibayarkan: ${formatRupiahRingkas(sisa)}`,
+        note: 'Angka ini menunjukkan pembayaran, bukan ukuran pekerjaan yang sudah selesai.',
       }
-    } catch (e) {
-      console.error("Gagal memuat aliran dana:", e)
+
+      stages = payRes.payments.pembayaran.map((p, index) => {
+        const fisik = progRes?.progress?.progres?.[index]?.persen_fisik || 0
+        return {
+          label: `Pembayaran tahap ${p.termin_ke}`,
+          paid: Number(p.persen_kontrak),
+          done: Number(fisik),
+        }
+      })
     }
 
-    try {
-      // Mengambil data progress fisik dan pembayaran dari backend
-      const [progRes, payRes] = await Promise.all([
-        fetch(`http://localhost:3000/api/projects/${featured.id}/progress`).then(r => r.json()).catch(() => null),
-        fetch(`http://localhost:3000/api/projects/${featured.id}/payments`).then(r => r.json()).catch(() => null)
-      ])
-
-      if (payRes?.status === 'success' && payRes.payments) {
-        const ringkasan = payRes.payments.ringkasan
-        const nilaiKontrak = Number(ringkasan.nilai_kontrak) || 0
-        const totalDibayar = Number(ringkasan.total_dibayar) || 0
-        const sisa = nilaiKontrak - totalDibayar
-        const persen = ringkasan.persen_dibayar || 0
-
-        // Memasukkan data ke kartu Aliran Dana Proyek
-        fund = {
-          steps: [
-            { label: '1. Anggaran daerah', value: formatRupiahRingkas(pagu || 0) },
-            { label: '2. Nilai kontrak', value: formatRupiahRingkas(nilaiKontrak) },
-            { label: '3. Uang yang sudah dibayarkan', value: `${formatRupiahRingkas(totalDibayar)} (${persen}%)`, accent: true },
-          ],
-          paidPercent: persen,
-          paidLabel: `Sudah dibayarkan: ${formatRupiahRingkas(totalDibayar)}`,
-          unpaidLabel: `Belum dibayarkan: ${formatRupiahRingkas(sisa)}`,
-          note: 'Angka ini menunjukkan pembayaran, bukan ukuran pekerjaan yang sudah selesai.',
-        }
-
-        // Memasukkan data ke kartu Uang Dibayarkan & Pekerjaan Selesai
-        stages = payRes.payments.pembayaran.map((p, index) => {
-          const fisik = progRes?.progress?.progres?.[index]?.persen_fisik || 0
-          return {
-            label: `Pembayaran tahap ${p.termin_ke}`,
-            paid: Number(p.persen_kontrak),
-            done: Number(fisik)
-          }
-        })
-      }
-    } catch (e) {
-      console.error("Gagal memuat aliran dana:", e)
-    }
-
-    // Analisis AI
-    // Analisis AI dan Rincian Biaya
+    // Analisis AI + Rincian Biaya (RAB)
     let ai = { ...mockDashboardData.ai }
 
-    try {
-      // Mengambil data rincian biaya (RAB) dari backend
-      const rabRes = await fetch(`http://localhost:3000/api/projects/${featured.id}/rab-items`).then(r => r.json()).catch(() => null)
+    if (rabRes?.status === 'success' && rabRes.rab_items?.items) {
+      ai.rows = rabRes.rab_items.items.map((item) => {
+        const totalRencana = Number(item.total) || 0
+        const totalAcuan = (Number(item.harga_acuan) || 0) * (Number(item.volume) || 0)
+        const deviasi = Number(item.deviasi_pct) || 0
 
-      if (rabRes?.status === 'success' && rabRes.rab_items?.items) {
-        // Mengganti baris tabel (rows) mock dengan data asli dari database
-        ai.rows = rabRes.rab_items.items.map(item => {
-          const totalRencana = Number(item.total) || 0
-          // Menghitung total harga acuan (harga_acuan * volume)
-          const totalAcuan = (Number(item.harga_acuan) || 0) * (Number(item.volume) || 0)
-          const deviasi = Number(item.deviasi_pct) || 0
+        let level = 'low'
+        let label = 'Rendah'
+        if (deviasi > 15) {
+          level = 'high'
+          label = 'Tinggi'
+        } else if (deviasi > 5) {
+          level = 'attention'
+          label = 'Sedang'
+        }
 
-          // Menentukan warna label risiko (Tinggi/Sedang/Rendah)
-          let level = 'low'
-          let label = 'Rendah'
-          if (deviasi > 15) {
-            level = 'high'
-            label = 'Tinggi'
-          } else if (deviasi > 5) {
-            level = 'attention'
-            label = 'Sedang'
-          }
+        const tanda = deviasi > 0 ? '+' : ''
 
-          const tanda = deviasi > 0 ? '+' : ''
-
-          return {
-            item: item.uraian,
-            budget: formatRupiahRingkas(totalRencana),
-            benchmark: formatRupiahRingkas(totalAcuan),
-            diff: `${tanda}${deviasi}%`,
-            level: level,
-            label: label
-          }
-        })
-      }
-    } catch (e) {
-      console.error("Gagal memuat rincian biaya:", e)
+        return {
+          item: item.uraian,
+          budget: formatRupiahRingkas(totalRencana),
+          benchmark: formatRupiahRingkas(totalAcuan),
+          diff: `${tanda}${deviasi}%`,
+          level,
+          label,
+        }
+      })
     }
 
     try {
       const explainData = await projectsApi.explain(featured.id)
-      console.log("✅ Data AI dari Backend:", explainData) // Tambahkan log ini
 
       if (explainData && explainData.ringkasan) {
         const temuanList = Array.isArray(explainData.temuan) ? explainData.temuan : []
@@ -271,13 +212,8 @@ export const dashboardApi = {
         }
       }
     } catch (error) {
-      // Tampilkan error agar Anda tahu API-nya gagal
-      console.error("❌ Gagal memuat AI dari backend:", error)
-      // ai = { ...mockDashboardData.ai } // Anda bisa mematikan ini nanti jika API sudah stabil
+      console.error('Gagal memuat AI dari backend:', error)
     }
-
-    console.log("Struktur Fund:", mockDashboardData.fund)
-    console.log("Struktur Stages:", mockDashboardData.stages)
 
     return {
       project,
@@ -298,4 +234,3 @@ export const dashboardApi = {
     return mockDashboardData
   },
 }
-

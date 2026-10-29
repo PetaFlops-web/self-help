@@ -107,6 +107,51 @@ export const projectsApi = {
   },
 
   /**
+   * Mengambil data progres fisik proyek.
+   * @param {string | number} id
+   * @returns {Promise<Record<string, any> | null>}
+   */
+  async progress(id) {
+    try {
+      const { data } = await http.get(endpoints.projectProgress(id))
+      if (data?.status === 'error') return null
+      return data
+    } catch {
+      return null
+    }
+  },
+
+  /**
+   * Mengambil data pembayaran proyek.
+   * @param {string | number} id
+   * @returns {Promise<Record<string, any> | null>}
+   */
+  async payments(id) {
+    try {
+      const { data } = await http.get(endpoints.projectPayments(id))
+      if (data?.status === 'error') return null
+      return data
+    } catch {
+      return null
+    }
+  },
+
+  /**
+   * Mengambil rincian item RAB proyek.
+   * @param {string | number} id
+   * @returns {Promise<Record<string, any> | null>}
+   */
+  async rabItems(id) {
+    try {
+      const { data } = await http.get(endpoints.projectRabItems(id))
+      if (data?.status === 'error') return null
+      return data
+    } catch {
+      return null
+    }
+  },
+
+  /**
    * Mengambil statistik ringkasan beranda.
    * @returns {Promise<Record<string, any>>}
    */

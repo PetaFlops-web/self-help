@@ -4,7 +4,7 @@ export async function verifyReport(req, res) {
     const id = req.params.id;
     const body = req.body;
     const input = {
-        status: body.status ?? '',
+        status: body.status,
         catatan_verifikator: body.catatan_verifikator,
         alasan_tolak: body.alasan_tolak,
     };

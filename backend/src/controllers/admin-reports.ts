@@ -5,9 +5,9 @@ import type { VerifyReportInput } from '../types/citizen-report.js';
 
 export async function verifyReport(req: Request<{ id: string }>, res: Response): Promise<void> {
   const id = req.params.id;
-  const body = req.body as Partial<VerifyReportInput>;
+  const body = req.body as VerifyReportInput;
   const input: VerifyReportInput = {
-    status: body.status ?? ('' as VerifyReportInput['status']),
+    status: body.status,
     catatan_verifikator: body.catatan_verifikator,
     alasan_tolak: body.alasan_tolak,
   };
