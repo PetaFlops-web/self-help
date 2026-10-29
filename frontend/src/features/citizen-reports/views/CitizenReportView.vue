@@ -385,7 +385,8 @@ async function submit() {
 
 async function applyQueryParams() {
   const q = route.query
-  if (!q?.description) return
+  // Proses bila ada draf (description) ATAU proyek terpilih dari peta (projectId).
+  if (!q?.description && !q?.projectId) return
 
   if (q.title && typeof q.title === 'string') {
     form.title = q.title
@@ -398,7 +399,13 @@ async function applyQueryParams() {
   }
   if (q.projectId && typeof q.projectId === 'string') {
     form.projectId = q.projectId
-    projectQuery.value = q.projectName && typeof q.projectName === 'string' ? q.projectName : ''
+    // Jika nama proyek tidak dikirim, cari dari daftar proyek yang sudah dimuat.
+    if (q.projectName && typeof q.projectName === 'string') {
+      projectQuery.value = q.projectName
+    } else {
+      const match = (projectsStore.projects || []).find((p) => p.id === q.projectId)
+      projectQuery.value = match?.name ?? ''
+    }
   }
 }
 

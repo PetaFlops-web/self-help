@@ -84,7 +84,7 @@
               <RouterLink v-if="data?.id" class="btn btn-outline-dark btn-sm" :to="{ name: 'project-detail', params: { id: data.id } }" @click="close">
                 Profil proyek
               </RouterLink>
-              <RouterLink class="btn btn-dark btn-sm" :to="{ name: 'citizen-report' }" @click="close">
+              <RouterLink class="btn btn-dark btn-sm" :to="reportLink" @click="close">
                 Buat laporan
               </RouterLink>
             </div>
@@ -114,6 +114,14 @@ const emit = defineEmits(['update:modelValue'])
 const dialogRef = ref(null)
 const activeFilter = ref('all')
 let lastFocused = null
+
+// Tombol "Buat laporan" membawa proyek terpilih (dari pin peta) ke form Lapor Warga.
+const reportLink = computed(() => {
+  const q = {}
+  if (props.data?.id) q.projectId = props.data.id
+  if (props.data?.name) q.projectName = props.data.name
+  return { name: 'citizen-report', query: q }
+})
 
 const items = computed(() => props.data?.items ?? [])
 const level = computed(() => props.data?.riskLevel ?? 'low')
