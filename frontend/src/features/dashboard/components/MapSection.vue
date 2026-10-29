@@ -219,6 +219,12 @@ function onMarkerAction({ action, marker }) {
     return
   }
   // Pin proyek lain: pindah analisis dashboard ke proyek tersebut.
+  // Tutup peta besar dulu (jika sedang fullscreen) lalu scroll ke atas, supaya
+  // pengguna melihat dashboard memuat ulang (skeleton) untuk proyek baru.
+  if (appMapRef.value?.expanded) {
+    appMapRef.value.collapse()
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' })
   loadData(marker.id).then(async () => {
     await nextTick()
     appMapRef.value?.focusOn?.(project.lat, project.lng, 14)
