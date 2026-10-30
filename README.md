@@ -74,6 +74,7 @@ Frontend
 - [x] Halaman detail proyek beserta daftar laporan warga terkait
 - [x] Form pelaporan warga (`/lapor`)
 - [x] Halaman pelacakan laporan (`/lacak-laporan`)
+- [x] Upload gambar dan video untuk laporan warga
 - [x] Routing SPA dan layout aplikasi
 
 Backend
@@ -82,15 +83,22 @@ Backend
 - [x] Migrasi skema dan seeder data
 - [x] Dokumentasi Swagger
 - [x] Integrasi service LLM untuk penjelasan risiko
+- [x] Upload gambar dan video untuk laporan warga
+- [x] Cache Redis untuk response GET dan hasil LLM (invalidasi saat mutasi)
+- [x] Rate limit endpoint LLM per IP (per menit dan per hari)
 
 LLM Service
 - [x] Endpoint penjelasan risiko proyek dalam bahasa awam
 - [x] Validasi payload dengan Zod
+- [x] Penggunaan .env docker compose secara secret untuk keamanan
+
+Optimasi
+- [x] Pemuatan penjelasan AI non-blocking di dashboard (first load lebih cepat)
 
 Yang Belum
 - [ ] Autentikasi dan dashboard admin
+- [ ] Fungsional dashboard admin (verifikasi laporan, rekap laporan)
+- [ ] Penghubunga API data real-time pemerintah
 - [ ] Notifikasi real-time untuk update laporan
-- [ ] Integrasi Redis untuk cache
-- [ ] Upload gambar dan video untuk laporan warga
 - [ ] Pengiriman laporan berdasarkan analisis LLM (sekadar copy and paste)
-- [ ] Penggunaan .env docker compose secara secret untuk keamanan
+
