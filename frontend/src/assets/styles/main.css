@@ -157,6 +157,30 @@ p {
   .app-nav .navbar-nav {
     padding: 8px 0 4px;
   }
+
+  /* Cegah baris navbar melewati lebar layar: brand boleh menyusut,
+     cta-wrap hanya selebar isinya, tombol Lapor tetap satu baris & kompak. */
+  .app-nav {
+    flex-wrap: nowrap;
+  }
+
+  .app-nav .brand {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-nav .cta-wrap {
+    flex: 0 0 auto;
+  }
+
+  .app-nav .cta-wrap .btn-dark {
+    --bs-btn-padding-x: 14px;
+    --bs-btn-padding-y: 8px;
+    --bs-btn-font-size: 12px;
+    white-space: nowrap;
+  }
 }
 
 @media (max-width: 420px) {
@@ -165,9 +189,8 @@ p {
   }
 
   .app-nav .cta-wrap .btn-dark {
-    --bs-btn-padding-x: 14px;
-    --bs-btn-padding-y: 8px;
-    --bs-btn-font-size: 12px;
+    --bs-btn-padding-x: 12px;
+    --bs-btn-padding-y: 7px;
   }
 }
 
