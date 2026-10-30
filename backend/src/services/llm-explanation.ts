@@ -5,6 +5,8 @@ import { scoreProject } from './scoring.js';
 import { loadScoringConfig } from '../config/scoring.js';
 import { callLlmService, LlmServiceUnavailableError } from './llm-client.js';
 import { getProjectRabItems } from './financials.js';
+import { findCachedExplanation, saveExplanation } from '../repositories/llm-explanation.js';
+import { hashObject } from '../helpers/hash.js';
 import { HttpError } from '../helpers/http.js';
 import { toNum } from '../helpers/number.js';
 import pool from '../config/database.js';
@@ -33,8 +35,8 @@ const INSTITUTION_LABELS: Record<LlmTargetInstitution, string> = {
   dinas_terkait: 'Dinas Terkait',
 };
 
-export type ExplainResult = LlmExplainOutput & { generated_by: 'llm' | 'fallback' };
-export type DraftResult = LlmDraftOutput & { generated_by: 'llm' | 'fallback' };
+export type ExplainResult = LlmExplainOutput & { generated_by: 'llm' | 'fallback' | 'cache' };
+export type DraftResult = LlmDraftOutput & { generated_by: 'llm' | 'fallback' | 'cache' };
 
 function isUuidLike(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -171,9 +173,25 @@ export async function explainProject(id: string): Promise<ExplainResult> {
   const reports = await listVerifiedReportsByProjectId(id);
   const rab = await getProjectRabItems(id);
   const payload = buildPayload(project, result, 'explain', 'warga awam', reports, rab.items);
+  const inputHash = hashObject(payload);
+
+  // LLM-07: masukan yang sama memakai hasil tersimpan tanpa memanggil LLM lagi.
+  const cached = (await findCachedExplanation(inputHash, 'explain')) as LlmExplainOutput | null;
+  if (cached) {
+    return { generated_by: 'cache', ...cached };
+  }
 
   try {
     const output = (await callLlmService(payload)) as LlmExplainOutput;
+    // Simpan hanya hasil LLM yang lolos (fallback tidak di-cache).
+    await saveExplanation({
+      proyek_id: project.id,
+      jenis: 'explain',
+      isi_json: output,
+      model: null,
+      versi_prompt: VERSI_PROMPT,
+      input_hash: inputHash,
+    }).catch((e) => console.error('[llm-cache] gagal simpan penjelasan explain:', e));
     return { generated_by: 'llm', ...output };
   } catch (err) {
     if (err instanceof LlmServiceUnavailableError) {
@@ -188,9 +206,24 @@ export async function draftProject(id: string, targetInstitution: LlmTargetInsti
   const reports = await listVerifiedReportsByProjectId(id);
   const rab = await getProjectRabItems(id);
   const payload = buildPayload(project, result, 'draft', targetInstitution, reports, rab.items);
+  const inputHash = hashObject(payload);
+
+  // LLM-07: masukan yang sama (termasuk tujuan lembaga) memakai hasil tersimpan.
+  const cached = (await findCachedExplanation(inputHash, 'draft')) as LlmDraftOutput | null;
+  if (cached) {
+    return { generated_by: 'cache', ...cached };
+  }
 
   try {
     const output = (await callLlmService(payload)) as LlmDraftOutput;
+    await saveExplanation({
+      proyek_id: project.id,
+      jenis: 'draft',
+      isi_json: output,
+      model: null,
+      versi_prompt: VERSI_PROMPT,
+      input_hash: inputHash,
+    }).catch((e) => console.error('[llm-cache] gagal simpan penjelasan draft:', e));
     return { generated_by: 'llm', ...output };
   } catch (err) {
     if (err instanceof LlmServiceUnavailableError) {

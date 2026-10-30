@@ -5,6 +5,8 @@ import { scoreProject } from './scoring.js';
 import { loadScoringConfig } from '../config/scoring.js';
 import { callLlmService, LlmServiceUnavailableError } from './llm-client.js';
 import { getProjectRabItems } from './financials.js';
+import { findCachedExplanation, saveExplanation } from '../repositories/llm-explanation.js';
+import { hashObject } from '../helpers/hash.js';
 import { HttpError } from '../helpers/http.js';
 import { toNum } from '../helpers/number.js';
 import pool from '../config/database.js';
@@ -124,8 +126,23 @@ export async function explainProject(id) {
     const reports = await listVerifiedReportsByProjectId(id);
     const rab = await getProjectRabItems(id);
     const payload = buildPayload(project, result, 'explain', 'warga awam', reports, rab.items);
+    const inputHash = hashObject(payload);
+    // LLM-07: masukan yang sama memakai hasil tersimpan tanpa memanggil LLM lagi.
+    const cached = (await findCachedExplanation(inputHash, 'explain'));
+    if (cached) {
+        return { generated_by: 'cache', ...cached };
+    }
     try {
         const output = (await callLlmService(payload));
+        // Simpan hanya hasil LLM yang lolos (fallback tidak di-cache).
+        await saveExplanation({
+            proyek_id: project.id,
+            jenis: 'explain',
+            isi_json: output,
+            model: null,
+            versi_prompt: VERSI_PROMPT,
+            input_hash: inputHash,
+        }).catch((e) => console.error('[llm-cache] gagal simpan penjelasan explain:', e));
         return { generated_by: 'llm', ...output };
     }
     catch (err) {
@@ -140,8 +157,22 @@ export async function draftProject(id, targetInstitution) {
     const reports = await listVerifiedReportsByProjectId(id);
     const rab = await getProjectRabItems(id);
     const payload = buildPayload(project, result, 'draft', targetInstitution, reports, rab.items);
+    const inputHash = hashObject(payload);
+    // LLM-07: masukan yang sama (termasuk tujuan lembaga) memakai hasil tersimpan.
+    const cached = (await findCachedExplanation(inputHash, 'draft'));
+    if (cached) {
+        return { generated_by: 'cache', ...cached };
+    }
     try {
         const output = (await callLlmService(payload));
+        await saveExplanation({
+            proyek_id: project.id,
+            jenis: 'draft',
+            isi_json: output,
+            model: null,
+            versi_prompt: VERSI_PROMPT,
+            input_hash: inputHash,
+        }).catch((e) => console.error('[llm-cache] gagal simpan penjelasan draft:', e));
         return { generated_by: 'llm', ...output };
     }
     catch (err) {

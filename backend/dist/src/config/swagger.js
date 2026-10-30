@@ -487,6 +487,14 @@ const swaggerSpec = {
                             },
                         },
                     },
+                    '429': {
+                        description: 'Batas permintaan LLM tercapai (per menit via llmLimiter atau per hari via llmDailyLimiter).',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
                 },
             },
         },
@@ -544,6 +552,14 @@ const swaggerSpec = {
                     },
                     '404': {
                         description: 'Project tidak ditemukan',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                    '429': {
+                        description: 'Batas permintaan LLM tercapai (per menit via llmLimiter atau per hari via llmDailyLimiter).',
                         content: {
                             'application/json': {
                                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -1152,13 +1168,47 @@ const swaggerSpec = {
                 },
                 required: ['kode_aturan', 'penjelasan', 'arti_bagi_warga'],
             },
+            PenjelasanLLM: {
+                type: 'object',
+                description: 'Baris cache hasil LLM di tabel penjelasan_llm (LLM-07). Masukan dengan ' +
+                    'input_hash + jenis yang sama memakai hasil tersimpan tanpa memanggil LLM lagi.',
+                properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    proyek_id: { type: 'string', format: 'uuid' },
+                    jenis: {
+                        type: 'string',
+                        enum: ['explain', 'draft'],
+                        description: 'Jenis keluaran LLM yang disimpan',
+                    },
+                    isi_json: {
+                        oneOf: [
+                            { $ref: '#/components/schemas/ExplainOutput' },
+                            { $ref: '#/components/schemas/DraftOutput' },
+                        ],
+                        description: 'Isi keluaran LLM (ExplainOutput untuk jenis explain, DraftOutput untuk draft)',
+                    },
+                    model: {
+                        type: 'string',
+                        nullable: true,
+                        description: 'Nama model LLM yang menghasilkan (null bila tidak dilaporkan service)',
+                    },
+                    versi_prompt: { type: 'string', nullable: true, example: 'explain-v1' },
+                    input_hash: {
+                        type: 'string',
+                        nullable: true,
+                        description: 'SHA-256 payload yang dikirim ke LLM; kunci cache per masukan',
+                    },
+                    dibuat_pada: { type: 'string', format: 'date-time', nullable: true },
+                },
+                required: ['id', 'proyek_id', 'jenis', 'isi_json'],
+            },
             ExplainOutput: {
                 type: 'object',
                 properties: {
                     generated_by: {
                         type: 'string',
-                        enum: ['llm', 'fallback'],
-                        description: 'Sumber penjelasan: "llm" jika dari LLM service, "fallback" jika template statis',
+                        enum: ['llm', 'fallback', 'cache'],
+                        description: 'Sumber penjelasan: "llm" dari LLM service, "cache" dari hasil tersimpan di penjelasan_llm (input_hash sama), "fallback" jika template statis',
                     },
                     ringkasan: { type: 'string', description: 'Ringkasan risiko proyek dalam bahasa awam' },
                     temuan: {
@@ -1200,8 +1250,8 @@ const swaggerSpec = {
                 properties: {
                     generated_by: {
                         type: 'string',
-                        enum: ['llm', 'fallback'],
-                        description: 'Sumber draf: "llm" jika dari LLM service, "fallback" jika template statis',
+                        enum: ['llm', 'fallback', 'cache'],
+                        description: 'Sumber draf: "llm" dari LLM service, "cache" dari hasil tersimpan di penjelasan_llm (input_hash sama), "fallback" jika template statis',
                     },
                     kepada: { type: 'string', description: 'Nama lembaga tujuan surat' },
                     perihal: { type: 'string', description: 'Perihal surat' },
