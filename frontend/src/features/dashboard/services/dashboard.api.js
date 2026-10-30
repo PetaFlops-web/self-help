@@ -182,38 +182,10 @@ export const dashboardApi = {
       })
     }
 
-    try {
-      const explainData = await projectsApi.explain(featured.id)
-
-      if (explainData && explainData.ringkasan) {
-        const temuanList = Array.isArray(explainData.temuan) ? explainData.temuan : []
-        const explanation = [
-          explainData.ringkasan,
-          ...temuanList.map((t) => t.penjelasan).filter(Boolean),
-        ]
-        if (explainData.penafian) {
-          explanation.push(explainData.penafian)
-        }
-
-        const sourceLabel = explainData.generated_by === 'llm' ? 'AI' : 'templat cadangan'
-        const chips = [`Dibuat oleh ${sourceLabel}`]
-
-        const saranList = Array.isArray(explainData.saran_tindak_lanjut) ? explainData.saran_tindak_lanjut : []
-        const lembagaList = saranList
-          .map((s) => s?.lembaga)
-          .filter(Boolean)
-          .slice(0, 2)
-        chips.push(...lembagaList)
-
-        ai = {
-          ...ai,
-          explanation,
-          chips,
-        }
-      }
-    } catch (error) {
-      console.error('Gagal memuat AI dari backend:', error)
-    }
+    // Penjelasan AI (explain) TIDAK di-fetch di sini: di production endpoint ini
+    // memanggil LLM eksternal yang bisa memakan beberapa detik dan akan menahan
+    // render seluruh dashboard. Explain dimuat terpisah via getExplanation()
+    // sehingga data cepat (proyek, skor, peta, RAB) langsung tampil.
 
     return {
       project,
@@ -223,6 +195,45 @@ export const dashboardApi = {
       fund,
       stages,
       ai,
+    }
+  },
+
+  /**
+   * Mengambil penjelasan AI (explain) untuk satu proyek secara terpisah dari
+   * data dashboard utama. Dipanggil non-blocking agar first paint tidak menunggu
+   * LLM. Mengembalikan null bila gagal (pemanggil mempertahankan state apa adanya).
+   * @param {string} projectId
+   * @returns {Promise<{ explanation: string[], chips: string[] } | null>}
+   */
+  async getExplanation(projectId) {
+    if (!projectId) return null
+    try {
+      const explainData = await projectsApi.explain(projectId)
+      if (!explainData || !explainData.ringkasan) return null
+
+      const temuanList = Array.isArray(explainData.temuan) ? explainData.temuan : []
+      const explanation = [
+        explainData.ringkasan,
+        ...temuanList.map((t) => t.penjelasan).filter(Boolean),
+      ]
+      if (explainData.penafian) {
+        explanation.push(explainData.penafian)
+      }
+
+      const sourceLabel = explainData.generated_by === 'llm' ? 'AI' : 'templat cadangan'
+      const chips = [`Dibuat oleh ${sourceLabel}`]
+
+      const saranList = Array.isArray(explainData.saran_tindak_lanjut) ? explainData.saran_tindak_lanjut : []
+      const lembagaList = saranList
+        .map((s) => s?.lembaga)
+        .filter(Boolean)
+        .slice(0, 2)
+      chips.push(...lembagaList)
+
+      return { explanation, chips }
+    } catch (error) {
+      console.error('Gagal memuat AI dari backend:', error)
+      return null
     }
   },
 

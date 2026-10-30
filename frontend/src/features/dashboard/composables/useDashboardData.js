@@ -23,6 +23,8 @@ const state = reactive({
   loading: false,
   loaded: false,
   error: '',
+  aiLoading: false,
+  aiLoaded: false,
 })
 
 let activeFetchPromise = null
@@ -56,6 +58,10 @@ async function loadData(forceOrId = false) {
         if (data.stages) state.stages.splice(0, state.stages.length, ...data.stages)
         if (data.ai) Object.assign(state.ai, data.ai)
         state.loaded = true
+
+        // Muat penjelasan AI secara terpisah & non-blocking: data utama sudah
+        // tampil, section AI menampilkan skeleton sendiri sampai explain balik.
+        void loadExplanation(state.project.id)
       }
     } catch {
       state.loaded = false
@@ -67,6 +73,28 @@ async function loadData(forceOrId = false) {
   })()
 
   return activeFetchPromise
+}
+
+/**
+ * Memuat penjelasan AI (explain) secara terpisah dari data utama. Men-set
+ * aiLoading selama berjalan; mengisi state.ai bila sukses. Gagal → biarkan
+ * explanation apa adanya (mock/placeholder), aiLoading tetap dimatikan.
+ * @param {string} projectId
+ */
+async function loadExplanation(projectId) {
+  if (!projectId) return
+  state.aiLoading = true
+  state.aiLoaded = false
+  try {
+    const result = await dashboardApi.getExplanation(projectId)
+    if (result) {
+      state.ai.explanation = result.explanation
+      state.ai.chips = result.chips
+      state.aiLoaded = true
+    }
+  } finally {
+    state.aiLoading = false
+  }
 }
 
 /**
@@ -87,6 +115,7 @@ export function useDashboardData() {
     stages: state.stages,
     ai: state.ai,
     loading: toRef(state, 'loading'),
+    aiLoading: toRef(state, 'aiLoading'),
     error: toRef(state, 'error'),
     loadData,
   }

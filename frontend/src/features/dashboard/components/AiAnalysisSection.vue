@@ -68,7 +68,7 @@
         <div class="col-lg-5">
           <article class="explain">
             <h3>Penjelasan AI</h3>
-            <div v-if="showSkeleton" class="d-grid gap-2 mb-3">
+            <div v-if="showAiSkeleton" class="d-grid gap-2 mb-3">
               <SkeletonBlock width="100%" height="13px" radius="4px" class="bg-dark-subtle" />
               <SkeletonBlock width="95%" height="13px" radius="4px" class="bg-dark-subtle" />
               <SkeletonBlock width="80%" height="13px" radius="4px" class="bg-dark-subtle mt-2" />
@@ -97,7 +97,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import RiskBadge from '@/components/ui/RiskBadge.vue'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
@@ -105,8 +105,11 @@ import { useMinLoading } from '@/composables/useMinLoading'
 import { useDashboardData } from '../composables/useDashboardData'
 import { projectsApi } from '@/services/api'
 
-const { ai, loading, project } = useDashboardData()
+const { ai, loading, aiLoading, project } = useDashboardData()
 const showSkeleton = useMinLoading(loading)
+// Skeleton khusus Penjelasan AI: aktif selama data utama ATAU explain masih dimuat,
+// sehingga section AI menampilkan skeleton sendiri walau data lain sudah tampil.
+const showAiSkeleton = useMinLoading(computed(() => loading.value || aiLoading.value))
 const router = useRouter()
 const copied = ref(false)
 const draftLoading = ref(false)
