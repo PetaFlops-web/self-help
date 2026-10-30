@@ -348,14 +348,14 @@ function uuid(n: number): string {
 
 async function clearPreviousRealSeed(): Promise<void> {
   const ids = PROJECTS.map((p) => uuid(p.n));
-  for (const table of ['laporan_warga', 'indikator_temuan', 'pembayaran', 'progres', 'rab_item', 'tender', 'dokumen', 'prosedur_checklist']) {
+  for (const table of ['laporan_warga', 'indikator_temuan', 'penjelasan_llm', 'pembayaran', 'progres', 'rab_item', 'tender', 'dokumen', 'prosedur_checklist']) {
     await pool.query(`DELETE FROM ${table} WHERE proyek_id = ANY($1::uuid[])`, [ids]);
   }
   await pool.query('DELETE FROM proyek WHERE id = ANY($1::uuid[])', [ids]);
 }
 
 async function clearDummySeed(): Promise<void> {
-  for (const table of ['laporan_warga', 'indikator_temuan', 'pembayaran', 'progres', 'rab_item', 'tender', 'dokumen', 'prosedur_checklist']) {
+  for (const table of ['laporan_warga', 'indikator_temuan', 'penjelasan_llm', 'pembayaran', 'progres', 'rab_item', 'tender', 'dokumen', 'prosedur_checklist']) {
     await pool.query(`DELETE FROM ${table} WHERE proyek_id IN (SELECT id FROM proyek WHERE is_dummy = true)`);
   }
   await pool.query('DELETE FROM proyek WHERE is_dummy = true');
