@@ -46,26 +46,16 @@ Prasyarat: Git, Docker + Docker Compose.
    ```sh
    docker compose up -d --build
    ```
-   Service yang terangkat:
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:3000
-   - LLM Service: http://localhost:3001
+   Semua trafik HTTP masuk lewat Nginx di port 80 (frontend, backend, dan llm tidak di-expose langsung ke host):
+   - Aplikasi (frontend): http://localhost
+   - Backend API: http://localhost/api (mis. http://localhost/api/ping)
+   - Swagger (dev): http://localhost/docs
    - Postgres: localhost:5433
    - Redis: localhost:6379
 
+   LLM Service berjalan internal (diakses backend via `http://llm:3001`), tidak di-expose ke host.
+
    Migrasi database dan seed data awal berjalan otomatis via service `backend-init` sebelum backend start.
-
-### Opsional: Dev mode frontend lokal
-
-Butuh Node.js 22+.
-
-```sh
-cd frontend
-npm install
-npm run dev        # http://localhost:5173
-npm run build      # build produksi
-npm run preview
-```
 
 ## Progress Saat Ini
 
