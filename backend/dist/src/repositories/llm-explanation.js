@@ -1,8 +1,4 @@
 import pool from '../config/database.js';
-/**
- * Ambil hasil LLM tersimpan paling baru yang cocok `input_hash` + `jenis`.
- * Mengembalikan `isi_json` bila ada, atau `null` bila cache miss.
- */
 export async function findCachedExplanation(inputHash, jenis) {
     const res = await pool.query(`SELECT isi_json
        FROM penjelasan_llm
@@ -11,7 +7,6 @@ export async function findCachedExplanation(inputHash, jenis) {
       LIMIT 1`, [inputHash, jenis]);
     return res.rows[0]?.isi_json ?? null;
 }
-/** Simpan hasil LLM yang lolos validasi ke `penjelasan_llm`. */
 export async function saveExplanation(input) {
     await pool.query(`INSERT INTO penjelasan_llm
        (proyek_id, jenis, isi_json, model, versi_prompt, input_hash, dibuat_pada)

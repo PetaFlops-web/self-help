@@ -1,4 +1,3 @@
-/** Baris tabel `proyek` (SRS 4.2) + nama kabupaten dari join `wilayah`. */
 export interface Project {
   id: string;
   kode_rup: string | null;
@@ -39,7 +38,6 @@ export interface ProjectFilters {
   limit?: number;
 }
 
-/** Baris tabel `indikator_temuan` (SRS 4.5). */
 export interface IndicatorFindingRow {
   id: string;
   dimensi: string | null;
@@ -53,7 +51,6 @@ export interface IndicatorFindingRow {
   dihitung_pada: Date | null;
 }
 
-/** Item laporan warga yang muncul di detail proyek. */
 export interface ProjectReportItem {
   tiket: string;
   kategori: string | null;
@@ -64,7 +61,6 @@ export interface ProjectReportItem {
   anonim: boolean;
 }
 
-/** Detail proyek lengkap termasuk laporan warga terkait. */
 export interface ProjectDetail extends Project {
   laporan_warga: {
     total: number;
@@ -72,7 +68,6 @@ export interface ProjectDetail extends Project {
   };
 }
 
-/** Hasil agregasi ringkas beranda (FR-05). */
 export interface StatsSummary {
   total_proyek: number;
   rendah: number;

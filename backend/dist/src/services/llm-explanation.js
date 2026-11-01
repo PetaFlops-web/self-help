@@ -127,14 +127,12 @@ export async function explainProject(id) {
     const rab = await getProjectRabItems(id);
     const payload = buildPayload(project, result, 'explain', 'warga awam', reports, rab.items);
     const inputHash = hashObject(payload);
-    // LLM-07: masukan yang sama memakai hasil tersimpan tanpa memanggil LLM lagi.
     const cached = (await findCachedExplanation(inputHash, 'explain'));
     if (cached) {
         return { generated_by: 'cache', ...cached };
     }
     try {
         const output = (await callLlmService(payload));
-        // Simpan hanya hasil LLM yang lolos (fallback tidak di-cache).
         await saveExplanation({
             proyek_id: project.id,
             jenis: 'explain',
@@ -158,7 +156,6 @@ export async function draftProject(id, targetInstitution) {
     const rab = await getProjectRabItems(id);
     const payload = buildPayload(project, result, 'draft', targetInstitution, reports, rab.items);
     const inputHash = hashObject(payload);
-    // LLM-07: masukan yang sama (termasuk tujuan lembaga) memakai hasil tersimpan.
     const cached = (await findCachedExplanation(inputHash, 'draft'));
     if (cached) {
         return { generated_by: 'cache', ...cached };

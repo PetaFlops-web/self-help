@@ -1,9 +1,5 @@
 import { z } from 'zod';
 
-/**
- * Schema body `PATCH /api/admin/reports/:id`.
- * `status` wajib (enum); `alasan_tolak` wajib jika status 'Ditolak'.
- */
 export const VerifyReportBodySchema = z
   .object({
     status: z.enum(['Diverifikasi', 'Ditolak'], {

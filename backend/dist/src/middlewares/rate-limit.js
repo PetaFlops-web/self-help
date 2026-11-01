@@ -16,8 +16,6 @@ export const llmLimiter = rateLimit({
     message: { status: 'error', message: 'Batas permintaan LLM tercapai, coba lagi dalam 1 menit' },
     keyGenerator: (req) => req.headers['x-real-ip'] || req.ip || 'unknown',
 });
-// LLM-08 / NFR-11: batas per alamat IP per hari untuk endpoint LLM, melengkapi
-// llmLimiter (burst per menit) sebagai pembatas kuota harian.
 export const llmDailyLimiter = rateLimit({
     windowMs: 24 * 60 * 60 * 1000,
     limit: isProd ? 50 : 1000,

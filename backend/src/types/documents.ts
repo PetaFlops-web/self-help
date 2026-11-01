@@ -1,4 +1,3 @@
-/** Baris tabel `dokumen` (Fase 9). */
 export interface Document {
   id: string;
   proyek_id: string;
@@ -12,7 +11,6 @@ export interface Document {
   is_dummy: boolean;
 }
 
-/** Baris tabel `prosedur_checklist` (Fase 9). */
 export interface ProcedureChecklist {
   id: string;
   proyek_id: string;

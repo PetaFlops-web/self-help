@@ -171,8 +171,6 @@ const PROCEDURE_STEPS: ProcedureStep[] = [
 ];
 
 function isDocumentPublished(risk: RiskLevel, index: number): boolean {
-  // Project tinggi = banyak dokumen tidak dipublikasikan
-  // Project rendah = hampir semua dipublikasikan
   if (risk === 'tinggi') return index < 2;
   if (risk === 'perlu_perhatian') return index < 4;
   return index < 5 || index === 5;
@@ -224,7 +222,7 @@ function splitAmount(total: number, count: number, seed: number): number[] {
 }
 
 function buildRabSchedule(referenceTotal: number, risk: RiskLevel, projectNum: number): Array<{ uraian: string; satuan: string; volume: number; harga_satuan: number; harga_acuan: number; kode_acuan: string }> {
-  const count = 3 + (projectNum % 3); // 3, 4, atau 5 item
+  const count = 3 + (projectNum % 3);
   const itemDeviations = [5, 0, -3, -7, -10];
   const baseAcuanPct = risk === 'tinggi' ? 22 : risk === 'perlu_perhatian' ? 14 : -5;
   const portions = splitAmount(referenceTotal, count, projectNum);
@@ -410,7 +408,6 @@ async function run(): Promise<void> {
 
     const referenceTotal = Math.round(hps / (1 + scenario.acuanMargin));
 
-    // Seed harga acuan & item RAB yang lebih realistis (3-5 item per proyek)
     const rabSchedule = buildRabSchedule(referenceTotal, risk, p.n);
     for (const item of rabSchedule) {
       await pool.query(
@@ -426,7 +423,6 @@ async function run(): Promise<void> {
       );
     }
 
-    // Tender dummy agar D2 & D6 bisa dihitung
     const announcementDate = addDays(rupAnnouncementDate, scenario.hari_rup);
     const determinationDate = addDays(announcementDate, 7);
     await pool.query(
@@ -438,7 +434,6 @@ async function run(): Promise<void> {
       ],
     );
 
-    // Seed pembayaran termin (2-3 tahap) agar aliran dana & stages lebih realistis
     const paymentSchedule = buildPaymentSchedule(scenario.cair, p.status, p.tahun);
     for (const term of paymentSchedule) {
       await pool.query(
@@ -448,7 +443,6 @@ async function run(): Promise<void> {
       );
     }
 
-    // Seed riwayat progres fisik (2-3 snapshot)
     const progressSchedule = buildProgressSchedule(scenario.fisik, p.status, p.tahun);
     for (const prog of progressSchedule) {
       await pool.query(
@@ -470,7 +464,6 @@ async function run(): Promise<void> {
       );
     }
 
-    // Seed dokumen wajib publik untuk D5
     for (let i = 0; i < REQUIRED_DOCUMENTS.length; i += 1) {
       const d = REQUIRED_DOCUMENTS[i];
       await pool.query(
@@ -483,7 +476,6 @@ async function run(): Promise<void> {
       );
     }
 
-    // Seed prosedur checklist untuk D6
     for (let i = 0; i < PROCEDURE_STEPS.length; i += 1) {
       const t = PROCEDURE_STEPS[i];
       await pool.query(

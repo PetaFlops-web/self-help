@@ -16,7 +16,6 @@ export function created(res, resource, data, message) {
 export function updated(res, resource, data, message) {
     success(res, resource, data, message, 200);
 }
-/** Hapus (DELETE, 200) — `{ status: 'success', message, [resource]: id }`. */
 export function removed(res, resource, id, message) {
     respond(res, 200, { message, [resource]: id });
 }

@@ -1,14 +1,5 @@
-/**
- * Fase 1.2 — Tabel proyek (SRS 4.2) + kolom umum (FR-49, DR-01).
- *
- * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
- */
 export const shorthands = undefined;
 
-/**
- * @param pgm {import('node-pg-migrate').MigrationBuilder}
- * @returns {Promise<void> | void}
- */
 export const up = (pgm) => {
   pgm.createTable('proyek', {
     id: { type: 'uuid', primaryKey: true, default: pgm.func('gen_random_uuid()') },
@@ -30,7 +21,6 @@ export const up = (pgm) => {
     match_status: 'text',
     skor_total: 'numeric',
     kategori: 'text',
-    // Kolom umum (FR-49, DR-01)
     source_id: 'text',
     source_url: 'text',
     fetched_at: 'timestamptz',
@@ -40,10 +30,6 @@ export const up = (pgm) => {
   pgm.createIndex('proyek', 'kode_bps');
 };
 
-/**
- * @param pgm {import('node-pg-migrate').MigrationBuilder}
- * @returns {Promise<void> | void}
- */
 export const down = (pgm) => {
   pgm.dropTable('proyek');
 };

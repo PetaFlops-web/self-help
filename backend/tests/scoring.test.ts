@@ -20,7 +20,6 @@ test('config/scoring.json valid: bobot berjumlah 1 dan aturan terisi', () => {
   assert.ok(['D1', 'D2', 'D3', 'D4', 'D5', 'D6'].every((d) =>
     config.rules.some((r) => r.dimension === d),
   ));
-  // loader berbasis cwd juga harus jalan dari root backend
   assert.ok(loadScoringConfig().rules.length > 0);
 });
 
@@ -28,13 +27,13 @@ test('skenario Peningkatan Jalan → kategori Tinggi (skor 76)', () => {
   const input: ScoreInput = {
     kenaikan_pagu_pct: 5,
     selisih_hps_acuan_pct: 5,
-    jumlah_penawar: 1, // D2-01 tinggi
+    jumlah_penawar: 1,
     menang_hps_pct: 95,
-    selisih_harga_acuan_pct: 28, // D2-03 tinggi
+    selisih_harga_acuan_pct: 28,
     konsentrasi_pemenang_pct: 20,
-    selisih_volume_pct: 15, // D3-01 tinggi
-    jumlah_laporan_terverifikasi: 1, // D3-02 sedang
-    cair_minus_fisik_poin: 35, // D4-01 tinggi
+    selisih_volume_pct: 15,
+    jumlah_laporan_terverifikasi: 1,
+    cair_minus_fisik_poin: 35,
     jumlah_temuan_bpk: 0,
     hari_rup_ke_tender: 30,
     hari_tanpa_tindak_lanjut: 0,
@@ -53,11 +52,11 @@ test('skenario Rehabilitasi Jembatan → Perlu Perhatian (skor 39)', () => {
     selisih_hps_acuan_pct: 5,
     jumlah_penawar: 4,
     menang_hps_pct: 90,
-    selisih_harga_acuan_pct: 16, // D2-03 sedang
+    selisih_harga_acuan_pct: 16,
     konsentrasi_pemenang_pct: 10,
-    selisih_volume_pct: 8, // D3-01 sedang
-    jumlah_laporan_terverifikasi: 1, // D3-02 sedang
-    cair_minus_fisik_poin: 15, // D4-01 sedang
+    selisih_volume_pct: 8,
+    jumlah_laporan_terverifikasi: 1,
+    cair_minus_fisik_poin: 15,
     jumlah_temuan_bpk: 0,
     hari_rup_ke_tender: 30,
     hari_tanpa_tindak_lanjut: 0,
@@ -98,12 +97,10 @@ test('dimensi data belum cukup dikeluarkan + bobot dinormalisasi (FR-10, FR-14)'
     cair_minus_fisik_poin: 35,
   };
   const r = scoreProject(input, config);
-  // D1, D5, D6 tidak punya field → data belum cukup
   assert.deepEqual(r.dimensi_data_belum_cukup.sort(), ['D1', 'D5', 'D6']);
   assert.equal(r.dimensi.D1, null);
   assert.equal(r.dimensi.D5, null);
   assert.equal(r.dimensi.D6, null);
-  // bobot ternormalisasi hanya atas D2, D3, D4 → skor total 100
   assert.equal(r.skor_total, 100);
   assert.equal(r.kategori, 'Tinggi');
   assert.deepEqual(Object.keys(r.weights_used).sort(), ['D2', 'D3', 'D4']);
@@ -115,7 +112,6 @@ test('ambang kategori dan arah lte/gte', () => {
   assert.equal(categorize(65, config.category_thresholds), 'Perlu Perhatian');
   assert.equal(categorize(66, config.category_thresholds), 'Tinggi');
 
-  // lte: jumlah penawar 1 = tinggi, 2 = sedang, 3 = rendah
   const one = scoreProject({ jumlah_penawar: 1 }, config);
   const two = scoreProject({ jumlah_penawar: 2 }, config);
   const three = scoreProject({ jumlah_penawar: 3 }, config);
@@ -137,7 +133,7 @@ test('validateConfig menolak arah ambang yang salah', () => {
           input: 'x',
           direction: 'lte',
           sedang: 2,
-          tinggi: 10, // lte harusnya tinggi < sedang
+          tinggi: 10,
           required_fields: ['x'],
         },
       ],

@@ -67,7 +67,6 @@ test('fallback explain memenuhi skema 6.5 dan tanpa frasa terlarang', () => {
     assert.ok(!text.toLowerCase().includes(banned), `frasa terlarang "${banned}" muncul`);
   }
 
-  // Dimensi data belum cukup disebut, dan is_dummy dicatat.
   assert.ok(out.keterbatasan.some((k) => k.includes('D1')));
   assert.ok(out.keterbatasan.some((k) => k.includes('simulasi')));
 });

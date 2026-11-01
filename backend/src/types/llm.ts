@@ -1,6 +1,3 @@
-/**
- * Tipe kontrak antara Main Backend dan llm-service (SRS 6.4 / 6.5).
- */
 
 export type LlmTask = 'explain' | 'draft';
 
@@ -36,7 +33,6 @@ export interface LlmRabItemInput {
   deviasi_pct: string | null;
 }
 
-/** Payload yang dikirim ke POST /internal/generate (SRS 6.4). */
 export interface LlmGeneratePayload {
   versi_prompt: string;
   tugas: LlmTask;
@@ -59,7 +55,6 @@ export interface LlmFindingOutput {
   arti_bagi_warga: string;
 }
 
-/** Keluaran T1 (penjelasan berbahasa awam), SRS 6.5. */
 export interface LlmExplainOutput {
   ringkasan: string;
   temuan: LlmFindingOutput[];
@@ -68,7 +63,6 @@ export interface LlmExplainOutput {
   penafian: string;
 }
 
-/** Keluaran T2 (draf laporan tindak lanjut), SRS 6.5. */
 export interface LlmDraftOutput {
   kepada: string;
   perihal: string;
@@ -82,6 +76,5 @@ export interface LlmDraftOutput {
 
 export type LlmOutput = LlmExplainOutput | LlmDraftOutput;
 
-/** Lembaga tujuan draf yang sah (SRS 6.5). */
 export const LLM_TARGET_INSTITUTIONS = ['inspektorat', 'BPK', 'KPK', 'Ombudsman', 'dinas_terkait'] as const;
 export type LlmTargetInstitution = (typeof LLM_TARGET_INSTITUTIONS)[number];

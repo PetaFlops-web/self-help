@@ -17,7 +17,6 @@ router.post(
   validateBody(CreateReportBodySchema),
   createReport,
 );
-// GET /reports?tiket= TIDAK di-cache (lacak status laporan per-tiket, privasi).
 router.get('/reports', getReportByTiket);
 router.get(
   '/projects/:id/reports',

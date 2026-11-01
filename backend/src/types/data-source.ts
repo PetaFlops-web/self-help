@@ -1,4 +1,3 @@
-/** Baris tabel `sumber_data` (SRS 4.1). */
 export interface DataSource {
   source_id: string;
   nama: string;

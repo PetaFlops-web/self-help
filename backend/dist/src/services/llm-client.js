@@ -1,5 +1,4 @@
 import { config } from '../config/env.js';
-// Retry 10 detik + 1 percobaan ulang dilakukan di llm-service; backend cukup sekali panggil.
 const MAX_ATTEMPTS = 1;
 export class LlmServiceUnavailableError extends Error {
     constructor(message) {
@@ -7,10 +6,6 @@ export class LlmServiceUnavailableError extends Error {
         this.name = 'LlmServiceUnavailableError';
     }
 }
-/**
- * Panggil llm-service dari server saja (LLM-01); kunci API hanya ada di
- * llm-service. Batas waktu 10 detik + satu retry (LLM-06).
- */
 export async function callLlmService(payload) {
     const url = `${config.llmServiceUrl}/internal/generate`;
     const timeout = config.llmServiceTimeoutMs;

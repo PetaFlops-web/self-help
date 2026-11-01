@@ -10,8 +10,6 @@ export async function verifyReport(req, res) {
         alasan_tolak: body.alasan_tolak,
     };
     const report = await verifyReportByTiket(id, input);
-    // Verifikasi laporan memengaruhi daftar laporan, angka ringkas, dan
-    // indikator/skor proyek (hitung ulang D3).
     await invalidateCache('reports', 'stats', 'projects');
     updated(res, 'report', report, 'Status laporan berhasil diperbarui');
 }

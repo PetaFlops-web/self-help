@@ -32,7 +32,6 @@ if (isProd && config.allowedOrigins.length > 0) {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Sajikan media laporan yang diunggah (dev: disk lokal uploads/).
 app.use('/uploads', express.static(UPLOAD_ROOT));
 
 if (isDev) {
@@ -42,7 +41,6 @@ if (isDev) {
   });
 }
 
-// --- Routes ---
 app.use('/api', generalLimiter);
 app.use('/api', pingRouter);
 app.use('/api', regionsRouter);

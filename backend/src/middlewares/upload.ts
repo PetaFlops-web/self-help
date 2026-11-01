@@ -10,11 +10,10 @@ import { MediaMetadataError, stripMediaMetadata } from '../helpers/media-metadat
 export const UPLOAD_ROOT: string = path.resolve(process.cwd(), 'uploads');
 export const REPORT_UPLOAD_DIR: string = path.join(UPLOAD_ROOT, 'reports');
 
-export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB per file
+export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 export const MAX_FILES = 5;
 export const REPORT_MEDIA_FIELD = 'media';
 
-/** MIME yang diizinkan dipetakan ke ekstensi kanonikalnya. */
 const ALLOWED_MIME: Record<string, string> = {
   'image/jpeg': '.jpg',
   'video/mp4': '.mp4',
@@ -44,7 +43,6 @@ function fileFilter(
     cb(null, true);
     return;
   }
-  // Pesan ditangkap oleh wrapper di bawah dan diubah ke HttpError 400.
   cb(new HttpError(400, 'Tipe file tidak didukung. Hanya JPG (image/jpeg) dan MP4 (video/mp4) yang diizinkan'));
 }
 
@@ -59,7 +57,6 @@ const uploader = multer({
 
 const multerHandler = uploader.array(REPORT_MEDIA_FIELD, MAX_FILES);
 
-/** Terjemahkan MulterError ke HttpError dengan pesan ramah pengguna. */
 function translateMulterError(err: MulterError): HttpError {
   switch (err.code) {
     case 'LIMIT_FILE_SIZE':
@@ -92,11 +89,6 @@ async function sanitizeReportMedia(files: Express.Multer.File[]): Promise<void> 
   }
 }
 
-/**
- * Middleware upload media laporan (field `media`, maksimal 5 file).
- * Menerima request multipart/form-data; file tersedia di `req.files`,
- * field teks lain tetap di `req.body`.
- */
 export function uploadReportMedia(req: Request, res: Response, next: NextFunction): void {
   multerHandler(req, res, (err: unknown) => {
     if (err) {
@@ -119,13 +111,11 @@ export function uploadReportMedia(req: Request, res: Response, next: NextFunctio
   });
 }
 
-/** Ubah daftar file hasil multer menjadi URL publik `/uploads/reports/<nama>`. */
 export function mediaFilesToUrls(files: Express.Multer.File[] | undefined): string[] {
   if (!files || files.length === 0) return [];
   return files.map((f) => `/uploads/reports/${f.filename}`);
 }
 
-/** Pastikan minimal 1 file media diunggah; jika tidak → HttpError(400). */
 export function requireReportMedia(req: Request, _res: Response, next: NextFunction): void {
   const files = req.files as Express.Multer.File[] | undefined;
   if (!files || files.length === 0) {

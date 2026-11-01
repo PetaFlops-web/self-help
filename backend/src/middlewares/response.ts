@@ -32,7 +32,6 @@ export function updated<T>(res: Response, resource: string, data: T, message: st
   success(res, resource, data, message, 200);
 }
 
-/** Hapus (DELETE, 200) — `{ status: 'success', message, [resource]: id }`. */
 export function removed(res: Response, resource: string, id: string, message: string): void {
   respond(res, 200, { message, [resource]: id });
 }

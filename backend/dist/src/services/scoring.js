@@ -43,12 +43,6 @@ export function categorize(total, thresholds) {
         return 'Perlu Perhatian';
     return 'Tinggi';
 }
-/**
- *
- * @param input
- *
- * @param config
- */
 export function scoreProject(input, config) {
     validateConfig(config);
     const byDimension = new Map();

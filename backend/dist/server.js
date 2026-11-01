@@ -1,4 +1,3 @@
-// env.ts harus di-import pertama agar dotenv.config() jalan sebelum modul lain
 import { config } from './src/config/env.js';
 import app from './app.js';
 import { connectRedis } from './src/config/redis.js';

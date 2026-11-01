@@ -1,15 +1,5 @@
-/**
- * Fase 1.5 — Tabel laporan_warga, indikator_temuan, penjelasan_llm, etl_error
- * (SRS 4.5).
- *
- * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
- */
 export const shorthands = undefined;
 
-/**
- * @param pgm {import('node-pg-migrate').MigrationBuilder}
- * @returns {Promise<void> | void}
- */
 export const up = (pgm) => {
   pgm.createTable('laporan_warga', {
     tiket: { type: 'text', primaryKey: true },
@@ -61,10 +51,6 @@ export const up = (pgm) => {
   pgm.createIndex('penjelasan_llm', 'proyek_id');
 };
 
-/**
- * @param pgm {import('node-pg-migrate').MigrationBuilder}
- * @returns {Promise<void> | void}
- */
 export const down = (pgm) => {
   pgm.dropTable('etl_error');
   pgm.dropTable('penjelasan_llm');

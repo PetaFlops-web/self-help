@@ -1,15 +1,5 @@
-/**
- * Fase 1.4 — Tabel pembayaran, progres, rab_item, harga_acuan, anggaran_dinas
- * (SRS 4.4).
- *
- * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
- */
 export const shorthands = undefined;
 
-/**
- * @param pgm {import('node-pg-migrate').MigrationBuilder}
- * @returns {Promise<void> | void}
- */
 export const up = (pgm) => {
   pgm.createTable('harga_acuan', {
     kode: { type: 'text', primaryKey: true },
@@ -18,7 +8,6 @@ export const up = (pgm) => {
     harga: 'bigint',
     kode_bps: 'text',
     tahun: 'smallint',
-    // Kolom umum (FR-49, DR-01)
     source_id: 'text',
     source_url: 'text',
     fetched_at: 'timestamptz',
@@ -32,7 +21,6 @@ export const up = (pgm) => {
     tanggal: 'date',
     jumlah: 'bigint',
     persen_kontrak: 'numeric',
-    // Kolom umum (FR-49, DR-01)
     source_id: 'text',
     source_url: 'text',
     fetched_at: 'timestamptz',
@@ -45,7 +33,6 @@ export const up = (pgm) => {
     tanggal: 'date',
     persen_fisik: 'numeric',
     sumber: 'text',
-    // Kolom umum (FR-49, DR-01)
     source_id: 'text',
     source_url: 'text',
     fetched_at: 'timestamptz',
@@ -60,7 +47,6 @@ export const up = (pgm) => {
     volume: 'numeric',
     harga_satuan: 'bigint',
     kode_harga_acuan: { type: 'text', references: 'harga_acuan' },
-    // Kolom umum (FR-49, DR-01)
     source_id: 'text',
     source_url: 'text',
     fetched_at: 'timestamptz',
@@ -75,7 +61,6 @@ export const up = (pgm) => {
       tahun: { type: 'smallint', notNull: true },
       pagu: 'bigint',
       realisasi: 'bigint',
-      // Kolom umum (FR-49, DR-01)
       source_id: 'text',
       source_url: 'text',
       fetched_at: 'timestamptz',
@@ -90,10 +75,6 @@ export const up = (pgm) => {
   pgm.createIndex('rab_item', 'kode_harga_acuan');
 };
 
-/**
- * @param pgm {import('node-pg-migrate').MigrationBuilder}
- * @returns {Promise<void> | void}
- */
 export const down = (pgm) => {
   pgm.dropTable('anggaran_dinas');
   pgm.dropTable('rab_item');

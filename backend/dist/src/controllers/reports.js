@@ -3,7 +3,6 @@ import { created, ok } from '../middlewares/response.js';
 import { invalidateCache } from '../middlewares/cache.js';
 import { mediaFilesToUrls } from '../middlewares/upload.js';
 export async function createReport(req, res) {
-    // req.body sudah divalidasi & di-coerce oleh validateBody(CreateReportBodySchema).
     const body = req.body;
     const files = req.files;
     const input = {
@@ -16,7 +15,6 @@ export async function createReport(req, res) {
         anonim: body.anonim ?? false,
     };
     const report = await submitReport(input);
-    // Laporan baru memengaruhi daftar laporan proyek & angka ringkas beranda.
     await invalidateCache('reports', 'stats');
     created(res, 'report', report, 'Laporan berhasil dikirim');
 }

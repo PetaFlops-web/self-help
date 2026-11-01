@@ -56,12 +56,6 @@ export function categorize(total: number, thresholds: ScoringConfig['category_th
   return 'Tinggi';
 }
 
-/**
- *
- * @param input 
- *               
- * @param config 
- */
 export function scoreProject(input: ScoreInput, config: ScoringConfig): ScoreResult {
   validateConfig(config);
 

@@ -7,7 +7,6 @@ import type { CreateReportInput } from '../types/citizen-report.js';
 import type { CreateReportBody } from '../utils/validators/reports.js';
 
 export async function createReport(req: Request, res: Response): Promise<void> {
-  // req.body sudah divalidasi & di-coerce oleh validateBody(CreateReportBodySchema).
   const body = req.body as CreateReportBody;
   const files = req.files as Express.Multer.File[] | undefined;
 
@@ -21,7 +20,6 @@ export async function createReport(req: Request, res: Response): Promise<void> {
     anonim: body.anonim ?? false,
   };
   const report = await submitReport(input);
-  // Laporan baru memengaruhi daftar laporan proyek & angka ringkas beranda.
   await invalidateCache('reports', 'stats');
   created(res, 'report', report, 'Laporan berhasil dikirim');
 }

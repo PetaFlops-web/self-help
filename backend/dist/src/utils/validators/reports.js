@@ -1,10 +1,4 @@
 import { z } from 'zod';
-/**
- * Schema body `POST /api/reports` (multipart/form-data).
- * Field inti wajib; lat/lng/anonim opsional. Nilai datang sebagai string dari
- * multipart sehingga lat/lng/anonim di-coerce. `foto_urls` tidak divalidasi di
- * sini karena diisi dari file hasil upload multer (lihat upload.ts).
- */
 export const CreateReportBodySchema = z.object({
     proyek_id: z
         .string({ error: 'proyek_id wajib diisi' })
