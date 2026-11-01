@@ -50,7 +50,8 @@
 
     <footer class="site-footer">
       <div class="site-container app-footer text-center">
-        <span>Indikator risiko bukan bukti pelanggaran. Data pada tahap pengembangan adalah simulasi.</span>
+        <p class="app-footer-note">Indikator risiko bukan bukti pelanggaran. Data pada tahap pengembangan adalah simulasi.</p>
+        <p class="app-footer-credit">&copy; 2026 CodeMasterPerdi</p>
       </div>
     </footer>
   </div>
