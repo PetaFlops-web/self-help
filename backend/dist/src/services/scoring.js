@@ -106,7 +106,7 @@ export function scoreProject(input, config) {
                 weightsUsed[d] = w;
                 total += w * dimensionScores[d];
             }
-            totalScore = Math.round(total * 100) / 100;
+            totalScore = Math.round(total);
         }
     }
     const category = totalScore === null ? null : categorize(totalScore, config.category_thresholds);

@@ -131,7 +131,7 @@ export function scoreProject(input: ScoreInput, config: ScoringConfig): ScoreRes
         weightsUsed[d] = w;
         total += w * (dimensionScores[d] as number);
       }
-      totalScore = Math.round(total * 100) / 100;
+      totalScore = Math.round(total);
     }
   }
 

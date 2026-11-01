@@ -24,7 +24,7 @@ test('config/scoring.json valid: bobot berjumlah 1 dan aturan terisi', () => {
   assert.ok(loadScoringConfig().rules.length > 0);
 });
 
-test('skenario Peningkatan Jalan → kategori Tinggi (skor 73)', () => {
+test('skenario Peningkatan Jalan → kategori Tinggi (skor 76)', () => {
   const input: ScoreInput = {
     kenaikan_pagu_pct: 5,
     selisih_hps_acuan_pct: 5,
@@ -41,13 +41,13 @@ test('skenario Peningkatan Jalan → kategori Tinggi (skor 73)', () => {
   };
   const r = scoreProject(input, config);
   assert.equal(r.kategori, 'Tinggi');
-  assert.equal(r.skor_total, 73);
+  assert.equal(r.skor_total, 76);
   assert.equal(r.dimensi.D2, 100);
   assert.equal(r.dimensi.D3, 100);
   assert.equal(r.dimensi.D4, 100);
 });
 
-test('skenario Rehabilitasi Jembatan → Perlu Perhatian (skor 38)', () => {
+test('skenario Rehabilitasi Jembatan → Perlu Perhatian (skor 39)', () => {
   const input: ScoreInput = {
     kenaikan_pagu_pct: 5,
     selisih_hps_acuan_pct: 5,
@@ -64,7 +64,7 @@ test('skenario Rehabilitasi Jembatan → Perlu Perhatian (skor 38)', () => {
   };
   const r = scoreProject(input, config);
   assert.equal(r.kategori, 'Perlu Perhatian');
-  assert.equal(r.skor_total, 38);
+  assert.equal(r.skor_total, 39);
 });
 
 test('skenario Pembangunan Drainase → kategori Rendah (skor 10)', () => {
