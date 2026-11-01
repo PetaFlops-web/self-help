@@ -1,7 +1,42 @@
+import { randomBytes } from 'node:crypto';
+import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import pool from '../src/config/database.js';
 import { recalculateProjectScore } from '../src/services/project-scoring.js';
 import redisClient, { connectRedis } from '../src/config/redis.js';
 import { invalidateCache } from '../src/middlewares/cache.js';
+import { stripMediaMetadata } from '../src/helpers/media-metadata.js';
+import { REPORT_UPLOAD_DIR } from '../src/middlewares/upload.js';
+
+const SEED_MEDIA_PREFIX = 'seed-';
+const ASSET_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'assest');
+
+const MEDIA_ASSETS: Array<{ file: string; mimetype: string; ext: string }> = [
+  { file: 'WhatsApp Image 2026-11-01 at 17.36.11.jpeg', mimetype: 'image/jpeg', ext: '.jpg' },
+  { file: 'WhatsApp Image 2026-11-01 at 17.36.12.jpeg', mimetype: 'image/jpeg', ext: '.jpg' },
+  { file: 'WhatsApp Video 2026-11-01 at 17.36.11.mp4', mimetype: 'video/mp4', ext: '.mp4' },
+];
+
+function clearSeededMediaFiles(): void {
+  if (!existsSync(REPORT_UPLOAD_DIR)) {
+    mkdirSync(REPORT_UPLOAD_DIR, { recursive: true });
+    return;
+  }
+  for (const name of readdirSync(REPORT_UPLOAD_DIR)) {
+    if (name.startsWith(SEED_MEDIA_PREFIX)) {
+      unlinkSync(path.join(REPORT_UPLOAD_DIR, name));
+    }
+  }
+}
+
+function writeSeedMediaFile(asset: { file: string; mimetype: string; ext: string }): string {
+  const raw = readFileSync(path.join(ASSET_DIR, asset.file));
+  const clean = stripMediaMetadata(raw, asset.mimetype);
+  const name = `${SEED_MEDIA_PREFIX}${Date.now()}-${randomBytes(8).toString('hex')}${asset.ext}`;
+  writeFileSync(path.join(REPORT_UPLOAD_DIR, name), clean);
+  return `/uploads/reports/${name}`;
+}
 
 const REGIONS = [
   { kode_bps: '1803', nama: 'Lampung Utara', lat: -4.82, lng: 104.8 },
@@ -366,6 +401,7 @@ async function run(): Promise<void> {
 
   await clearPreviousRealSeed();
   await pool.query('DELETE FROM harga_acuan WHERE is_dummy = true');
+  clearSeededMediaFiles();
 
   for (const w of REGIONS) {
     await pool.query(
@@ -453,13 +489,15 @@ async function run(): Promise<void> {
     }
 
     for (let i = 0; i < scenario.laporan; i += 1) {
+      const fotoUrls = MEDIA_ASSETS.map((asset) => writeSeedMediaFile(asset));
       await pool.query(
-        `INSERT INTO laporan_warga (tiket, proyek_id, kategori, keterangan, status, lat, lng)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)
+        `INSERT INTO laporan_warga (tiket, proyek_id, kategori, keterangan, status, lat, lng, foto_urls, catatan_verifikator)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
          ON CONFLICT (tiket) DO NOTHING`,
         [
           `LPR-${p.n}-${String(i + 1).padStart(3, '0')}`, uuid(p.n), 'Kualitas pekerjaan',
           `Laporan dummy ${i + 1} untuk proyek ${p.n}`, 'Diverifikasi', 0, 0,
+          fotoUrls, 'Media simulasi untuk demo',
         ],
       );
     }
