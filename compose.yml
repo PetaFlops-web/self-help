@@ -37,6 +37,8 @@ services:
       - REDIS_URL=redis://redis:6379                                            # DEV
       # - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379                       # PROD
       - LLM_SERVICE_URL=http://llm:3001
+    volumes:
+      - ./backend/uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -61,6 +63,8 @@ services:
       - LLM_SERVICE_URL=http://llm:3001
       - ALLOWED_ORIGINS=http://localhost,http://localhost:5173                   # DEV
       # - ALLOWED_ORIGINS=https://bordrex.my.id,http://bordrex.my.id           # PROD
+    volumes:
+      - ./backend/uploads:/app/uploads
     depends_on:
       backend-init:
         condition: service_completed_successfully
