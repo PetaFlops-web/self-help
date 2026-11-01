@@ -1,5 +1,7 @@
 import pool from '../src/config/database.js';
 import { recalculateProjectScore } from '../src/services/project-scoring.js';
+import redisClient, { connectRedis } from '../src/config/redis.js';
+import { invalidateCache } from '../src/middlewares/cache.js';
 
 const REGIONS = [
   { kode_bps: '1803', nama: 'Lampung Utara', lat: -4.82, lng: 104.8 },
@@ -494,6 +496,18 @@ async function run(): Promise<void> {
 
   for (const p of PROJECTS) {
     await recalculateProjectScore(pool, uuid(p.n));
+  }
+
+  try {
+    await connectRedis();
+    if (redisClient.isReady) {
+      await invalidateCache('projects', 'meta', 'stats', 'reports');
+      console.log('Cache Redis diinvalidasi (projects, meta, stats, reports)');
+    } else {
+      console.warn('[seed] Redis tidak siap — cache tidak diinvalidasi. Jalankan FLUSHDB manual bila perlu.');
+    }
+  } finally {
+    if (redisClient.isOpen) await redisClient.quit();
   }
 }
 
