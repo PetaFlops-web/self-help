@@ -1,9 +1,11 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync } from 'node:fs';
+import { readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { NextFunction, Request, Response } from 'express';
 import multer, { MulterError } from 'multer';
 import { HttpError } from '../helpers/http.js';
+import { MediaMetadataError, stripMediaMetadata } from '../helpers/media-metadata.js';
 
 export const UPLOAD_ROOT: string = path.resolve(process.cwd(), 'uploads');
 export const REPORT_UPLOAD_DIR: string = path.join(UPLOAD_ROOT, 'reports');
@@ -71,6 +73,25 @@ function translateMulterError(err: MulterError): HttpError {
   }
 }
 
+async function sanitizeReportMedia(files: Express.Multer.File[]): Promise<void> {
+  for (const file of files) {
+    const tmpPath = `${file.path}.strip`;
+    try {
+      const raw = await readFile(file.path);
+      const clean = stripMediaMetadata(raw, file.mimetype);
+      if (clean.length === raw.length && clean.equals(raw)) continue;
+      await writeFile(tmpPath, clean);
+      await rename(tmpPath, file.path);
+      file.size = clean.length;
+    } catch (err) {
+      await unlink(tmpPath).catch(() => undefined);
+      await Promise.all(files.map((f) => unlink(f.path).catch(() => undefined)));
+      const reason = err instanceof MediaMetadataError ? err.message : 'metadata tidak dapat dibersihkan';
+      throw new HttpError(400, `Media "${file.originalname}" ditolak: ${reason}`);
+    }
+  }
+}
+
 /**
  * Middleware upload media laporan (field `media`, maksimal 5 file).
  * Menerima request multipart/form-data; file tersedia di `req.files`,
@@ -78,19 +99,23 @@ function translateMulterError(err: MulterError): HttpError {
  */
 export function uploadReportMedia(req: Request, res: Response, next: NextFunction): void {
   multerHandler(req, res, (err: unknown) => {
-    if (!err) {
-      next();
+    if (err) {
+      if (err instanceof MulterError) {
+        next(translateMulterError(err));
+        return;
+      }
+      if (err instanceof HttpError) {
+        next(err);
+        return;
+      }
+      next(new HttpError(400, err instanceof Error ? err.message : 'Upload gagal'));
       return;
     }
-    if (err instanceof MulterError) {
-      next(translateMulterError(err));
-      return;
-    }
-    if (err instanceof HttpError) {
-      next(err);
-      return;
-    }
-    next(new HttpError(400, err instanceof Error ? err.message : 'Upload gagal'));
+
+    const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+    sanitizeReportMedia(files)
+      .then(() => next())
+      .catch((stripErr: unknown) => next(stripErr));
   });
 }
 
