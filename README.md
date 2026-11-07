@@ -17,6 +17,7 @@ Backend
 - PostgreSQL 17 (via `pg`) + `node-pg-migrate`
 - Redis 8
 - Swagger UI Express
+- Zod (validasi input), bcrypt + JSON Web Token (autentikasi panel admin)
 
 LLM Service
 - Node.js + TypeScript + Express 5
@@ -57,6 +58,15 @@ Prasyarat: Git, Docker + Docker Compose.
 
    Migrasi database dan seed data awal berjalan otomatis via service `backend-init` sebelum backend start.
 
+   `compose.yml` dikonfigurasi untuk **mode development**: `NODE_ENV=development`, Nginx memakai `nginx/dev.conf`, CORS terbuka untuk `localhost`, Postgres/Redis tanpa kata sandi tambahan, dan Swagger aktif. Baris untuk produksi tersedia dalam bentuk komentar bertanda `# PROD` pada file yang sama — jangan dipakai di lokal.
+
+4. Siapkan akun admin panel pengawas (opsional, untuk mencoba endpoint admin)
+   ```sh
+   # atur ADMIN_EMAIL dan ADMIN_PASSWORD di backend/.env lebih dulu
+   docker compose exec backend npm run seed:admin
+   ```
+   Akun dibuat dari variabel lingkungan, bukan kredensial yang ditulis di kode. Login lewat `POST /api/auth/login` untuk memperoleh token Bearer.
+
 ## Progress Saat Ini
 
 Frontend
@@ -71,11 +81,16 @@ Backend
 - [x] API proyek: list, detail, daftar laporan per proyek
 - [x] API laporan warga: pembuatan dan tracking status
 - [x] Migrasi skema dan seeder data
-- [x] Dokumentasi Swagger
+- [x] Dokumentasi Swagger (26 operasi, seluruh rute terpasang terdokumentasi)
 - [x] Integrasi service LLM untuk penjelasan risiko
-- [x] Upload gambar dan video untuk laporan warga
+- [x] Upload gambar dan video untuk laporan warga, metadata EXIF/GPS dibersihkan
 - [x] Cache Redis untuk response GET dan hasil LLM (invalidasi saat mutasi)
 - [x] Rate limit endpoint LLM per IP (per menit dan per hari)
+- [x] Validasi input mutasi dengan Zod
+- [x] Autentikasi JWT + otorisasi peran (admin / verifikator / peninjau)
+- [x] Log audit append-only untuk perubahan status dan aksi moderator
+- [x] API panel admin: antrean laporan, detail internal, verifikasi, penerusan ke lembaga pengawas
+- [x] Siklus enam status laporan dengan transisi yang ditegakkan
 
 LLM Service
 - [x] Endpoint penjelasan risiko proyek dalam bahasa awam
@@ -86,9 +101,19 @@ Optimasi
 - [x] Pemuatan penjelasan AI non-blocking di dashboard (first load lebih cepat)
 
 Yang Belum
-- [ ] Autentikasi dan dashboard admin
-- [ ] Fungsional dashboard admin (verifikasi laporan, rekap laporan)
-- [ ] Penghubunga API data real-time pemerintah
+- [ ] Antarmuka dashboard admin di frontend (API-nya sudah tersedia, halamannya belum dibuat)
+- [ ] Modul ETL dan penghubung API data pemerintah (SiRUP, SPSE, APBD)
+- [ ] Pencocokan paket antarsumber (`match_status`)
+- [ ] Tiga indikator yang belum terhitung karena tabel pendukung masih kosong: D1-01 (kenaikan pagu), D2-04 (konsentrasi pemenang), D3-01 (selisih volume lapangan)
+- [ ] Umpan balik otomatis ke pelapor (LLM-T3)
 - [ ] Notifikasi real-time untuk update laporan
 - [ ] Pengiriman laporan berdasarkan analisis LLM (sekadar copy and paste)
+
+## Catatan Data
+
+Aplikasi ini **masih berjalan dalam mode simulasi**. Data proyek berasal dari pemberitaan publik, sedangkan data pelengkap yang tidak terbuka untuk publik (pembayaran per termin, progres fisik lapangan, RAB rinci) dibuat tim dan ditandai permanen `is_dummy = true`. Label itu dipertahankan apa adanya sampai tersedia akses data resmi.
+
+Skor risiko **bukan** keluaran AI: perhitungannya memakai mesin aturan deterministik dari `backend/config/scoring.json`, sehingga hasilnya dapat diaudit dan dihitung ulang. LLM hanya menjelaskan skor yang sudah final dalam bahasa awam, tidak pernah menghitung atau mengubahnya. Bobot dan ambang hanya dapat diubah lewat berkas konfigurasi yang terlacak git, bukan lewat API.
+
+Seluruh angka yang ditampilkan adalah indikator risiko untuk diperiksa, bukan bukti pelanggaran.
 
