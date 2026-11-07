@@ -1,10 +1,66 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import AppLayout from '@/layouts/AppLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   scrollBehavior: () => ({ top: 0 }),
   routes: [
+    // ── Admin: Login (standalone, tanpa AdminLayout) ──
+    {
+      path: '/admin/login',
+      name: 'admin-login',
+      component: () => import('@/features/admin/views/AdminLoginView.vue'),
+      meta: { title: 'Masuk Panel Admin' },
+    },
+
+    // ── Admin: Panel (dengan AdminLayout + guard) ──
+    {
+      path: '/admin',
+      component: () => import('@/layouts/AdminLayout.vue'),
+      children: [
+        {
+          path: '',
+          name: 'admin-dashboard',
+          component: () => import('@/features/admin/views/AdminDashboardView.vue'),
+          meta: {
+            requiresAuth: true,
+            roles: ['admin', 'verifikator', 'peninjau'],
+            title: 'Ringkasan Operasional',
+          },
+        },
+        {
+          path: 'laporan',
+          name: 'admin-reports',
+          component: () => import('@/features/admin/views/AdminReportsView.vue'),
+          meta: {
+            requiresAuth: true,
+            roles: ['admin', 'verifikator'],
+            title: 'Antrean Laporan',
+          },
+        },
+        {
+          path: 'audit',
+          name: 'admin-audit',
+          component: () => import('@/features/admin/views/AdminAuditView.vue'),
+          meta: {
+            requiresAuth: true,
+            roles: ['admin', 'peninjau'],
+            title: 'Log Audit',
+          },
+        },
+        {
+          path: 'forbidden',
+          name: 'admin-forbidden',
+          component: () => import('@/features/admin/views/AdminForbiddenView.vue'),
+          meta: { requiresAuth: true, title: 'Akses Ditolak' },
+        },
+        // Rute admin tak dikenal → kembali ke Ringkasan
+        { path: ':pathMatch(.*)*', redirect: '/admin' },
+      ],
+    },
+
+    // ── Publik (sisi warga) ──
     {
       path: '/',
       component: AppLayout,
@@ -36,8 +92,42 @@ const router = createRouter({
         },
       ],
     },
+
+    // Catch-all: semua path tak dikenal → beranda publik
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
+})
+
+// ── Navigation guard ──────────────────────────────────────────────────
+// Rute publik tetap dapat diakses tanpa login. Guard hanya aktif untuk /admin/*.
+router.beforeEach(async (to) => {
+  // Halaman login: bila sudah terautentikasi, alihkan ke dashboard.
+  if (to.name === 'admin-login') {
+    const auth = useAuthStore()
+    await auth.initialize()
+    if (auth.isAuthenticated) {
+      return { name: 'admin-dashboard' }
+    }
+    return true
+  }
+
+  // Rute tanpa meta.requiresAuth → publik, lewatkan tanpa cek.
+  if (to.meta.requiresAuth !== true) return true
+
+  // Rute admin yang memerlukan autentikasi.
+  const auth = useAuthStore()
+  await auth.initialize()
+
+  if (!auth.isAuthenticated) {
+    return { name: 'admin-login', query: { redirect: to.fullPath } }
+  }
+
+  // Periksa peran bila didefinisikan di meta.roles.
+  if (to.meta.roles?.length && !to.meta.roles.includes(auth.user?.peran)) {
+    return { name: 'admin-forbidden' }
+  }
+
+  return true
 })
 
 export default router

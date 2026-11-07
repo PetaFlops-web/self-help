@@ -1,0 +1,386 @@
+/* ============ Admin Panel Styles — Clearsight ============ */
+/* Berdasarkan docs/design-system.md (diturunkan dari ui_ux_clearsight.figcraft).
+   Memakai token §9. Tidak mengubah gaya sisi publik.
+   Aturan mengikat (§10): tanpa bayangan, tanpa uppercase, tanpa angka karangan. */
+
+/* ── Token §9 (admin-only, prefix --c- agar tidak bentrok dengan main.css) ── */
+:root {
+  --c-ink: #111111;
+  --c-muted: #6B6760;
+  --c-subtle: #9A958C;
+  --c-surface: #FFFFFF;
+  --c-bg: #F4F2EE;
+  --c-bg-alt: #F8F7F4;
+  --c-border: #E7E3DC;
+  --c-border-strong: #DCD8D0;
+
+  --c-primary: #FF6B2B;
+  --c-primary-text: #C2410C;
+  --c-primary-soft: #FFF2EB;
+
+  --c-danger: #D63A1F;   --c-danger-soft: #FCE4DF;
+  --c-success: #2E8B57;  --c-success-soft: #E3F2EA;
+  --c-warning: #D97706;  --c-warning-soft: #FDF0D8;
+  --c-info: #2F6FDE;     --c-info-soft: #EBF2FC;
+
+  --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --fs-micro: 9px;  --fs-xs: 10px;  --fs-sm: 11px; --fs-md: 12px;
+  --fs-lg: 13px;    --fs-xl: 18px;  --fs-2xl: 24px;
+
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px;
+
+  --r-xs: 4px; --r-sm: 6px; --r-md: 8px;
+  --r-lg: 12px; --r-xl: 16px; --r-pill: 999px;
+
+  --bw: 1px;
+  --w-sidebar: 220px;
+  --h-topbar: 64px;
+  --pad-content: 24px;
+}
+
+/* ══════════════ Halaman Login (§8) ══════════════ */
+.admin-login-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-bg);
+  padding: var(--sp-6);
+}
+
+.admin-login-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--c-surface);
+  border: var(--bw) solid var(--c-border-strong);
+  border-radius: var(--r-lg);     /* 12 */
+  padding: 32px;                  /* §8: padding 32 */
+}
+
+.admin-login-brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-xl);        /* 18 */
+  font-weight: 800;               /* Extra Bold */
+  color: var(--c-ink);
+  margin-bottom: var(--sp-1);     /* 4 — subtitle langsung di bawah */
+}
+.admin-login-brand .brand-mark { width: 24px; height: 24px; align-self: center; }
+
+.admin-login-subtitle {
+  font-size: var(--fs-sm);        /* 11 */
+  font-weight: 400;               /* Regular */
+  color: var(--c-muted);
+  margin-bottom: var(--sp-6);     /* 24 */
+}
+
+.admin-field { margin-bottom: var(--sp-4); /* 16 */ }
+.admin-field label {
+  display: block;
+  font-size: var(--fs-sm);        /* 11 */
+  font-weight: 600;               /* Semi Bold */
+  color: var(--c-ink);
+  margin-bottom: 6px;             /* §8: jarak 6px ke input */
+}
+.admin-field input {
+  width: 100%;
+  height: 40px;                   /* §8: tinggi 40 */
+  padding: 0 12px;
+  font-size: var(--fs-sm);        /* 11 */
+  font-family: var(--font);
+  color: var(--c-ink);
+  background: var(--c-surface);
+  border: var(--bw) solid var(--c-border-strong); /* #DCD8D0 */
+  border-radius: var(--r-sm);     /* 6 */
+  transition: border-color 0.15s;
+}
+.admin-field input:focus {
+  outline: none;
+  border-color: var(--c-primary); /* §8: fokus 1px #FF6B2B */
+}
+.admin-field input:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.admin-login-error {
+  font-size: var(--fs-sm);        /* 11 */
+  font-weight: 500;               /* Medium */
+  color: var(--c-danger);         /* #D63A1F */
+  background: var(--c-danger-soft); /* #FCE4DF */
+  border-radius: var(--r-sm);     /* 6 */
+  padding: 10px 12px;             /* §8: padding 10×12 */
+  margin-bottom: var(--sp-4);
+}
+
+.admin-login-btn {
+  width: 100%;
+  height: 38px;                   /* §8: tinggi 38 */
+  font-size: var(--fs-sm);        /* 11 */
+  font-weight: 700;               /* Bold */
+  font-family: var(--font);
+  color: var(--c-ink);            /* §7+§8: teks gelap, bukan putih */
+  background: var(--c-primary);   /* #FF6B2B */
+  border: none;
+  border-radius: var(--r-sm);     /* 6 */
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.admin-login-btn:hover:not(:disabled) { background: #f57f1a; }
+.admin-login-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+/* §8: status memuat = tombol dinonaktifkan + teks "Memproses…", tanpa spinner */
+
+.admin-login-back {
+  display: block;
+  text-align: center;
+  margin-top: var(--sp-6);
+  font-size: var(--fs-sm);
+  color: var(--c-muted);
+  transition: color 0.15s;
+}
+.admin-login-back:hover { color: var(--c-ink); }
+
+/* ══════════════ Admin Shell (§5) ══════════════ */
+.admin-shell {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--c-bg);
+}
+
+/* Sidebar — putih, batas kanan 1px */
+.admin-sidebar {
+  width: var(--w-sidebar);        /* 220 */
+  flex: none;
+  background: var(--c-surface);   /* #FFFFFF */
+  border-right: var(--bw) solid var(--c-border); /* #E7E3DC */
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 1040;
+  transition: transform 0.25s ease;
+  overflow-y: auto;
+}
+
+.admin-sidebar-head {
+  padding: 22px var(--sp-3) var(--sp-2);  /* x=20 y=22 → padding 12 sisi, y=22 atas */
+}
+/* Logo sudah di main.css .brand-mark; di sini hanya penyesuaian konteks sidebar */
+.admin-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-xl);        /* 18 Extra Bold */
+  font-weight: 800;
+  color: var(--c-ink);
+}
+.admin-brand .brand-mark { width: 24px; height: 24px; }
+.admin-sidebar-tag {
+  display: block;
+  font-size: var(--fs-sm);        /* 11 Regular */
+  font-weight: 400;
+  color: var(--c-muted);
+  margin-top: 2px;
+  padding-left: calc(24px + var(--sp-2)); /* sejajar dengan teks logo, bukan ikon */
+}
+
+/* Nav — item 196×36 r8, aktif #FFF2EB+#FF6B2B, tidak aktif #6B6760 */
+.admin-nav {
+  flex: 1;
+  padding: var(--sp-3);           /* 12 sisi */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);               /* 4 — jarak antar item terukur */
+}
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  height: 36px;                   /* §5: 196×36 */
+  padding: 0 12px;
+  font-size: var(--fs-sm);        /* 11 */
+  font-weight: 500;               /* Medium */
+  color: var(--c-muted);          /* #6B6760 tidak aktif */
+  border-radius: var(--r-md);     /* 8 */
+  transition: background 0.12s, color 0.12s;
+}
+.admin-nav-link:hover {
+  background: var(--c-bg);        /* #F4F2EE */
+  color: var(--c-ink);
+}
+.admin-nav-link.router-link-exact-active {
+  background: var(--c-primary-soft); /* #FFF2EB */
+  color: var(--c-primary);          /* #FF6B2B */
+  font-weight: 600;                 /* Semi Bold */
+}
+
+/* Profile box — 196×54 r10 #F4F2EE */
+.admin-sidebar-foot {
+  padding: var(--sp-3);
+}
+.admin-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 54px;
+  padding: 0 10px;
+  background: var(--c-bg);        /* #F4F2EE */
+  border-radius: 10px;
+  margin-bottom: var(--sp-3);
+}
+.admin-avatar {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: var(--r-pill);   /* 17 = pill */
+  background: var(--c-primary);   /* #FF6B2B */
+  color: var(--c-surface);        /* putih */
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.admin-profile-info {
+  min-width: 0;
+}
+.admin-profile-name {
+  font-size: var(--fs-sm);        /* 11 */
+  font-weight: 600;
+  color: var(--c-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.admin-profile-role {
+  font-size: var(--fs-xs);        /* 10 */
+  color: var(--c-muted);
+}
+
+.admin-logout-btn {
+  width: 100%;
+  height: 32px;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  font-family: var(--font);
+  color: var(--c-muted);
+  background: var(--c-surface);
+  border: var(--bw) solid var(--c-border);
+  border-radius: var(--r-md);     /* 8 */
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.admin-logout-btn:hover:not(:disabled) {
+  background: var(--c-bg);
+  color: var(--c-ink);
+}
+.admin-logout-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Main area */
+.admin-main {
+  flex: 1;
+  margin-left: var(--w-sidebar);  /* 220 */
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Topbar — 64px, putih, batas bawah */
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: var(--h-topbar);        /* 64 */
+  padding: 0 var(--pad-content);  /* 24 */
+  background: var(--c-surface);
+  border-bottom: var(--bw) solid var(--c-border);
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+}
+.admin-page-title {
+  font-size: var(--fs-lg);        /* 13 — §5: judul topbar padat */
+  font-weight: 700;
+  color: var(--c-ink);
+  margin: 0;
+  line-height: var(--lh-tight, 1.25);
+}
+
+/* Toggle mobile */
+.admin-sidebar-toggle {
+  display: none;
+  flex-direction: column;
+  gap: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+}
+.admin-sidebar-toggle span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--c-ink);
+  border-radius: 1px;
+}
+
+/* Content */
+.admin-content {
+  flex: 1;
+  padding: var(--pad-content);    /* 24 */
+}
+
+/* Overlay mobile */
+.admin-sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--c-ink);
+  opacity: 0.25;
+  z-index: 1035;
+}
+
+/* ══════════════ Placeholder & Forbidden ══════════════ */
+.admin-placeholder h2 {
+  font-size: var(--fs-2xl);       /* 24 Extra Bold */
+  font-weight: 800;
+  color: var(--c-ink);
+  margin-bottom: var(--sp-2);
+}
+.admin-placeholder-note {
+  font-size: var(--fs-sm);
+  color: var(--c-muted);
+}
+
+.admin-forbidden {
+  text-align: center;
+  padding: 48px var(--sp-6);
+}
+.admin-forbidden h2 {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  color: var(--c-danger);
+  margin-bottom: var(--sp-2);
+}
+.admin-forbidden p {
+  font-size: var(--fs-sm);
+  color: var(--c-muted);
+  margin-bottom: var(--sp-4);
+}
+.admin-forbidden-link {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--c-info);
+}
+
+/* ══════════════ Responsive ══════════════ */
+@media (max-width: 991.98px) {
+  .admin-sidebar { transform: translateX(-100%); }
+  .admin-sidebar.is-open { transform: translateX(0); }
+  .admin-main { margin-left: 0; }
+  .admin-sidebar-toggle { display: flex; }
+  .admin-sidebar-overlay { display: block; }
+  .admin-content { padding: var(--sp-4); }
+}
