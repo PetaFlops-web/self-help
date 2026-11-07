@@ -1,3 +1,19 @@
+const errorContent = {
+    'application/json': {
+        schema: { $ref: '#/components/schemas/ErrorResponse' },
+    },
+};
+const commonErrors = {
+    '429': {
+        description: 'Batas laju tercapai. Berlaku untuk seluruh endpoint /api ' +
+            '(generalLimiter: 100 request/menit per IP di produksi)',
+        content: errorContent,
+    },
+    '500': {
+        description: 'Kesalahan server',
+        content: errorContent,
+    },
+};
 const swaggerSpec = {
     openapi: '3.0.3',
     info: {
@@ -25,6 +41,8 @@ const swaggerSpec = {
         { name: 'Reports', description: 'Pelaporan warga' },
         { name: 'Admin', description: 'Panel admin untuk verifikasi laporan' },
         { name: 'Documents', description: 'Document wajib publik dan checklist prosedur proyek' },
+        { name: 'Auth', description: 'Autentikasi dan otorisasi pengguna panel admin' },
+        { name: 'Audit', description: 'Log audit perubahan data dan status' },
     ],
     paths: {
         '/ping': {
@@ -34,6 +52,7 @@ const swaggerSpec = {
                 description: 'Mengecek koneksi ke database PostgreSQL dan Redis.',
                 operationId: 'getPing',
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Server aktif',
                         content: {
@@ -61,6 +80,7 @@ const swaggerSpec = {
                     'Setiap feature memiliki properties kode_bps, nama, lat, lng.',
                 operationId: 'getRegions',
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'GeoJSON FeatureCollection wilayah',
                         content: {
@@ -143,6 +163,7 @@ const swaggerSpec = {
                     },
                 ],
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Daftar proyek',
                         content: {
@@ -170,6 +191,7 @@ const swaggerSpec = {
                     },
                 ],
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Detail proyek',
                         content: {
@@ -206,6 +228,7 @@ const swaggerSpec = {
                     },
                 ],
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Daftar indikator temuan',
                         content: {
@@ -242,6 +265,7 @@ const swaggerSpec = {
                     },
                 ],
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Daftar pembayaran dan ringkasan',
                         content: {
@@ -286,6 +310,7 @@ const swaggerSpec = {
                     },
                 ],
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Daftar progres fisik',
                         content: {
@@ -330,6 +355,7 @@ const swaggerSpec = {
                     },
                 ],
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Daftar item RAB',
                         content: {
@@ -374,6 +400,7 @@ const swaggerSpec = {
                     },
                 ],
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Daftar dokumen proyek',
                         content: {
@@ -418,6 +445,7 @@ const swaggerSpec = {
                     },
                 ],
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Daftar checklist prosedur proyek',
                         content: {
@@ -463,6 +491,7 @@ const swaggerSpec = {
                     },
                 ],
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Penjelasan proyek berhasil dibuat',
                         content: {
@@ -534,6 +563,7 @@ const swaggerSpec = {
                     },
                 },
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Draf laporan berhasil dibuat',
                         content: {
@@ -577,6 +607,7 @@ const swaggerSpec = {
                     'sebaran kategori (Rendah, Perlu Perhatian, Tinggi), dan rata-rata skor.',
                 operationId: 'getStats',
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Statistik ringkasan',
                         content: {
@@ -596,6 +627,7 @@ const swaggerSpec = {
                     'termasuk lisensi, atribusi, dan waktu terakhir diambil.',
                 operationId: 'listSources',
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Daftar sumber data',
                         content: {
@@ -615,6 +647,7 @@ const swaggerSpec = {
                     'poin per tingkat, bobot dimensi, kebijakan data kosong, dan daftar aturan.',
                 operationId: 'getScoringConfig',
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Konfigurasi scoring',
                         content: {
@@ -636,12 +669,16 @@ const swaggerSpec = {
                 requestBody: {
                     required: true,
                     content: {
-                        'application/json': {
+                        'multipart/form-data': {
                             schema: { $ref: '#/components/schemas/CreateReportRequest' },
+                            encoding: {
+                                media: { contentType: 'image/jpeg, video/mp4' },
+                            },
                         },
                     },
                 },
                 responses: {
+                    ...commonErrors,
                     '201': {
                         description: 'Laporan berhasil dibuat',
                         content: {
@@ -651,7 +688,9 @@ const swaggerSpec = {
                         },
                     },
                     '400': {
-                        description: 'Input tidak valid',
+                        description: 'Input tidak valid, tidak ada berkas media, tipe berkas tidak didukung, ' +
+                            'ukuran berkas melebihi 5 MB, jumlah berkas melebihi 5, ' +
+                            'atau metadata media gagal dibersihkan',
                         content: {
                             'application/json': {
                                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -660,6 +699,22 @@ const swaggerSpec = {
                     },
                     '404': {
                         description: 'Project tidak ditemukan',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                    '429': {
+                        description: 'Batas pengiriman laporan tercapai (10/menit di produksi)',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                    '500': {
+                        description: 'Kesalahan server',
                         content: {
                             'application/json': {
                                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -683,6 +738,7 @@ const swaggerSpec = {
                     },
                 ],
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Status laporan',
                         content: {
@@ -710,20 +766,183 @@ const swaggerSpec = {
                 },
             },
         },
-        '/admin/reports/{id}': {
-            patch: {
-                tags: ['Admin'],
-                summary: 'Verifikasi laporan warga',
-                description: 'Mengubah status laporan menjadi Diverifikasi atau Ditolak. ' +
-                    'Jika Diverifikasi, skor proyek terkait akan dihitung ulang.',
-                operationId: 'verifyReport',
+        '/projects/{id}/reports': {
+            get: {
+                tags: ['Reports'],
+                summary: 'Daftar laporan warga pada satu proyek',
+                description: 'Mengembalikan laporan warga milik satu proyek beserta media (foto/video), ' +
+                    'tanpa batas 20 item seperti pada GET /projects/{id}. ' +
+                    'Filter status dipakai untuk membandingkan media Diverifikasi dan Belum Diverifikasi. ' +
+                    'Maksimum 100 item, terurut dari yang terbaru.',
+                operationId: 'listProjectReports',
                 parameters: [
                     {
                         name: 'id',
                         in: 'path',
                         required: true,
-                        description: 'Tiket laporan',
+                        description: 'UUID proyek',
+                        schema: { type: 'string', format: 'uuid' },
+                    },
+                    {
+                        name: 'status',
+                        in: 'query',
+                        required: false,
+                        description: 'Filter status laporan. Tanpa parameter ini, semua status dikembalikan.',
+                        schema: {
+                            type: 'string',
+                            enum: ['Dilaporkan', 'Diverifikasi', 'Ditolak'],
+                        },
+                    },
+                ],
+                responses: {
+                    ...commonErrors,
+                    '200': {
+                        description: 'Daftar laporan warga proyek',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ProjectReportsResponse' },
+                            },
+                        },
+                    },
+                    '400': {
+                        description: 'UUID proyek tidak valid',
+                        content: errorContent,
+                    },
+                    '404': {
+                        description: 'Project tidak ditemukan',
+                        content: errorContent,
+                    },
+                },
+            },
+        },
+        '/admin/reports': {
+            get: {
+                tags: ['Admin'],
+                summary: 'Antrean laporan untuk verifikator',
+                description: 'Daftar laporan dengan filter status, kategori, kode_bps, ' +
+                    'urutan umur laporan (tertua dulu), paginasi limit/offset, ' +
+                    'plus total per status. Membutuhkan peran admin atau verifikator.',
+                operationId: 'listAdminReports',
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    {
+                        name: 'status',
+                        in: 'query',
+                        required: false,
                         schema: { type: 'string' },
+                    },
+                    {
+                        name: 'kategori',
+                        in: 'query',
+                        required: false,
+                        schema: { type: 'string' },
+                    },
+                    {
+                        name: 'kode_bps',
+                        in: 'query',
+                        required: false,
+                        schema: { type: 'string' },
+                    },
+                    {
+                        name: 'limit',
+                        in: 'query',
+                        required: false,
+                        description: 'Maksimal 100 (default 50)',
+                        schema: { type: 'integer', minimum: 1 },
+                    },
+                    {
+                        name: 'offset',
+                        in: 'query',
+                        required: false,
+                        schema: { type: 'integer', minimum: 0 },
+                    },
+                ],
+                responses: {
+                    ...commonErrors,
+                    '200': {
+                        description: 'Daftar laporan',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/AdminReportListResponse' },
+                            },
+                        },
+                    },
+                    '401': {
+                        description: 'Token autentikasi tidak valid atau tidak disertakan',
+                        content: errorContent,
+                    },
+                    '403': {
+                        description: 'Akses ditolak: peran tidak mencukupi',
+                        content: errorContent,
+                    },
+                },
+            },
+        },
+        '/admin/reports/{tiket}': {
+            get: {
+                tags: ['Admin'],
+                summary: 'Detail internal satu laporan',
+                description: 'Menampilkan seluruh kolom laporan termasuk catatan_verifikator, ' +
+                    'alasan_tolak, foto_urls, lat/lng, lembaga_tujuan, dan konteks proyek. ' +
+                    'Berbeda dari endpoint publik GET /reports?tiket= yang menyembunyikan ' +
+                    'keterangan kecuali status Diverifikasi/Ditolak. ' +
+                    'Membutuhkan peran admin atau verifikator.',
+                operationId: 'getAdminReportDetail',
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    {
+                        name: 'tiket',
+                        in: 'path',
+                        required: true,
+                        schema: { type: 'string', example: 'LPR-ABCD1234-EFGH' },
+                    },
+                ],
+                responses: {
+                    ...commonErrors,
+                    '200': {
+                        description: 'Detail laporan',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        status: { type: 'string', example: 'success' },
+                                        report: { $ref: '#/components/schemas/AdminReportDetail' },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    '401': {
+                        description: 'Token autentikasi tidak valid atau tidak disertakan',
+                        content: errorContent,
+                    },
+                    '403': {
+                        description: 'Akses ditolak: peran tidak mencukupi',
+                        content: errorContent,
+                    },
+                    '404': {
+                        description: 'Laporan tidak ditemukan',
+                        content: errorContent,
+                    },
+                },
+            },
+            patch: {
+                tags: ['Admin'],
+                summary: 'Ubah status laporan (transisi FR-27)',
+                description: 'Mengubah status laporan sesuai tabel transisi yang sah: ' +
+                    'Dilaporkan → Diverifikasi/Ditolak; Diverifikasi → Diteruskan/Selesai; ' +
+                    'Diteruskan → Ditindaklanjuti; Ditindaklanjuti → Selesai. ' +
+                    'Skor proyek dihitung ulang hanya pada transisi ke Diverifikasi (FR-29). ' +
+                    'Membutuhkan peran admin atau verifikator.',
+                operationId: 'verifyReport',
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    {
+                        name: 'tiket',
+                        in: 'path',
+                        required: true,
+                        schema: { type: 'string', example: 'LPR-ABCD1234-EFGH' },
                     },
                 ],
                 requestBody: {
@@ -735,6 +954,7 @@ const swaggerSpec = {
                     },
                 },
                 responses: {
+                    ...commonErrors,
                     '200': {
                         description: 'Status laporan berhasil diperbarui',
                         content: {
@@ -744,23 +964,270 @@ const swaggerSpec = {
                         },
                     },
                     '400': {
-                        description: 'Input tidak valid',
-                        content: {
-                            'application/json': {
-                                schema: { $ref: '#/components/schemas/ErrorResponse' },
-                            },
-                        },
+                        description: 'Input tidak valid atau transisi tidak sah',
+                        content: errorContent,
+                    },
+                    '401': {
+                        description: 'Token autentikasi tidak valid atau tidak disertakan',
+                        content: errorContent,
+                    },
+                    '403': {
+                        description: 'Akses ditolak: peran tidak mencukupi',
+                        content: errorContent,
                     },
                     '404': {
                         description: 'Laporan tidak ditemukan',
+                        content: errorContent,
+                    },
+                    '409': {
+                        description: 'Laporan sudah memiliki status yang sama',
+                        content: errorContent,
+                    },
+                },
+            },
+        },
+        '/admin/reports/{tiket}/forward': {
+            post: {
+                tags: ['Admin'],
+                summary: 'Teruskan laporan ke lembaga pengawas',
+                description: 'Meneruskan laporan dengan status Diverifikasi ke lembaga pengawas ' +
+                    '(inspektorat/BPK/KPK/Ombudsman/dinas_terkait). ' +
+                    'Mengubah status menjadi Diteruskan dan mencatat lembaga_tujuan serta diteruskan_pada. ' +
+                    'Membutuhkan peran admin atau verifikator.',
+                operationId: 'forwardReport',
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    {
+                        name: 'tiket',
+                        in: 'path',
+                        required: true,
+                        schema: { type: 'string', example: 'LPR-ABCD1234-EFGH' },
+                    },
+                ],
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/ForwardBody' },
+                        },
+                    },
+                },
+                responses: {
+                    ...commonErrors,
+                    '200': {
+                        description: 'Laporan berhasil diteruskan',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ReportResponse' },
+                            },
+                        },
+                    },
+                    '400': {
+                        description: 'Laporan tidak dapat diteruskan dari status saat ini',
+                        content: errorContent,
+                    },
+                    '401': {
+                        description: 'Token autentikasi tidak valid atau tidak disertakan',
+                        content: errorContent,
+                    },
+                    '403': {
+                        description: 'Akses ditolak: peran tidak mencukupi',
+                        content: errorContent,
+                    },
+                    '404': {
+                        description: 'Laporan tidak ditemukan',
+                        content: errorContent,
+                    },
+                },
+            },
+        },
+        '/auth/login': {
+            post: {
+                tags: ['Auth'],
+                summary: 'Login admin dan verifikator',
+                description: 'Autentikasi surel dan kata sandi untuk mendapatkan token JWT.',
+                operationId: 'login',
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/LoginBody' },
+                        },
+                    },
+                },
+                responses: {
+                    ...commonErrors,
+                    '200': {
+                        description: 'Login berhasil',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/LoginResponse' },
+                            },
+                        },
+                    },
+                    '400': {
+                        description: 'Validasi surel atau kata sandi gagal',
                         content: {
                             'application/json': {
                                 schema: { $ref: '#/components/schemas/ErrorResponse' },
                             },
                         },
                     },
-                    '409': {
-                        description: 'Laporan sudah memiliki status yang sama',
+                    '401': {
+                        description: 'Surel atau kata sandi tidak valid',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        '/auth/logout': {
+            post: {
+                tags: ['Auth'],
+                summary: 'Logout akun admin/verifikator',
+                description: 'Menandai sesi logout pengguna.',
+                operationId: 'logout',
+                security: [{ bearerAuth: [] }],
+                responses: {
+                    ...commonErrors,
+                    '200': {
+                        description: 'Logout berhasil',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/LogoutResponse' },
+                            },
+                        },
+                    },
+                    '401': {
+                        description: 'Token autentikasi tidak valid atau tidak disertakan',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        '/auth/me': {
+            get: {
+                tags: ['Auth'],
+                summary: 'Profil pengguna yang sedang login',
+                description: 'Mengambil data profil pengguna berdasarkan token JWT yang disertakan.',
+                operationId: 'getMe',
+                security: [{ bearerAuth: [] }],
+                responses: {
+                    ...commonErrors,
+                    '200': {
+                        description: 'Profil pengguna',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/UserProfileResponse' },
+                            },
+                        },
+                    },
+                    '401': {
+                        description: 'Token autentikasi tidak valid atau tidak disertakan',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        '/admin/audit': {
+            get: {
+                tags: ['Audit'],
+                summary: 'Daftar log audit',
+                description: 'Mengembalikan daftar log audit terurut waktu menurun. ' +
+                    'Mendukung filter modul, aktor_id, rentang tanggal, dan paginasi. ' +
+                    'Hanya admin dan peninjau yang dapat mengakses.',
+                operationId: 'listAudit',
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    {
+                        name: 'modul',
+                        in: 'query',
+                        required: false,
+                        description: 'Filter berdasarkan modul (mis. moderasi, etl, aturan_skor)',
+                        schema: { type: 'string' },
+                    },
+                    {
+                        name: 'aktor_id',
+                        in: 'query',
+                        required: false,
+                        description: 'Filter berdasarkan ID pengguna aktor',
+                        schema: { type: 'string', format: 'uuid' },
+                    },
+                    {
+                        name: 'start_date',
+                        in: 'query',
+                        required: false,
+                        description: 'Filter tanggal mulai (ISO 8601)',
+                        schema: { type: 'string', format: 'date-time' },
+                    },
+                    {
+                        name: 'end_date',
+                        in: 'query',
+                        required: false,
+                        description: 'Filter tanggal akhir (ISO 8601)',
+                        schema: { type: 'string', format: 'date-time' },
+                    },
+                    {
+                        name: 'limit',
+                        in: 'query',
+                        required: false,
+                        description: 'Jumlah baris per halaman (default 50)',
+                        schema: { type: 'integer', minimum: 1 },
+                    },
+                    {
+                        name: 'offset',
+                        in: 'query',
+                        required: false,
+                        description: 'Offset paginasi (default 0)',
+                        schema: { type: 'integer', minimum: 0 },
+                    },
+                ],
+                responses: {
+                    '200': {
+                        description: 'Daftar log audit',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/AuditListResponse' },
+                            },
+                        },
+                    },
+                    '401': {
+                        description: 'Token autentikasi tidak valid atau tidak disertakan',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                    '403': {
+                        description: 'Akses ditolak: peran tidak mencukupi',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                    '429': {
+                        description: 'Batas permintaan tercapai',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/ErrorResponse' },
+                            },
+                        },
+                    },
+                    '500': {
+                        description: 'Kesalahan server internal',
                         content: {
                             'application/json': {
                                 schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -772,7 +1239,90 @@ const swaggerSpec = {
         },
     },
     components: {
+        securitySchemes: {
+            bearerAuth: {
+                type: 'http',
+                scheme: 'bearer',
+                bearerFormat: 'JWT',
+                description: 'Masukkan token JWT yang didapat dari POST /api/auth/login',
+            },
+        },
         schemas: {
+            LoginBody: {
+                type: 'object',
+                required: ['surel', 'kata_sandi'],
+                properties: {
+                    surel: { type: 'string', format: 'email', example: 'admin@clearsight.id' },
+                    kata_sandi: { type: 'string', example: 'AdminClearsight2026!' },
+                },
+            },
+            UserProfile: {
+                type: 'object',
+                required: ['id', 'nama', 'surel', 'peran', 'aktif', 'dibuat_pada'],
+                properties: {
+                    id: { type: 'string', format: 'uuid', example: '35c4736d-1c0b-432a-9090-9201c9d6118b' },
+                    nama: { type: 'string', example: 'Administrator' },
+                    surel: { type: 'string', format: 'email', example: 'admin@clearsight.id' },
+                    peran: { type: 'string', enum: ['admin', 'verifikator', 'peninjau'], example: 'admin' },
+                    aktif: { type: 'boolean', example: true },
+                    dibuat_pada: { type: 'string', format: 'date-time' },
+                },
+            },
+            LoginResponse: {
+                type: 'object',
+                required: ['status', 'token', 'pengguna'],
+                properties: {
+                    status: { type: 'string', example: 'success' },
+                    token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+                    pengguna: { $ref: '#/components/schemas/UserProfile' },
+                },
+            },
+            UserProfileResponse: {
+                type: 'object',
+                required: ['status', 'pengguna'],
+                properties: {
+                    status: { type: 'string', example: 'success' },
+                    pengguna: { $ref: '#/components/schemas/UserProfile' },
+                },
+            },
+            LogoutResponse: {
+                type: 'object',
+                required: ['status', 'message'],
+                properties: {
+                    status: { type: 'string', example: 'success' },
+                    message: { type: 'string', example: 'Logout berhasil' },
+                },
+            },
+            LogAudit: {
+                type: 'object',
+                required: ['id', 'waktu', 'aktor_nama', 'peran', 'modul', 'aksi'],
+                properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    waktu: { type: 'string', format: 'date-time' },
+                    aktor_id: { type: 'string', format: 'uuid', nullable: true },
+                    aktor_nama: { type: 'string', example: 'Administrator' },
+                    peran: { type: 'string', enum: ['admin', 'verifikator', 'peninjau'], example: 'admin' },
+                    modul: { type: 'string', example: 'moderasi' },
+                    aksi: { type: 'string', example: 'VERIFY_REPORT' },
+                    target_id: { type: 'string', nullable: true, example: 'LPR-1-001' },
+                    diff: { type: 'object', nullable: true },
+                    ip: { type: 'string', nullable: true, example: '192.168.1.1' },
+                },
+            },
+            AuditListResponse: {
+                type: 'object',
+                required: ['status', 'audit_logs', 'total', 'limit', 'offset'],
+                properties: {
+                    status: { type: 'string', example: 'success' },
+                    audit_logs: {
+                        type: 'array',
+                        items: { $ref: '#/components/schemas/LogAudit' },
+                    },
+                    total: { type: 'integer', example: 42 },
+                    limit: { type: 'integer', example: 50 },
+                    offset: { type: 'integer', example: 0 },
+                },
+            },
             ErrorResponse: {
                 type: 'object',
                 properties: {
@@ -898,12 +1448,32 @@ const swaggerSpec = {
                     kategori: { type: 'string', nullable: true, example: 'Kualitas pekerjaan' },
                     status: {
                         type: 'string',
-                        enum: ['Dilaporkan', 'Diverifikasi', 'Ditolak'],
+                        enum: ['Dilaporkan', 'Diverifikasi', 'Diteruskan', 'Ditindaklanjuti', 'Selesai', 'Ditolak'],
                         example: 'Diverifikasi',
                     },
                     dibuat_pada: { type: 'string', format: 'date-time', nullable: true },
+                    foto_urls: {
+                        type: 'array',
+                        nullable: true,
+                        description: 'URL relatif media laporan, disajikan lewat GET /uploads/reports/<berkas>. ' +
+                            'Berekstensi .jpg untuk foto dan .mp4 untuk video.',
+                        items: { type: 'string', example: '/uploads/reports/seed-1762500000-a1b2c3.jpg' },
+                    },
+                    keterangan: { type: 'string', nullable: true },
+                    anonim: { type: 'boolean', example: true },
                 },
                 required: ['tiket', 'status'],
+            },
+            ProjectReportsResponse: {
+                type: 'object',
+                properties: {
+                    status: { type: 'string', example: 'success' },
+                    reports: {
+                        type: 'array',
+                        items: { $ref: '#/components/schemas/ProjectReportItem' },
+                    },
+                },
+                required: ['status', 'reports'],
             },
             ProjectDetail: {
                 allOf: [
@@ -1093,7 +1663,7 @@ const swaggerSpec = {
                 },
                 required: ['id', 'proyek_id', 'jenis', 'wajib', 'dipublikasikan', 'is_dummy'],
             },
-            DokumenRingkasan: {
+            DocumentsSummary: {
                 type: 'object',
                 properties: {
                     total: { type: 'integer', example: 6 },
@@ -1113,7 +1683,7 @@ const swaggerSpec = {
                                 type: 'array',
                                 items: { $ref: '#/components/schemas/Document' },
                             },
-                            ringkasan: { $ref: '#/components/schemas/DokumenRingkasan' },
+                            ringkasan: { $ref: '#/components/schemas/DocumentsSummary' },
                         },
                     },
                 },
@@ -1133,7 +1703,7 @@ const swaggerSpec = {
                 },
                 required: ['id', 'proyek_id', 'tahapan', 'terpenuhi', 'is_dummy'],
             },
-            ProsedurRingkasan: {
+            ProcedureSummary: {
                 type: 'object',
                 properties: {
                     total: { type: 'integer', example: 7 },
@@ -1153,13 +1723,13 @@ const swaggerSpec = {
                                 type: 'array',
                                 items: { $ref: '#/components/schemas/ProcedureChecklist' },
                             },
-                            ringkasan: { $ref: '#/components/schemas/ProsedurRingkasan' },
+                            ringkasan: { $ref: '#/components/schemas/ProcedureSummary' },
                         },
                     },
                 },
                 required: ['status', 'procedure_checklist'],
             },
-            LlmTemuan: {
+            LlmFinding: {
                 type: 'object',
                 properties: {
                     kode_aturan: { type: 'string', example: 'D3-02' },
@@ -1213,7 +1783,7 @@ const swaggerSpec = {
                     ringkasan: { type: 'string', description: 'Ringkasan risiko proyek dalam bahasa awam' },
                     temuan: {
                         type: 'array',
-                        items: { $ref: '#/components/schemas/LlmTemuan' },
+                        items: { $ref: '#/components/schemas/LlmFinding' },
                         description: 'Daftar temuan per indikator',
                     },
                     keterbatasan: {
@@ -1258,7 +1828,7 @@ const swaggerSpec = {
                     pembuka: { type: 'string', description: 'Paragraf pembuka surat' },
                     uraian_indikator: {
                         type: 'array',
-                        items: { $ref: '#/components/schemas/LlmTemuan' },
+                        items: { $ref: '#/components/schemas/LlmFinding' },
                         description: 'Uraian per indikator dalam surat',
                     },
                     permohonan: { type: 'string', description: 'Paragraf permohonan klarifikasi' },
@@ -1390,32 +1960,135 @@ const swaggerSpec = {
             },
             CreateReportRequest: {
                 type: 'object',
+                description: 'Dikirim sebagai multipart/form-data. Seluruh field teks diterima sebagai string ' +
+                    'lalu di-coerce oleh validator. Minimal satu berkas media wajib disertakan.',
                 properties: {
                     proyek_id: { type: 'string', format: 'uuid', description: 'UUID proyek yang dilaporkan' },
                     kategori: { type: 'string', example: 'Kualitas pekerjaan' },
-                    keterangan: { type: 'string', example: 'Jalan berlubang dan tidak sesuai spesifikasi' },
+                    keterangan: {
+                        type: 'string',
+                        minLength: 1,
+                        maxLength: 4000,
+                        example: 'Jalan berlubang dan tidak sesuai spesifikasi',
+                    },
                     lat: { type: 'number', nullable: true, example: -5.45 },
                     lng: { type: 'number', nullable: true, example: 105.27 },
-                    foto_urls: {
+                    media: {
                         type: 'array',
-                        items: { type: 'string' },
-                        nullable: true,
+                        description: 'Berkas foto/video bukti. Wajib minimal 1, maksimal 5 berkas, ' +
+                            'masing-masing maksimal 5 MB, hanya image/jpeg dan video/mp4. ' +
+                            'Metadata pribadi (EXIF/GPS pada foto, udta pada video) dibersihkan server ' +
+                            'sebelum disimpan. URL hasil unggahan diisi ke foto_urls pada respons.',
+                        minItems: 1,
+                        maxItems: 5,
+                        items: { type: 'string', format: 'binary' },
                     },
-                    anonim: { type: 'boolean', default: false },
+                    anonim: {
+                        type: 'boolean',
+                        default: false,
+                        description: 'Dikirim sebagai string "true"/"false" pada multipart',
+                    },
                 },
-                required: ['proyek_id', 'kategori', 'keterangan'],
+                required: ['proyek_id', 'kategori', 'keterangan', 'media'],
             },
             VerifyReportRequest: {
                 type: 'object',
                 properties: {
                     status: {
                         type: 'string',
-                        enum: ['Diverifikasi', 'Ditolak'],
+                        enum: ['Diverifikasi', 'Ditolak', 'Diteruskan', 'Ditindaklanjuti', 'Selesai'],
                     },
                     catatan_verifikator: { type: 'string', nullable: true },
                     alasan_tolak: { type: 'string', nullable: true },
                 },
                 required: ['status'],
+            },
+            ForwardBody: {
+                type: 'object',
+                required: ['lembaga'],
+                properties: {
+                    lembaga: {
+                        type: 'string',
+                        enum: ['inspektorat', 'BPK', 'KPK', 'Ombudsman', 'dinas_terkait'],
+                    },
+                },
+            },
+            AdminReportListItem: {
+                type: 'object',
+                properties: {
+                    tiket: { type: 'string', example: 'LPR-ABCD1234-EFGH' },
+                    kategori: { type: 'string', nullable: true },
+                    status: {
+                        type: 'string',
+                        enum: ['Dilaporkan', 'Diverifikasi', 'Diteruskan', 'Ditindaklanjuti', 'Selesai', 'Ditolak'],
+                    },
+                    dibuat_pada: { type: 'string', format: 'date-time' },
+                    proyek: {
+                        type: 'object',
+                        nullable: true,
+                        properties: {
+                            nama: { type: 'string', nullable: true },
+                            kabupaten: { type: 'string', nullable: true },
+                            kode_bps: { type: 'string', nullable: true },
+                        },
+                    },
+                },
+            },
+            AdminReportListResponse: {
+                type: 'object',
+                required: ['status', 'reports', 'total', 'limit', 'offset'],
+                properties: {
+                    status: { type: 'string', example: 'success' },
+                    reports: {
+                        type: 'array',
+                        items: { $ref: '#/components/schemas/AdminReportListItem' },
+                    },
+                    total: { type: 'integer', example: 24 },
+                    total_by_status: {
+                        type: 'object',
+                        description: 'Jumlah laporan per status',
+                        additionalProperties: { type: 'integer' },
+                        example: { Dilaporkan: 10, Diverifikasi: 8, Ditolak: 3, Selesai: 3 },
+                    },
+                    limit: { type: 'integer', example: 50 },
+                    offset: { type: 'integer', example: 0 },
+                },
+            },
+            AdminReportDetail: {
+                type: 'object',
+                properties: {
+                    tiket: { type: 'string', example: 'LPR-ABCD1234-EFGH' },
+                    proyek_id: { type: 'string', format: 'uuid', nullable: true },
+                    kategori: { type: 'string', nullable: true },
+                    keterangan: { type: 'string', nullable: true },
+                    lat: { type: 'string', nullable: true },
+                    lng: { type: 'string', nullable: true },
+                    foto_urls: {
+                        type: 'array',
+                        nullable: true,
+                        items: { type: 'string' },
+                    },
+                    anonim: { type: 'boolean' },
+                    status: {
+                        type: 'string',
+                        enum: ['Dilaporkan', 'Diverifikasi', 'Diteruskan', 'Ditindaklanjuti', 'Selesai', 'Ditolak'],
+                    },
+                    alasan_tolak: { type: 'string', nullable: true },
+                    catatan_verifikator: { type: 'string', nullable: true },
+                    lembaga_tujuan: { type: 'string', nullable: true },
+                    diteruskan_pada: { type: 'string', format: 'date-time', nullable: true },
+                    dibuat_pada: { type: 'string', format: 'date-time', nullable: true },
+                    diubah_pada: { type: 'string', format: 'date-time', nullable: true },
+                    proyek: {
+                        type: 'object',
+                        nullable: true,
+                        properties: {
+                            nama: { type: 'string', nullable: true },
+                            kabupaten: { type: 'string', nullable: true },
+                            kode_bps: { type: 'string', nullable: true },
+                        },
+                    },
+                },
             },
             Report: {
                 type: 'object',
@@ -1425,7 +2098,7 @@ const swaggerSpec = {
                     kategori: { type: 'string', nullable: true },
                     status: {
                         type: 'string',
-                        enum: ['Dilaporkan', 'Diverifikasi', 'Ditolak'],
+                        enum: ['Dilaporkan', 'Diverifikasi', 'Diteruskan', 'Ditindaklanjuti', 'Selesai', 'Ditolak'],
                     },
                     keterangan: {
                         type: 'string',
@@ -1434,6 +2107,32 @@ const swaggerSpec = {
                     },
                     catatan_verifikator: { type: 'string', nullable: true },
                     alasan_tolak: { type: 'string', nullable: true },
+                    lembaga_tujuan: {
+                        type: 'string',
+                        nullable: true,
+                        description: 'Lembaga pengawas tujuan saat laporan diteruskan',
+                        example: 'KPK',
+                    },
+                    diteruskan_pada: {
+                        type: 'string',
+                        format: 'date-time',
+                        nullable: true,
+                    },
+                    foto_urls: {
+                        type: 'array',
+                        nullable: true,
+                        description: 'URL relatif media laporan, disajikan lewat GET /uploads/reports/<berkas>. ' +
+                            'Berekstensi .jpg untuk foto dan .mp4 untuk video.',
+                        items: { type: 'string', example: '/uploads/reports/seed-1762500000-a1b2c3.jpg' },
+                    },
+                    anonim: { type: 'boolean', example: true },
+                    lat: {
+                        type: 'string',
+                        nullable: true,
+                        description: 'Dikembalikan sebagai string karena kolom numeric PostgreSQL',
+                        example: '-5.45000000',
+                    },
+                    lng: { type: 'string', nullable: true, example: '105.27000000' },
                     dibuat_pada: { type: 'string', format: 'date-time', nullable: true },
                     diubah_pada: { type: 'string', format: 'date-time', nullable: true },
                     proyek: {
