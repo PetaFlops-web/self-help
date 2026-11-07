@@ -1,14 +1,20 @@
 import { recalculateProjectScore } from './project-scoring.js';
-import { getReportInternal, verifyReport } from '../repositories/citizen-report.js';
-import { HttpError } from '../helpers/http.js';
+import { getReportInternal, verifyReport, listAdminReports as listAdminReportsFromRepo, getAdminReportDetail, forwardReport, countReportsByStatus, } from '../repositories/citizen-report.js';
+import { HttpError, strParam, positiveIntParam, intParam } from '../helpers/http.js';
 import pool from '../config/database.js';
-const VALID_STATUSES = ['Diverifikasi', 'Ditolak'];
+const TRANSITIONS = {
+    Dilaporkan: ['Diverifikasi', 'Ditolak'],
+    Diverifikasi: ['Diteruskan', 'Selesai'],
+    Diteruskan: ['Ditindaklanjuti'],
+    Ditindaklanjuti: ['Selesai'],
+};
+function isTransitionValid(from, to) {
+    const allowed = TRANSITIONS[from];
+    return allowed ? allowed.includes(to) : false;
+}
 export async function verifyReportByTiket(tiket, input) {
     if (!tiket || tiket.trim().length === 0) {
         throw new HttpError(400, 'tiket wajib diisi');
-    }
-    if (!VALID_STATUSES.includes(input.status)) {
-        throw new HttpError(400, 'status harus Diverifikasi atau Ditolak');
     }
     if (input.status === 'Ditolak' && (!input.alasan_tolak || input.alasan_tolak.trim().length === 0)) {
         throw new HttpError(400, 'alasan_tolak wajib diisi saat menolak laporan');
@@ -19,6 +25,9 @@ export async function verifyReportByTiket(tiket, input) {
     }
     if (existing.status === input.status) {
         throw new HttpError(409, `Laporan sudah berstatus ${input.status}`);
+    }
+    if (!isTransitionValid(existing.status, input.status)) {
+        throw new HttpError(400, `Transisi status tidak sah: ${existing.status} → ${input.status}`);
     }
     const updated = await verifyReport(tiket, {
         status: input.status,
@@ -31,5 +40,61 @@ export async function verifyReportByTiket(tiket, input) {
     if (input.status === 'Diverifikasi' && existing.proyek_id) {
         await recalculateProjectScore(pool, existing.proyek_id);
     }
-    return updated;
+    return { report: updated, previousStatus: existing.status };
+}
+const MAX_LIMIT = 100;
+const DEFAULT_LIMIT = 50;
+export async function listAdminReports(query) {
+    const limit = positiveIntParam(query.limit);
+    if (query.limit !== undefined && limit === undefined) {
+        throw new HttpError(400, 'limit harus bilangan bulat positif');
+    }
+    const offset = intParam(query.offset);
+    if (query.offset !== undefined && (offset === undefined || offset < 0)) {
+        throw new HttpError(400, 'offset harus bilangan bulat non-negatif');
+    }
+    const finalLimit = Math.min(limit ?? DEFAULT_LIMIT, MAX_LIMIT);
+    const finalOffset = offset ?? 0;
+    const result = await listAdminReportsFromRepo({
+        status: strParam(query.status),
+        kategori: strParam(query.kategori),
+        kode_bps: strParam(query.kode_bps),
+        limit: finalLimit,
+        offset: finalOffset,
+    });
+    const totalByStatus = await countReportsByStatus();
+    return {
+        rows: result.rows,
+        total: result.total,
+        totalByStatus,
+        limit: finalLimit,
+        offset: finalOffset,
+    };
+}
+export async function getAdminReport(tiket) {
+    if (!tiket || tiket.trim().length === 0) {
+        throw new HttpError(400, 'tiket wajib diisi');
+    }
+    const report = await getAdminReportDetail(tiket);
+    if (!report) {
+        throw new HttpError(404, 'Laporan tidak ditemukan');
+    }
+    return report;
+}
+export async function forwardReportByTiket(tiket, lembaga) {
+    if (!tiket || tiket.trim().length === 0) {
+        throw new HttpError(400, 'tiket wajib diisi');
+    }
+    const existing = await getReportInternal(tiket);
+    if (!existing) {
+        throw new HttpError(404, 'Laporan tidak ditemukan');
+    }
+    if (!isTransitionValid(existing.status, 'Diteruskan')) {
+        throw new HttpError(400, `Laporan dengan status ${existing.status} tidak dapat diteruskan`);
+    }
+    const updated = await forwardReport(tiket, lembaga);
+    if (!updated) {
+        throw new HttpError(500, 'Gagal meneruskan laporan');
+    }
+    return { report: updated, previousStatus: existing.status };
 }

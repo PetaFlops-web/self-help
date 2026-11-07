@@ -6,6 +6,8 @@ import type {
   VerifiedReport,
   ReportPublicView,
   VerifyReportInput,
+  AdminReportListItem,
+  AdminReportDetail,
 } from '../types/citizen-report.js';
 
 export async function listVerifiedReportsByProjectId(projectId: string): Promise<VerifiedReport[]> {
@@ -100,6 +102,8 @@ function toPublicView(
     anonim: row.anonim,
     lat: row.lat,
     lng: row.lng,
+    lembaga_tujuan: row.lembaga_tujuan ?? null,
+    diteruskan_pada: row.diteruskan_pada ?? null,
     dibuat_pada: row.dibuat_pada,
     diubah_pada: row.diubah_pada,
     proyek: projectDetail ?? null,
@@ -152,7 +156,8 @@ export async function createReport(input: CreateReportInput): Promise<ReportPubl
 export async function getReportByTiket(tiket: string): Promise<ReportPublicView | null> {
   const res = await pool.query<CitizenReport>(
     `SELECT tiket, proyek_id, kategori, keterangan, lat, lng, foto_urls, anonim,
-            status, alasan_tolak, catatan_verifikator, dibuat_pada, diubah_pada
+            status, alasan_tolak, catatan_verifikator, lembaga_tujuan, diteruskan_pada,
+            dibuat_pada, diubah_pada
        FROM laporan_warga
       WHERE tiket = $1`,
     [tiket],
@@ -165,7 +170,8 @@ export async function getReportByTiket(tiket: string): Promise<ReportPublicView 
 export async function getReportInternal(tiket: string): Promise<CitizenReport | null> {
   const res = await pool.query<CitizenReport>(
     `SELECT tiket, proyek_id, kategori, keterangan, lat, lng, foto_urls, anonim,
-            status, alasan_tolak, catatan_verifikator, dibuat_pada, diubah_pada
+            status, alasan_tolak, catatan_verifikator, lembaga_tujuan, diteruskan_pada,
+            dibuat_pada, diubah_pada
        FROM laporan_warga
       WHERE tiket = $1`,
     [tiket],
@@ -180,12 +186,168 @@ export async function verifyReport(
   const res = await pool.query<CitizenReport>(
     `UPDATE laporan_warga
         SET status = $2,
-            catatan_verifikator = $3,
-            alasan_tolak = $4,
+            catatan_verifikator = COALESCE($3, catatan_verifikator),
+            alasan_tolak = COALESCE($4, alasan_tolak),
             diubah_pada = now()
       WHERE tiket = $1
      RETURNING *`,
     [tiket, input.status, input.catatan_verifikator ?? null, input.alasan_tolak ?? null],
+  );
+  if (!res.rows[0]) return null;
+  const projectDetail = await getProjectDetailForReport(res.rows[0].proyek_id);
+  return toPublicView(res.rows[0], projectDetail);
+}
+
+export async function listAdminReports(filters: {
+  status?: string;
+  kategori?: string;
+  kode_bps?: string;
+  limit: number;
+  offset: number;
+}): Promise<{ rows: AdminReportListItem[]; total: number }> {
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+
+  if (filters.status) {
+    params.push(filters.status);
+    conditions.push(`lw.status = $${params.length}`);
+  }
+  if (filters.kategori) {
+    params.push(filters.kategori);
+    conditions.push(`lw.kategori = $${params.length}`);
+  }
+  if (filters.kode_bps) {
+    params.push(filters.kode_bps);
+    conditions.push(`p.kode_bps = $${params.length}`);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const countRes = await pool.query<{ count: string }>(
+    `SELECT COUNT(*) AS count
+       FROM laporan_warga lw
+       LEFT JOIN proyek p ON p.id = lw.proyek_id
+       ${whereClause}`,
+    params,
+  );
+  const total = parseInt(countRes.rows[0]?.count ?? '0', 10);
+
+  params.push(filters.limit);
+  params.push(filters.offset);
+  const dataRes = await pool.query<{
+    tiket: string;
+    kategori: string | null;
+    status: string;
+    dibuat_pada: Date | null;
+    proyek_nama: string | null;
+    proyek_kabupaten: string | null;
+    proyek_kode_bps: string | null;
+  }>(
+    `SELECT lw.tiket, lw.kategori, lw.status, lw.dibuat_pada,
+            p.nama AS proyek_nama,
+            w.nama AS proyek_kabupaten,
+            p.kode_bps AS proyek_kode_bps
+       FROM laporan_warga lw
+       LEFT JOIN proyek p ON p.id = lw.proyek_id
+       LEFT JOIN wilayah w ON w.kode_bps = p.kode_bps
+       ${whereClause}
+      ORDER BY lw.dibuat_pada ASC
+      LIMIT $${params.length - 1}
+      OFFSET $${params.length}`,
+    params,
+  );
+
+  const rows: AdminReportListItem[] = dataRes.rows.map((r) => ({
+    tiket: r.tiket,
+    kategori: r.kategori,
+    status: r.status,
+    dibuat_pada: r.dibuat_pada,
+    proyek: r.proyek_nama
+      ? {
+          nama: r.proyek_nama,
+          kabupaten: r.proyek_kabupaten,
+          kode_bps: r.proyek_kode_bps,
+        }
+      : null,
+  }));
+
+  return { rows, total };
+}
+
+export async function countReportsByStatus(): Promise<Record<string, number>> {
+  const res = await pool.query<{ status: string; count: number }>(
+    `SELECT status, COUNT(*)::int AS count
+       FROM laporan_warga
+      GROUP BY status`,
+  );
+  const map: Record<string, number> = {};
+  for (const row of res.rows) {
+    map[row.status] = row.count;
+  }
+  return map;
+}
+
+export async function getAdminReportDetail(
+  tiket: string,
+): Promise<AdminReportDetail | null> {
+  const res = await pool.query<AdminReportDetail & {
+    proyek_nama: string | null;
+    proyek_kabupaten: string | null;
+    proyek_kode_bps: string | null;
+  }>(
+    `SELECT lw.tiket, lw.proyek_id, lw.kategori, lw.keterangan, lw.lat, lw.lng,
+            lw.foto_urls, lw.anonim, lw.status, lw.alasan_tolak, lw.catatan_verifikator,
+            lw.lembaga_tujuan, lw.diteruskan_pada, lw.dibuat_pada, lw.diubah_pada,
+            p.nama AS proyek_nama,
+            w.nama AS proyek_kabupaten,
+            p.kode_bps AS proyek_kode_bps
+       FROM laporan_warga lw
+       LEFT JOIN proyek p ON p.id = lw.proyek_id
+       LEFT JOIN wilayah w ON w.kode_bps = p.kode_bps
+      WHERE lw.tiket = $1`,
+    [tiket],
+  );
+  if (!res.rows[0]) return null;
+  const r = res.rows[0];
+  return {
+    tiket: r.tiket,
+    proyek_id: r.proyek_id,
+    kategori: r.kategori,
+    keterangan: r.keterangan,
+    lat: r.lat,
+    lng: r.lng,
+    foto_urls: r.foto_urls,
+    anonim: r.anonim,
+    status: r.status,
+    alasan_tolak: r.alasan_tolak,
+    catatan_verifikator: r.catatan_verifikator,
+    lembaga_tujuan: r.lembaga_tujuan,
+    diteruskan_pada: r.diteruskan_pada,
+    dibuat_pada: r.dibuat_pada,
+    diubah_pada: r.diubah_pada,
+    proyek: r.proyek_nama
+      ? {
+          nama: r.proyek_nama,
+          kabupaten: r.proyek_kabupaten,
+          kode_bps: r.proyek_kode_bps,
+        }
+      : null,
+  };
+}
+
+export async function forwardReport(
+  tiket: string,
+  lembaga: string,
+): Promise<ReportPublicView | null> {
+  const res = await pool.query<CitizenReport>(
+    `UPDATE laporan_warga
+        SET status = 'Diteruskan',
+            lembaga_tujuan = $2,
+            diteruskan_pada = now(),
+            diubah_pada = now()
+      WHERE tiket = $1
+     RETURNING *`,
+    [tiket, lembaga],
   );
   if (!res.rows[0]) return null;
   const projectDetail = await getProjectDetailForReport(res.rows[0].proyek_id);

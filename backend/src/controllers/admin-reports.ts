@@ -1,18 +1,95 @@
 import type { Request, Response } from 'express';
-import { verifyReportByTiket } from '../services/admin-reports.js';
-import { updated } from '../middlewares/response.js';
+import {
+  verifyReportByTiket,
+  listAdminReports,
+  getAdminReport,
+  forwardReportByTiket,
+} from '../services/admin-reports.js';
+import { ok, updated, respond } from '../middlewares/response.js';
 import { invalidateCache } from '../middlewares/cache.js';
+import { recordAudit } from '../helpers/audit.js';
 import type { VerifyReportInput } from '../types/citizen-report.js';
 
+function auditActionForStatus(status: string): string {
+  if (status === 'Diverifikasi') return 'VERIFY_REPORT';
+  if (status === 'Ditolak') return 'REJECT_REPORT';
+  return 'UPDATE_STATUS';
+}
+
+export async function listReports(req: Request, res: Response): Promise<void> {
+  const result = await listAdminReports(req.query as Record<string, unknown>);
+  respond(res, 200, {
+    reports: result.rows,
+    total: result.total,
+    total_by_status: result.totalByStatus,
+    limit: result.limit,
+    offset: result.offset,
+  });
+}
+
+export async function getReportDetail(req: Request<{ tiket: string }>, res: Response): Promise<void> {
+  const report = await getAdminReport(req.params.tiket);
+  ok(res, 'report', report);
+}
+
 export async function verifyReport(req: Request<{ id: string }>, res: Response): Promise<void> {
-  const id = req.params.id;
+  const tiket = req.params.id;
   const body = req.body as VerifyReportInput;
   const input: VerifyReportInput = {
     status: body.status,
     catatan_verifikator: body.catatan_verifikator,
     alasan_tolak: body.alasan_tolak,
   };
-  const report = await verifyReportByTiket(id, input);
+
+  const { report, previousStatus } = await verifyReportByTiket(tiket, input);
   await invalidateCache('reports', 'stats', 'projects');
+
+  const ip = (req.headers['x-real-ip'] as string) || req.ip || null;
+  await recordAudit({
+    aktor_id: req.user?.id ?? null,
+    aktor_nama: req.user?.nama ?? 'unknown',
+    peran: req.user?.peran ?? 'unknown',
+    modul: 'moderasi',
+    aksi: auditActionForStatus(input.status),
+    target_id: tiket,
+    diff: {
+      before: { status: previousStatus },
+      after: {
+        status: input.status,
+        catatan_verifikator: input.catatan_verifikator ?? null,
+        alasan_tolak: input.alasan_tolak ?? null,
+      },
+    },
+    ip,
+  });
+
   updated(res, 'report', report, 'Status laporan berhasil diperbarui');
+}
+
+export async function forwardReport(req: Request<{ tiket: string }>, res: Response): Promise<void> {
+  const tiket = req.params.tiket;
+  const { lembaga } = req.body as { lembaga: string };
+
+  const { report, previousStatus } = await forwardReportByTiket(tiket, lembaga);
+  await invalidateCache('reports', 'stats', 'projects');
+
+  const ip = (req.headers['x-real-ip'] as string) || req.ip || null;
+  await recordAudit({
+    aktor_id: req.user?.id ?? null,
+    aktor_nama: req.user?.nama ?? 'unknown',
+    peran: req.user?.peran ?? 'unknown',
+    modul: 'moderasi',
+    aksi: 'FORWARD_AGENCY',
+    target_id: tiket,
+    diff: {
+      before: { status: previousStatus },
+      after: {
+        status: 'Diteruskan',
+        lembaga_tujuan: lembaga,
+      },
+    },
+    ip,
+  });
+
+  updated(res, 'report', report, 'Laporan berhasil diteruskan');
 }

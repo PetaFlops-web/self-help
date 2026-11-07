@@ -26,6 +26,8 @@ export interface AppConfig {
   llmServiceUrl: string;
   llmServiceTimeoutMs: number;
   allowedOrigins: string[];
+  jwtSecret: string;
+  jwtExpiresIn: string;
 }
 
 export const config: AppConfig = {
@@ -40,6 +42,22 @@ export const config: AppConfig = {
   allowedOrigins: process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
     : [],
+  jwtSecret: process.env.JWT_SECRET || 'clearsight-dev-jwt-secret-replace-in-production-1234567890',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
 };
+
+const JWT_EXPIRES_IN_RE = /^\d+(ms|s|m|h|d|w)$/;
+if (!JWT_EXPIRES_IN_RE.test(config.jwtExpiresIn)) {
+  throw new Error(
+    `[env] JWT_EXPIRES_IN tidak valid: "${config.jwtExpiresIn}". ` +
+    `Gunakan format seperti "24h", "7d", "3600s".`,
+  );
+}
+
+if (isProd && config.jwtSecret.length < 32) {
+  throw new Error(
+    '[env] JWT_SECRET harus minimal 32 karakter di production.',
+  );
+}
 
 export default config;

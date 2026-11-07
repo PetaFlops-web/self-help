@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { login, logout, getMe } from '../controllers/auth.js';
+import { validateBody } from '../middlewares/validate.js';
+import { requireAuth } from '../middlewares/auth.js';
+import { LoginBodySchema } from '../utils/validators/auth.js';
+const router = Router();
+router.post('/auth/login', validateBody(LoginBodySchema), login);
+router.post('/auth/logout', requireAuth, logout);
+router.get('/auth/me', requireAuth, getMe);
+export default router;

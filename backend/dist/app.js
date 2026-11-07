@@ -17,6 +17,8 @@ import financialsRouter from './src/routes/financials.js';
 import reportsRouter from './src/routes/reports.js';
 import adminReportsRouter from './src/routes/admin-reports.js';
 import documentsRouter from './src/routes/documents.js';
+import authRouter from './src/routes/auth.js';
+import auditRouter from './src/routes/audit.js';
 const app = express();
 app.set('trust proxy', 1);
 if (isProd && config.allowedOrigins.length > 0) {
@@ -46,6 +48,8 @@ app.use('/api', llmRouter);
 app.use('/api', reportsRouter);
 app.use('/api', adminReportsRouter);
 app.use('/api', documentsRouter);
+app.use('/api', authRouter);
+app.use('/api', auditRouter);
 if (isDev) {
     app.use('/', docsRouter);
 }

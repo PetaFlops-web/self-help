@@ -4,7 +4,13 @@ export interface VerifiedReport {
   ringkasan: string | null;
 }
 
-export type ReportStatus = 'Dilaporkan' | 'Diverifikasi' | 'Ditolak';
+export type ReportStatus =
+  | 'Dilaporkan'
+  | 'Diverifikasi'
+  | 'Diteruskan'
+  | 'Ditindaklanjuti'
+  | 'Selesai'
+  | 'Ditolak';
 
 export interface CitizenReport {
   tiket: string;
@@ -18,6 +24,8 @@ export interface CitizenReport {
   status: ReportStatus | string;
   alasan_tolak: string | null;
   catatan_verifikator: string | null;
+  lembaga_tujuan: string | null;
+  diteruskan_pada: Date | null;
   dibuat_pada: Date | null;
   diubah_pada: Date | null;
 }
@@ -33,7 +41,7 @@ export interface CreateReportInput {
 }
 
 export interface VerifyReportInput {
-  status: 'Diverifikasi' | 'Ditolak';
+  status: ReportStatus;
   catatan_verifikator?: string;
   alasan_tolak?: string;
 }
@@ -50,10 +58,47 @@ export interface ReportPublicView {
   anonim: boolean;
   lat: string | null;
   lng: string | null;
+  lembaga_tujuan: string | null;
+  diteruskan_pada: Date | null;
   dibuat_pada: Date | null;
   diubah_pada: Date | null;
   proyek: {
     nama: string | null;
     kabupaten: string | null;
+  } | null;
+}
+
+export interface AdminReportListItem {
+  tiket: string;
+  kategori: string | null;
+  status: string;
+  dibuat_pada: Date | null;
+  proyek: {
+    nama: string | null;
+    kabupaten: string | null;
+    kode_bps: string | null;
+  } | null;
+}
+
+export interface AdminReportDetail {
+  tiket: string;
+  proyek_id: string | null;
+  kategori: string | null;
+  keterangan: string | null;
+  lat: string | null;
+  lng: string | null;
+  foto_urls: string[] | null;
+  anonim: boolean;
+  status: string;
+  alasan_tolak: string | null;
+  catatan_verifikator: string | null;
+  lembaga_tujuan: string | null;
+  diteruskan_pada: Date | null;
+  dibuat_pada: Date | null;
+  diubah_pada: Date | null;
+  proyek: {
+    nama: string | null;
+    kabupaten: string | null;
+    kode_bps: string | null;
   } | null;
 }
