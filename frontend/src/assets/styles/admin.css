@@ -23,7 +23,6 @@
   --c-warning: #D97706;  --c-warning-soft: #FDF0D8;
   --c-info: #2F6FDE;     --c-info-soft: #EBF2FC;
 
-  --font: 'Plus Jakarta Sans', system-ui, sans-serif;
   --fs-micro: 9px;  --fs-xs: 10px;  --fs-sm: 11px; --fs-md: 12px;
   --fs-lg: 13px;    --fs-xl: 18px;  --fs-2xl: 24px;
 
@@ -166,13 +165,11 @@
 }
 
 .admin-sidebar-head {
-  padding: 22px var(--sp-3) var(--sp-2);  /* x=20 y=22 → padding 12 sisi, y=22 atas */
+  padding: 22px 20px var(--sp-2);  /* §5: logo di x=20, y=22 */
 }
-/* Logo sudah di main.css .brand-mark; di sini hanya penyesuaian konteks sidebar */
 .admin-brand {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
+  display: inline-flex;
+  align-items: baseline;
   font-size: var(--fs-xl);        /* 18 Extra Bold */
   font-weight: 800;
   color: var(--c-ink);
@@ -184,27 +181,49 @@
   font-weight: 400;
   color: var(--c-muted);
   margin-top: 2px;
-  padding-left: calc(24px + var(--sp-2)); /* sejajar dengan teks logo, bukan ikon */
 }
 
-/* Nav — item 196×36 r8, aktif #FFF2EB+#FF6B2B, tidak aktif #6B6760 */
+/* Nav — kategori + item 196×36 r8, ikon 14×14 stroke 1.5 */
 .admin-nav {
   flex: 1;
   padding: var(--sp-3);           /* 12 sisi */
   display: flex;
   flex-direction: column;
-  gap: var(--sp-1);               /* 4 — jarak antar item terukur */
+  gap: var(--sp-1);               /* 4 — jarak antar item dalam kategori */
+}
+.admin-nav-cat {
+  font-size: var(--fs-xs);        /* 10 */
+  font-weight: 600;               /* Semi Bold */
+  color: var(--c-subtle);         /* #9A958C — §5: label kategori */
+  padding: 0 8px;                 /* sejajar x=20 dari tepi sidebar */
+  margin-top: var(--sp-4);        /* 16 — jarak dari kelompok sebelumnya */
+  margin-bottom: var(--sp-1);     /* 4 */
+}
+.admin-nav-cat:first-child {
+  margin-top: 0;                  /* kategori pertama tanpa margin atas */
 }
 .admin-nav-link {
   display: flex;
   align-items: center;
+  gap: 6px;                       /* §5: ikon x≈28, teks x=48 */
   height: 36px;                   /* §5: 196×36 */
-  padding: 0 12px;
+  padding: 0 12px 0 16px;         /* ikon di 16px dari tepi kiri item */
   font-size: var(--fs-sm);        /* 11 */
   font-weight: 500;               /* Medium */
   color: var(--c-muted);          /* #6B6760 tidak aktif */
   border-radius: var(--r-md);     /* 8 */
   transition: background 0.12s, color 0.12s;
+}
+.admin-nav-icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+.admin-nav-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .admin-nav-link:hover {
   background: var(--c-bg);        /* #F4F2EE */
@@ -214,6 +233,24 @@
   background: var(--c-primary-soft); /* #FFF2EB */
   color: var(--c-primary);          /* #FF6B2B */
   font-weight: 600;                 /* Semi Bold */
+}
+/* Item "segera" — belum punya rute (F6), bukan anchor */
+.admin-nav-soon {
+  cursor: default;
+  opacity: 0.5;
+}
+.admin-nav-soon:hover {
+  background: transparent;
+  color: var(--c-muted);
+}
+.admin-nav-badge {
+  flex: none;
+  font-size: var(--fs-micro);     /* 9 */
+  font-weight: 600;
+  color: var(--c-subtle);         /* #9A958C */
+  background: var(--c-bg);        /* #F4F2EE */
+  border-radius: var(--r-pill);
+  padding: 1px 6px;
 }
 
 /* Profile box — 196×54 r10 #F4F2EE */

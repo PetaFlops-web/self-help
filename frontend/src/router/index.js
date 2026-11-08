@@ -36,7 +36,17 @@ const router = createRouter({
           meta: {
             requiresAuth: true,
             roles: ['admin', 'verifikator'],
-            title: 'Antrean Laporan',
+            title: 'Antrean Verifikasi Laporan Warga',
+          },
+        },
+        {
+          path: 'laporan/:tiket',
+          name: 'admin-report-detail',
+          component: () => import('@/features/admin/views/AdminReportDetailView.vue'),
+          meta: {
+            requiresAuth: true,
+            roles: ['admin', 'verifikator'],
+            title: 'Detail Laporan',
           },
         },
         {
