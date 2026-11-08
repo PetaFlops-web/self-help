@@ -50,6 +50,7 @@ const swaggerSpec: JsonObject = {
     { name: 'Auth', description: 'Autentikasi dan otorisasi pengguna panel admin' },
     { name: 'Audit', description: 'Log audit perubahan data dan status' },
     { name: 'ETL', description: 'Modul ETL data publik' },
+    { name: 'Notifikasi', description: 'Jejak pengiriman notifikasi surel kepada pelapor' },
   ],
   paths: {
     '/ping': {
@@ -1096,9 +1097,14 @@ const swaggerSpec: JsonObject = {
         tags: ['ETL'],
         summary: 'Jalankan ETL data publik',
         description:
-          'Mengimpor data CSV SiRUP ke tabel proyek. Baris divalidasi; baris valid ' +
-          'di-upsert ke proyek (ON CONFLICT kode_rup DO UPDATE), baris tidak valid ' +
-          'disimpan ke etl_error. Membutuhkan peran admin.',
+          'Mengimpor CSV SiRUP dengan source_url sebagai provenance setiap proyek. ' +
+          'Baris valid di-upsert berdasarkan kode_rup, duplikat dalam file dan baris invalid ' +
+          'disimpan ke etl_error, dan kode_tender unik lintas sumber dicocokkan otomatis. ' +
+          'Membutuhkan peran admin. Pengambilan otomatis tanpa csv_content hanya diizinkan ' +
+          'bila sumber memiliki boleh_otomatis=true; jika false, permintaan otomatis ditolak ' +
+          'dengan 403 (impor manual via csv_content tetap diizinkan). Advisory lock PostgreSQL ' +
+          'mencegah dua run ETL bersamaan untuk sumber yang sama — bila sudah berjalan, ' +
+          'kembalikan 409.',
         operationId: 'runEtl',
         security: [{ bearerAuth: [] }],
         requestBody: {
@@ -1106,6 +1112,11 @@ const swaggerSpec: JsonObject = {
           content: {
             'application/json': {
               schema: { $ref: '#/components/schemas/EtlRunBody' },
+              example: {
+                source_id: 'SRC-01',
+                source_url: 'https://sirup.inaproc.id/rencana-pengadaan.csv',
+                csv_content: 'kode_rup,kode_tender,nama_paket,satker,kode_bps,tahun_anggaran,pagu\n123456,T-123,Paket Jalan,Dinas PUPR,1871,2026,1000000000',
+              },
             },
           },
         },
@@ -1120,7 +1131,7 @@ const swaggerSpec: JsonObject = {
             },
           },
           '400': {
-            description: 'Input tidak valid atau source_id tidak didukung',
+            description: 'Input, source_id, atau source_url HTTP/HTTPS tidak valid',
             content: errorContent,
           },
           '401': {
@@ -1128,7 +1139,13 @@ const swaggerSpec: JsonObject = {
             content: errorContent,
           },
           '403': {
-            description: 'Akses ditolak: peran tidak mencukupi',
+            description:
+              'Akses ditolak (peran tidak mencukupi), atau sumber tidak mengizinkan ' +
+              'pengambilan otomatis (boleh_otomatis=false tanpa csv_content)',
+            content: errorContent,
+          },
+          '409': {
+            description: 'ETL sedang berjalan untuk sumber ini (advisory lock aktif)',
             content: errorContent,
           },
         },
@@ -1192,10 +1209,9 @@ const swaggerSpec: JsonObject = {
         tags: ['ETL'],
         summary: 'Daftar proyek belum tercocokkan beserta kandidat',
         description:
-          'Mengembalikan daftar proyek dengan match_status unmatched atau null, ' +
-          'masing-masing disertai 5 kandidat teratas dari sumber lain yang di-skor ' +
-          'berdasarkan kesamaan kode_rup/kode_tender, kemiripan nama, dinas, dan ' +
-          'kedekatan pagu. Membutuhkan peran admin.',
+          'Mengembalikan proyek unmatched atau null dengan maksimal 5 kandidat unmatched ' +
+          'dari source_id berbeda. Pasangan yang sudah diputuskan not_match tidak ditawarkan ' +
+          'kembali. Skor memakai kode_rup/kode_tender, kemiripan nama, dinas, dan pagu.',
         operationId: 'listUnmatched',
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -1241,9 +1257,10 @@ const swaggerSpec: JsonObject = {
         tags: ['ETL'],
         summary: 'Keputusan pencocokan paket antarsumber',
         description:
-          'Mencatat keputusan admin apakah dua proyek dari sumber berbeda merupakan ' +
-          'paket yang sama (match) atau bukan (not_match). Saat match, kedua proyek ' +
-          'ditandai match_status=matched. Membutuhkan peran admin.',
+          'Mencatat relasi canonical match atau not_match untuk dua proyek unmatched dari ' +
+          'sumber berbeda dalam satu transaksi. Match mengubah kedua status menjadi matched; ' +
+          'not_match mempertahankan status dan menekan pasangan dari kandidat. Pengulangan ' +
+          'keputusan yang sama idempoten; konflik ditolak. Membutuhkan peran admin.',
         operationId: 'matchDecision',
         security: [{ bearerAuth: [] }],
         requestBody: {
@@ -1275,7 +1292,7 @@ const swaggerSpec: JsonObject = {
             },
           },
           '400': {
-            description: 'Body tidak valid (bukan UUID atau decision tidak dikenal)',
+            description: 'Body/UUID tidak valid, self-match, sumber sama, status tidak eligible, atau keputusan konflik',
             content: errorContent,
           },
           '401': {
@@ -1290,6 +1307,78 @@ const swaggerSpec: JsonObject = {
             description: 'Proyek unmatched_id atau matched_id tidak ditemukan',
             content: errorContent,
           },
+        },
+      },
+    },
+
+    '/admin/notifications': {
+      get: {
+        tags: ['Notifikasi'],
+        summary: 'Daftar jejak pengiriman notifikasi',
+        description:
+          'Mengembalikan daftar notifikasi yang tercatat saat status laporan berubah. ' +
+          'Hanya metadata — alamat tujuan tidak disertakan (NFR-23, AC-20). ' +
+          'Filter tiket dan status_kirim, paginasi limit/offset. Peran admin dan peninjau.',
+        operationId: 'listNotifications',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'tiket', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'status_kirim', in: 'query', required: false, schema: { type: 'string', enum: ['tertunda', 'terkirim', 'gagal', 'dilewati'] } },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 100 } },
+          { name: 'offset', in: 'query', required: false, schema: { type: 'integer', minimum: 0 } },
+        ],
+        responses: {
+          ...commonErrors,
+          '200': {
+            description: 'Daftar notifikasi',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/NotificationListResponse' } } },
+          },
+          '401': { description: 'Token autentikasi tidak valid', content: errorContent },
+          '403': { description: 'Peran tidak mencukupi', content: errorContent },
+        },
+      },
+    },
+
+    '/admin/notifications/{id}/retry': {
+      post: {
+        tags: ['Notifikasi'],
+        summary: 'Kirim ulang notifikasi yang gagal',
+        description: 'Mencoba ulang pengiriman notifikasi yang berstatus gagal. Hanya admin.',
+        operationId: 'retryNotification',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          ...commonErrors,
+          '200': {
+            description: 'Hasil kirim ulang',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/NotificationRetryResult' } } },
+          },
+          '401': { description: 'Token autentikasi tidak valid', content: errorContent },
+          '403': { description: 'Peran tidak mencukupi (hanya admin)', content: errorContent },
+          '404': { description: 'Notifikasi tidak ditemukan', content: errorContent },
+        },
+      },
+    },
+
+    '/admin/notifications/retention': {
+      post: {
+        tags: ['Notifikasi'],
+        summary: 'Jalankan retensi kontak pelapor (DR-11)',
+        description:
+          'Menghapus kontak pelapor (nama, surel, telepon) pada laporan berstatus Selesai atau Ditolak ' +
+          'yang berumur lebih dari 90 hari. Dijalankan via cron eksternal. Hanya admin.',
+        operationId: 'runContactRetention',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          ...commonErrors,
+          '200': {
+            description: 'Hasil retensi',
+            content: { 'application/json': { schema: { type: 'object', properties: { retention: { type: 'object' } } } } },
+          },
+          '401': { description: 'Token autentikasi tidak valid', content: errorContent },
+          '403': { description: 'Peran tidak mencukupi (hanya admin)', content: errorContent },
         },
       },
     },
@@ -2295,8 +2384,29 @@ const swaggerSpec: JsonObject = {
             default: false,
             description: 'Dikirim sebagai string "true"/"false" pada multipart',
           },
+          ukuran_lapangan: {
+            type: 'number',
+            nullable: true,
+            description: 'Estimasi volume hasil ukur lapangan (opsional). Dipakai untuk menghitung indikator D3-01 (selisih volume RAB vs lapangan) setelah laporan diverifikasi.',
+            example: 850,
+          },
+          nama_pelapor: {
+            type: 'string',
+            nullable: true,
+            description: 'Nama lengkap pelapor (opsional, FR-54). Disimpan terenkripsi (AES-256-GCM). Tidak pernah ditampilkan di respons API.',
+          },
+          surel_pelapor: {
+            type: 'string',
+            format: 'email',
+            description: 'Alamat email pelapor (WAJIB, FR-54 rev 8 Nov 2026). Satu-satunya kanal notifikasi status laporan. Disimpan teks biasa untuk pengiriman notifikasi. Tidak pernah muncul di respons API (NFR-23, AC-20).',
+          },
+          telepon_pelapor: {
+            type: 'string',
+            nullable: true,
+            description: 'Nomor telepon pelapor (opsional, FR-54). Disimpan terenkripsi (AES-256-GCM). Tidak pernah ditampilkan di respons API.',
+          },
         },
-        required: ['proyek_id', 'kategori', 'keterangan', 'media'],
+        required: ['proyek_id', 'kategori', 'keterangan', 'media', 'surel_pelapor'],
       },
 
       VerifyReportRequest: {
@@ -2474,12 +2584,19 @@ const swaggerSpec: JsonObject = {
 
       EtlRunBody: {
         type: 'object',
-        required: ['source_id'],
+        required: ['source_id', 'csv_content', 'source_url'],
         properties: {
           source_id: { type: 'string', example: 'SRC-01' },
           csv_content: {
             type: 'string',
-            description: 'Isi CSV SiRUP. Wajib diisi pada implementasi saat ini.',
+            description: 'Isi CSV SiRUP; kode_rup yang duplikat dalam file hanya diproses pada baris pertama',
+          },
+          source_url: {
+            type: 'string',
+            format: 'uri',
+            pattern: '^https?://',
+            description: 'URL HTTP/HTTPS sumber CSV yang disimpan sebagai provenance setiap proyek',
+            example: 'https://sirup.inaproc.id/rencana-pengadaan.csv',
           },
         },
       },
@@ -2509,7 +2626,7 @@ const swaggerSpec: JsonObject = {
           baris_mentah: {
             type: 'object',
             nullable: true,
-            description: 'Baris mentah yang gagal divalidasi (JSON)',
+            description: 'Objek seluruh header dan nilai asli baris yang gagal divalidasi',
           },
           alasan: { type: 'string', nullable: true, example: 'kode_rup wajib diisi' },
         },
@@ -2527,6 +2644,54 @@ const swaggerSpec: JsonObject = {
           total: { type: 'integer', example: 2 },
           limit: { type: 'integer', example: 50 },
           offset: { type: 'integer', example: 0 },
+        },
+      },
+
+      NotificationItem: {
+        type: 'object',
+        description: 'Jejak pengiriman notifikasi. Tidak memuat alamat tujuan (NFR-23, AC-20).',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          tiket: { type: 'string', example: 'LPR-1-001' },
+          kanal: { type: 'string', example: 'surel' },
+          status_dari: { type: 'string', nullable: true, example: 'Dilaporkan' },
+          status_ke: { type: 'string', nullable: true, example: 'Diverifikasi' },
+          status_kirim: { type: 'string', enum: ['tertunda', 'terkirim', 'gagal', 'dilewati'] },
+          percobaan: { type: 'integer', example: 1 },
+          galat: { type: 'string', nullable: true },
+          dibuat_pada: { type: 'string', format: 'date-time' },
+          dikirim_pada: { type: 'string', format: 'date-time', nullable: true },
+        },
+      },
+
+      NotificationListResponse: {
+        type: 'object',
+        required: ['status', 'notifications', 'total', 'limit', 'offset'],
+        properties: {
+          status: { type: 'string', example: 'success' },
+          notifications: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/NotificationItem' },
+          },
+          total: { type: 'integer', example: 24 },
+          limit: { type: 'integer', example: 50 },
+          offset: { type: 'integer', example: 0 },
+        },
+      },
+
+      NotificationRetryResult: {
+        type: 'object',
+        properties: {
+          status: { type: 'string', example: 'success' },
+          message: { type: 'string', example: 'Notifikasi dikirim ulang' },
+          result: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              status_kirim: { type: 'string', enum: ['tertunda', 'terkirim', 'gagal', 'dilewati'] },
+              percobaan: { type: 'integer' },
+            },
+          },
         },
       },
 

@@ -5,7 +5,7 @@ import {
   getAdminReport,
   forwardReportByTiket,
 } from '../services/admin-reports.js';
-import { ok, updated, respond } from '../middlewares/response.js';
+import { ok, respond } from '../middlewares/response.js';
 import { invalidateCache } from '../middlewares/cache.js';
 import { recordAudit } from '../helpers/audit.js';
 import type { VerifyReportInput } from '../types/citizen-report.js';
@@ -41,7 +41,7 @@ export async function verifyReport(req: Request<{ id: string }>, res: Response):
     alasan_tolak: body.alasan_tolak,
   };
 
-  const { report, previousStatus } = await verifyReportByTiket(tiket, input);
+  const { report, previousStatus, notification } = await verifyReportByTiket(tiket, input);
   await invalidateCache('reports', 'stats', 'projects');
 
   const ip = (req.headers['x-real-ip'] as string) || req.ip || null;
@@ -63,14 +63,24 @@ export async function verifyReport(req: Request<{ id: string }>, res: Response):
     ip,
   });
 
-  updated(res, 'report', report, 'Status laporan berhasil diperbarui');
+  // Callback error notifikasi: status laporan tetap berubah (fail-safe), tetapi
+  // bila pengiriman surel gagal/dilewati, beri tahu admin lewat respons.
+  const message =
+    notification.status === 'gagal'
+      ? 'Status laporan berhasil diperbarui, tetapi notifikasi surel gagal terkirim'
+      : 'Status laporan berhasil diperbarui';
+  respond(res, 200, {
+    message,
+    report,
+    notification: { status: notification.status, galat: notification.galat ?? null },
+  });
 }
 
 export async function forwardReport(req: Request<{ tiket: string }>, res: Response): Promise<void> {
   const tiket = req.params.tiket;
   const { lembaga } = req.body as { lembaga: string };
 
-  const { report, previousStatus } = await forwardReportByTiket(tiket, lembaga);
+  const { report, previousStatus, notification } = await forwardReportByTiket(tiket, lembaga);
   await invalidateCache('reports', 'stats', 'projects');
 
   const ip = (req.headers['x-real-ip'] as string) || req.ip || null;
@@ -91,5 +101,13 @@ export async function forwardReport(req: Request<{ tiket: string }>, res: Respon
     ip,
   });
 
-  updated(res, 'report', report, 'Laporan berhasil diteruskan');
+  const message =
+    notification.status === 'gagal'
+      ? 'Laporan berhasil diteruskan, tetapi notifikasi surel gagal terkirim'
+      : 'Laporan berhasil diteruskan';
+  respond(res, 200, {
+    message,
+    report,
+    notification: { status: notification.status, galat: notification.galat ?? null },
+  });
 }

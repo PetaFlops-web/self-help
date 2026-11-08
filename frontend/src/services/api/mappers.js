@@ -241,6 +241,12 @@ export function toReportPayload(form, files = []) {
   fd.append('kategori', kategori)
   fd.append('keterangan', keterangan)
   fd.append('anonim', String(!!form?.anonymous))
+  if (form?.fieldMeasurement !== '' && form?.fieldMeasurement != null) {
+    fd.append('ukuran_lapangan', String(form.fieldMeasurement))
+  }
+  if (form?.reporterName) fd.append('nama_pelapor', form.reporterName)
+  if (form?.reporterEmail) fd.append('surel_pelapor', form.reporterEmail)
+  if (form?.reporterPhone) fd.append('telepon_pelapor', form.reporterPhone)
   for (const f of files) fd.append('media', f)
   return fd
 }

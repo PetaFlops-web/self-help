@@ -1,4 +1,5 @@
 import { recalculateProjectScore } from './project-scoring.js';
+import { triggerNotification, type NotificationOutcome } from './notification/index.js';
 import {
   getReportInternal,
   verifyReport,
@@ -31,7 +32,7 @@ function isTransitionValid(from: string, to: string): boolean {
 export async function verifyReportByTiket(
   tiket: string,
   input: VerifyReportInput,
-): Promise<{ report: ReportPublicView; previousStatus: string }> {
+): Promise<{ report: ReportPublicView; previousStatus: string; notification: NotificationOutcome }> {
   if (!tiket || tiket.trim().length === 0) {
     throw new HttpError(400, 'tiket wajib diisi');
   }
@@ -66,7 +67,11 @@ export async function verifyReportByTiket(
     await recalculateProjectScore(pool, existing.proyek_id);
   }
 
-  return { report: updated, previousStatus: existing.status };
+  // Fail-safe notification trigger (NFR-23): status laporan sudah berubah di
+  // atas; hasil pengiriman hanya dilaporkan, tidak pernah menggagalkan operasi.
+  const notification = await triggerNotification(tiket, existing.status, input.status);
+
+  return { report: updated, previousStatus: existing.status, notification };
 }
 
 const MAX_LIMIT = 100;
@@ -126,7 +131,7 @@ export async function getAdminReport(tiket: string): Promise<AdminReportDetail> 
 export async function forwardReportByTiket(
   tiket: string,
   lembaga: string,
-): Promise<{ report: ReportPublicView; previousStatus: string }> {
+): Promise<{ report: ReportPublicView; previousStatus: string; notification: NotificationOutcome }> {
   if (!tiket || tiket.trim().length === 0) {
     throw new HttpError(400, 'tiket wajib diisi');
   }
@@ -147,5 +152,8 @@ export async function forwardReportByTiket(
     throw new HttpError(500, 'Gagal meneruskan laporan');
   }
 
-  return { report: updated, previousStatus: existing.status };
+  // Fail-safe notification trigger (NFR-23): lihat catatan di verifyReportByTiket.
+  const notification = await triggerNotification(tiket, existing.status, 'Diteruskan');
+
+  return { report: updated, previousStatus: existing.status, notification };
 }

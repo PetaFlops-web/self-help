@@ -38,6 +38,10 @@ export interface CreateReportInput {
   lng?: number | null;
   foto_urls?: string[];
   anonim?: boolean;
+  ukuran_lapangan?: number | null;
+  nama_pelapor?: string | null;
+  surel_pelapor?: string | null;
+  telepon_pelapor?: string | null;
 }
 
 export interface VerifyReportInput {

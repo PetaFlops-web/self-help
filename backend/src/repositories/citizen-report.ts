@@ -135,8 +135,9 @@ export async function createReport(input: CreateReportInput): Promise<ReportPubl
   const tiket = generateTiket();
   const res = await pool.query<CitizenReport>(
     `INSERT INTO laporan_warga
-       (tiket, proyek_id, kategori, keterangan, lat, lng, foto_urls, anonim, status, dibuat_pada)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Dilaporkan', now())
+       (tiket, proyek_id, kategori, keterangan, lat, lng, foto_urls, anonim, ukuran_lapangan,
+        nama_pelapor, surel_pelapor, telepon_pelapor, status, dibuat_pada)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'Dilaporkan', now())
      RETURNING *`,
     [
       tiket,
@@ -147,6 +148,10 @@ export async function createReport(input: CreateReportInput): Promise<ReportPubl
       input.lng ?? null,
       input.foto_urls ?? null,
       input.anonim ?? false,
+      input.ukuran_lapangan ?? null,
+      (input.nama_pelapor as unknown as Buffer | null) ?? null,
+      input.surel_pelapor ?? null,
+      (input.telepon_pelapor as unknown as Buffer | null) ?? null,
     ],
   );
   const projectDetail = await getProjectDetailForReport(input.proyek_id);

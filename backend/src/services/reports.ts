@@ -5,8 +5,10 @@ import {
   listPublicReportsByProjectId,
 } from '../repositories/citizen-report.js';
 import { HttpError, isUuid } from '../helpers/http.js';
+import { encryptField } from '../helpers/crypto.js';
 import type { CreateReportInput, ReportPublicView } from '../types/citizen-report.js';
 import type { ProjectReportItem } from '../types/project.js';
+import type { CreateReportBody } from '../utils/validators/reports.js';
 
 async function assertProjectExists(id: string): Promise<void> {
   if (!isUuid(id)) {
@@ -18,28 +20,37 @@ async function assertProjectExists(id: string): Promise<void> {
   }
 }
 
-export async function submitReport(input: CreateReportInput): Promise<ReportPublicView> {
-  await assertProjectExists(input.proyek_id);
+export async function submitReport(
+  body: CreateReportBody,
+  foto_urls: string[],
+): Promise<ReportPublicView> {
+  await assertProjectExists(body.proyek_id);
 
-  if (!input.kategori || input.kategori.trim().length === 0) {
+  if (!body.kategori || body.kategori.trim().length === 0) {
     throw new HttpError(400, 'kategori wajib diisi');
   }
-  if (!input.keterangan || input.keterangan.trim().length === 0) {
+  if (!body.keterangan || body.keterangan.trim().length === 0) {
     throw new HttpError(400, 'keterangan wajib diisi');
   }
-  if (input.keterangan.length > 4000) {
+  if (body.keterangan.length > 4000) {
     throw new HttpError(400, 'keterangan maksimal 4000 karakter');
   }
 
-  return createReport({
-    proyek_id: input.proyek_id,
-    kategori: input.kategori.trim(),
-    keterangan: input.keterangan.trim(),
-    lat: input.lat ?? null,
-    lng: input.lng ?? null,
-    foto_urls: input.foto_urls ?? [],
-    anonim: input.anonim ?? false,
-  });
+  const input: CreateReportInput = {
+    proyek_id: body.proyek_id,
+    kategori: body.kategori.trim(),
+    keterangan: body.keterangan.trim(),
+    lat: body.lat ?? null,
+    lng: body.lng ?? null,
+    foto_urls,
+    anonim: body.anonim ?? false,
+    ukuran_lapangan: body.ukuran_lapangan ?? null,
+    nama_pelapor: encryptField(body.nama_pelapor ?? null) as unknown as string | null,
+    surel_pelapor: body.surel_pelapor ?? null,
+    telepon_pelapor: encryptField(body.telepon_pelapor ?? null) as unknown as string | null,
+  };
+
+  return createReport(input);
 }
 
 export async function getProjectReports(

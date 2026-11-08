@@ -89,8 +89,9 @@ function generateTiket() {
 export async function createReport(input) {
     const tiket = generateTiket();
     const res = await pool.query(`INSERT INTO laporan_warga
-       (tiket, proyek_id, kategori, keterangan, lat, lng, foto_urls, anonim, status, dibuat_pada)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Dilaporkan', now())
+       (tiket, proyek_id, kategori, keterangan, lat, lng, foto_urls, anonim, ukuran_lapangan,
+        nama_pelapor, surel_pelapor, telepon_pelapor, status, dibuat_pada)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'Dilaporkan', now())
      RETURNING *`, [
         tiket,
         input.proyek_id,
@@ -100,6 +101,10 @@ export async function createReport(input) {
         input.lng ?? null,
         input.foto_urls ?? null,
         input.anonim ?? false,
+        input.ukuran_lapangan ?? null,
+        input.nama_pelapor ?? null,
+        input.surel_pelapor ?? null,
+        input.telepon_pelapor ?? null,
     ]);
     const projectDetail = await getProjectDetailForReport(input.proyek_id);
     return toPublicView(res.rows[0], projectDetail);

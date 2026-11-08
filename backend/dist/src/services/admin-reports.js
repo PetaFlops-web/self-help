@@ -1,4 +1,5 @@
 import { recalculateProjectScore } from './project-scoring.js';
+import { triggerNotification } from './notification/index.js';
 import { getReportInternal, verifyReport, listAdminReports as listAdminReportsFromRepo, getAdminReportDetail, forwardReport, countReportsByStatus, } from '../repositories/citizen-report.js';
 import { HttpError, strParam, positiveIntParam, intParam } from '../helpers/http.js';
 import pool from '../config/database.js';
@@ -40,7 +41,10 @@ export async function verifyReportByTiket(tiket, input) {
     if (input.status === 'Diverifikasi' && existing.proyek_id) {
         await recalculateProjectScore(pool, existing.proyek_id);
     }
-    return { report: updated, previousStatus: existing.status };
+    // Fail-safe notification trigger (NFR-23): status laporan sudah berubah di
+    // atas; hasil pengiriman hanya dilaporkan, tidak pernah menggagalkan operasi.
+    const notification = await triggerNotification(tiket, existing.status, input.status);
+    return { report: updated, previousStatus: existing.status, notification };
 }
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 50;
@@ -96,5 +100,7 @@ export async function forwardReportByTiket(tiket, lembaga) {
     if (!updated) {
         throw new HttpError(500, 'Gagal meneruskan laporan');
     }
-    return { report: updated, previousStatus: existing.status };
+    // Fail-safe notification trigger (NFR-23): lihat catatan di verifyReportByTiket.
+    const notification = await triggerNotification(tiket, existing.status, 'Diteruskan');
+    return { report: updated, previousStatus: existing.status, notification };
 }

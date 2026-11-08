@@ -26,4 +26,25 @@ export const CreateReportBodySchema = z.object({
         .union([z.boolean(), z.enum(['true', 'false'])])
         .transform((v) => v === true || v === 'true')
         .optional(),
+    ukuran_lapangan: z.coerce
+        .number({ error: 'ukuran_lapangan harus berupa angka' })
+        .min(0, { message: 'ukuran_lapangan tidak boleh negatif' })
+        .optional(),
+    nama_pelapor: z
+        .string({ error: 'nama_pelapor harus teks' })
+        .trim()
+        .max(200, { message: 'nama_pelapor maksimal 200 karakter' })
+        .optional(),
+    // Wajib: satu-satunya kanal notifikasi status laporan (FR-54 rev 8 Nov 2026).
+    surel_pelapor: z
+        .string({ error: 'surel_pelapor wajib diisi' })
+        .trim()
+        .toLowerCase()
+        .min(1, { message: 'surel_pelapor wajib diisi' })
+        .email({ message: 'Format surel_pelapor tidak valid' }),
+    telepon_pelapor: z
+        .string({ error: 'telepon_pelapor harus teks' })
+        .trim()
+        .max(20, { message: 'telepon_pelapor maksimal 20 karakter' })
+        .optional(),
 });

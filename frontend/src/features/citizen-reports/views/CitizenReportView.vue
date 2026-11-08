@@ -93,6 +93,20 @@
           />
         </div>
 
+        <!-- Estimasi volume hasil ukur lapangan (opsional, untuk D3-01) -->
+        <div>
+          <label class="visually-hidden" for="r-volume">Estimasi volume hasil ukur lapangan</label>
+          <input
+            id="r-volume"
+            v-model.trim="form.fieldMeasurement"
+            class="field"
+            type="number"
+            min="0"
+            step="any"
+            placeholder="Estimasi Volume Hasil Ukur Lapangan (opsional — isi jika ada selisih volume dengan RAB)"
+          />
+        </div>
+
         <!-- Unggah bukti -->
         <div>
           <label
@@ -133,13 +147,40 @@
         </label>
 
         <div v-if="!form.anonymous">
-          <label class="visually-hidden" for="r-contact">Kontak (opsional)</label>
+          <label class="visually-hidden" for="r-reporter-name">Nama lengkap (opsional)</label>
           <input
-            id="r-contact"
-            v-model.trim="form.contact"
+            id="r-reporter-name"
+            v-model.trim="form.reporterName"
             class="field"
             type="text"
-            placeholder="Kontak yang bisa dihubungi (opsional)"
+            placeholder="Nama Lengkap (opsional)"
+            maxlength="200"
+          />
+        </div>
+
+        <!-- Surel tetap tersedia walau anonim: identitas tetap tersembunyi,
+             tetapi pelapor masih bisa menerima notifikasi status (PRD §11.1). -->
+        <div>
+          <label class="visually-hidden" for="r-reporter-email">Alamat email (wajib)</label>
+          <input
+            id="r-reporter-email"
+            v-model.trim="form.reporterEmail"
+            class="field"
+            type="email"
+            placeholder="Alamat email untuk notifikasi status laporan (wajib)"
+            required
+          />
+        </div>
+
+        <div v-if="!form.anonymous">
+          <label class="visually-hidden" for="r-reporter-phone">Telepon (opsional)</label>
+          <input
+            id="r-reporter-phone"
+            v-model.trim="form.reporterPhone"
+            class="field"
+            type="tel"
+            placeholder="Nomor Telepon (opsional)"
+            maxlength="20"
           />
         </div>
 
@@ -224,6 +265,10 @@ const form = reactive({
   description: '',
   anonymous: true,
   contact: '',
+  fieldMeasurement: '',
+  reporterName: '',
+  reporterEmail: '',
+  reporterPhone: '',
 })
 const sending = ref(false)
 const message = ref('')
@@ -346,6 +391,13 @@ async function submit() {
     return
   }
 
+  // Email wajib: kanal notifikasi status laporan. Validasi format sederhana;
+  // backend tetap memvalidasi ulang dengan Zod .email().
+  if (!form.reporterEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.reporterEmail)) {
+    setMessage('error', 'Masukkan alamat email yang valid untuk menerima notifikasi status laporan.')
+    return
+  }
+
   sending.value = true
   try {
     const result = await reportsApi.create(form, files.value)
@@ -362,6 +414,10 @@ async function submit() {
     form.projectId = ''
     form.description = ''
     form.contact = ''
+    form.fieldMeasurement = ''
+    form.reporterName = ''
+    form.reporterEmail = ''
+    form.reporterPhone = ''
     projectQuery.value = ''
     files.value = []
     fileError.value = ''

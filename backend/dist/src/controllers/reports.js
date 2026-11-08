@@ -5,16 +5,7 @@ import { mediaFilesToUrls } from '../middlewares/upload.js';
 export async function createReport(req, res) {
     const body = req.body;
     const files = req.files;
-    const input = {
-        proyek_id: body.proyek_id,
-        kategori: body.kategori,
-        keterangan: body.keterangan,
-        lat: body.lat ?? null,
-        lng: body.lng ?? null,
-        foto_urls: mediaFilesToUrls(files),
-        anonim: body.anonim ?? false,
-    };
-    const report = await submitReport(input);
+    const report = await submitReport(body, mediaFilesToUrls(files));
     await invalidateCache('reports', 'stats');
     created(res, 'report', report, 'Laporan berhasil dikirim');
 }
