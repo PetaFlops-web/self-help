@@ -43,6 +43,7 @@ const swaggerSpec = {
         { name: 'Documents', description: 'Document wajib publik dan checklist prosedur proyek' },
         { name: 'Auth', description: 'Autentikasi dan otorisasi pengguna panel admin' },
         { name: 'Audit', description: 'Log audit perubahan data dan status' },
+        { name: 'ETL', description: 'Modul ETL data publik' },
     ],
     paths: {
         '/ping': {
@@ -1036,6 +1037,201 @@ const swaggerSpec = {
                     },
                     '404': {
                         description: 'Laporan tidak ditemukan',
+                        content: errorContent,
+                    },
+                },
+            },
+        },
+        '/admin/etl/run': {
+            post: {
+                tags: ['ETL'],
+                summary: 'Jalankan ETL data publik',
+                description: 'Mengimpor data CSV SiRUP ke tabel proyek. Baris divalidasi; baris valid ' +
+                    'di-upsert ke proyek (ON CONFLICT kode_rup DO UPDATE), baris tidak valid ' +
+                    'disimpan ke etl_error. Membutuhkan peran admin.',
+                operationId: 'runEtl',
+                security: [{ bearerAuth: [] }],
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/EtlRunBody' },
+                        },
+                    },
+                },
+                responses: {
+                    ...commonErrors,
+                    '200': {
+                        description: 'Hasil jalankan ETL',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/EtlRunResponse' },
+                            },
+                        },
+                    },
+                    '400': {
+                        description: 'Input tidak valid atau source_id tidak didukung',
+                        content: errorContent,
+                    },
+                    '401': {
+                        description: 'Token autentikasi tidak valid atau tidak disertakan',
+                        content: errorContent,
+                    },
+                    '403': {
+                        description: 'Akses ditolak: peran tidak mencukupi',
+                        content: errorContent,
+                    },
+                },
+            },
+        },
+        '/admin/etl/errors': {
+            get: {
+                tags: ['ETL'],
+                summary: 'Daftar baris ETL yang gagal divalidasi',
+                description: 'Mengembalikan daftar baris yang gagal divalidasi saat ETL, terurut id menurun. ' +
+                    'Mendukung filter source_id dan paginasi limit/offset. Membutuhkan peran admin.',
+                operationId: 'listEtlErrors',
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    {
+                        name: 'source_id',
+                        in: 'query',
+                        required: false,
+                        schema: { type: 'string' },
+                    },
+                    {
+                        name: 'limit',
+                        in: 'query',
+                        required: false,
+                        description: 'Maksimal 100 (default 50)',
+                        schema: { type: 'integer', minimum: 1 },
+                    },
+                    {
+                        name: 'offset',
+                        in: 'query',
+                        required: false,
+                        schema: { type: 'integer', minimum: 0 },
+                    },
+                ],
+                responses: {
+                    ...commonErrors,
+                    '200': {
+                        description: 'Daftar baris ETL yang gagal',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/EtlErrorListResponse' },
+                            },
+                        },
+                    },
+                    '401': {
+                        description: 'Token autentikasi tidak valid atau tidak disertakan',
+                        content: errorContent,
+                    },
+                    '403': {
+                        description: 'Akses ditolak: peran tidak mencukupi',
+                        content: errorContent,
+                    },
+                },
+            },
+        },
+        '/admin/etl/unmatched': {
+            get: {
+                tags: ['ETL'],
+                summary: 'Daftar proyek belum tercocokkan beserta kandidat',
+                description: 'Mengembalikan daftar proyek dengan match_status unmatched atau null, ' +
+                    'masing-masing disertai 5 kandidat teratas dari sumber lain yang di-skor ' +
+                    'berdasarkan kesamaan kode_rup/kode_tender, kemiripan nama, dinas, dan ' +
+                    'kedekatan pagu. Membutuhkan peran admin.',
+                operationId: 'listUnmatched',
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    {
+                        name: 'limit',
+                        in: 'query',
+                        required: false,
+                        description: 'Jumlah proyek per halaman (maksimal 100, default 50)',
+                        schema: { type: 'integer', minimum: 1 },
+                    },
+                    {
+                        name: 'offset',
+                        in: 'query',
+                        required: false,
+                        description: 'Offset paginasi (default 0)',
+                        schema: { type: 'integer', minimum: 0 },
+                    },
+                ],
+                responses: {
+                    ...commonErrors,
+                    '200': {
+                        description: 'Daftar proyek belum tercocokkan beserta kandidat',
+                        content: {
+                            'application/json': {
+                                schema: { $ref: '#/components/schemas/UnmatchedListResponse' },
+                            },
+                        },
+                    },
+                    '401': {
+                        description: 'Token autentikasi tidak valid atau tidak disertakan',
+                        content: errorContent,
+                    },
+                    '403': {
+                        description: 'Akses ditolak: peran tidak mencukupi',
+                        content: errorContent,
+                    },
+                },
+            },
+        },
+        '/admin/etl/match': {
+            post: {
+                tags: ['ETL'],
+                summary: 'Keputusan pencocokan paket antarsumber',
+                description: 'Mencatat keputusan admin apakah dua proyek dari sumber berbeda merupakan ' +
+                    'paket yang sama (match) atau bukan (not_match). Saat match, kedua proyek ' +
+                    'ditandai match_status=matched. Membutuhkan peran admin.',
+                operationId: 'matchDecision',
+                security: [{ bearerAuth: [] }],
+                requestBody: {
+                    required: true,
+                    content: {
+                        'application/json': {
+                            schema: { $ref: '#/components/schemas/MatchDecisionBody' },
+                        },
+                    },
+                },
+                responses: {
+                    ...commonErrors,
+                    '200': {
+                        description: 'Keputusan pencocokan berhasil dicatat',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        status: { type: 'string', example: 'success' },
+                                        message: {
+                                            type: 'string',
+                                            example: 'Keputusan pencocokan berhasil',
+                                        },
+                                    },
+                                    required: ['status', 'message'],
+                                },
+                            },
+                        },
+                    },
+                    '400': {
+                        description: 'Body tidak valid (bukan UUID atau decision tidak dikenal)',
+                        content: errorContent,
+                    },
+                    '401': {
+                        description: 'Token autentikasi tidak valid atau tidak disertakan',
+                        content: errorContent,
+                    },
+                    '403': {
+                        description: 'Akses ditolak: peran tidak mencukupi',
+                        content: errorContent,
+                    },
+                    '404': {
+                        description: 'Proyek unmatched_id atau matched_id tidak ditemukan',
                         content: errorContent,
                     },
                 },
@@ -2155,6 +2351,123 @@ const swaggerSpec = {
                     report: { $ref: '#/components/schemas/Report' },
                 },
                 required: ['status', 'message', 'report'],
+            },
+            EtlRunBody: {
+                type: 'object',
+                required: ['source_id'],
+                properties: {
+                    source_id: { type: 'string', example: 'SRC-01' },
+                    csv_content: {
+                        type: 'string',
+                        description: 'Isi CSV SiRUP. Wajib diisi pada implementasi saat ini.',
+                    },
+                },
+            },
+            EtlRunResponse: {
+                type: 'object',
+                required: ['status', 'source_id', 'total_rows', 'accepted', 'rejected'],
+                properties: {
+                    status: {
+                        type: 'string',
+                        enum: ['success', 'partial', 'failed'],
+                        description: 'Status hasil ETL: success (semua baris valid), partial (sebagian gagal), failed (semua gagal)',
+                    },
+                    source_id: { type: 'string', example: 'SRC-01' },
+                    total_rows: { type: 'integer', example: 120 },
+                    accepted: { type: 'integer', example: 118 },
+                    rejected: { type: 'integer', example: 2 },
+                },
+            },
+            EtlErrorRow: {
+                type: 'object',
+                properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    source_id: { type: 'string', nullable: true, example: 'SRC-01' },
+                    baris_mentah: {
+                        type: 'object',
+                        nullable: true,
+                        description: 'Baris mentah yang gagal divalidasi (JSON)',
+                    },
+                    alasan: { type: 'string', nullable: true, example: 'kode_rup wajib diisi' },
+                },
+            },
+            EtlErrorListResponse: {
+                type: 'object',
+                required: ['status', 'etl_errors', 'total', 'limit', 'offset'],
+                properties: {
+                    status: { type: 'string', example: 'success' },
+                    etl_errors: {
+                        type: 'array',
+                        items: { $ref: '#/components/schemas/EtlErrorRow' },
+                    },
+                    total: { type: 'integer', example: 2 },
+                    limit: { type: 'integer', example: 50 },
+                    offset: { type: 'integer', example: 0 },
+                },
+            },
+            UnmatchedProject: {
+                type: 'object',
+                required: ['id', 'kode_rup', 'kode_tender', 'nama', 'dinas', 'pagu', 'tahun_anggaran'],
+                properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    kode_rup: { type: 'string', nullable: true },
+                    kode_tender: { type: 'string', nullable: true },
+                    nama: { type: 'string', example: 'Pembangunan Jalan Sudirman' },
+                    dinas: { type: 'string', nullable: true, example: 'Dinas PUPR' },
+                    pagu: {
+                        type: 'string',
+                        nullable: true,
+                        description: 'Nilai pagu sebagai string (kolom bigint PostgreSQL)',
+                        example: '1000000000',
+                    },
+                    tahun_anggaran: { type: 'integer', example: 2025 },
+                },
+            },
+            MatchCandidate: {
+                type: 'object',
+                required: ['id', 'kode_rup', 'kode_tender', 'nama', 'dinas', 'pagu', 'skor'],
+                properties: {
+                    id: { type: 'string', format: 'uuid' },
+                    kode_rup: { type: 'string', nullable: true },
+                    kode_tender: { type: 'string', nullable: true },
+                    nama: { type: 'string', example: 'Pembangunan Jalan Sudirman' },
+                    dinas: { type: 'string', nullable: true, example: 'Dinas PUPR' },
+                    pagu: { type: 'string', nullable: true, example: '1000000000' },
+                    skor: { type: 'integer', minimum: 0, maximum: 100, example: 85 },
+                },
+            },
+            UnmatchedListResponse: {
+                type: 'object',
+                required: ['status', 'unmatched', 'total', 'limit', 'offset'],
+                properties: {
+                    status: { type: 'string', example: 'success' },
+                    unmatched: {
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            required: ['project', 'candidates'],
+                            properties: {
+                                project: { $ref: '#/components/schemas/UnmatchedProject' },
+                                candidates: {
+                                    type: 'array',
+                                    items: { $ref: '#/components/schemas/MatchCandidate' },
+                                },
+                            },
+                        },
+                    },
+                    total: { type: 'integer', example: 12 },
+                    limit: { type: 'integer', example: 50 },
+                    offset: { type: 'integer', example: 0 },
+                },
+            },
+            MatchDecisionBody: {
+                type: 'object',
+                required: ['unmatched_id', 'matched_id', 'decision'],
+                properties: {
+                    unmatched_id: { type: 'string', format: 'uuid' },
+                    matched_id: { type: 'string', format: 'uuid' },
+                    decision: { type: 'string', enum: ['match', 'not_match'], example: 'match' },
+                },
             },
         },
     },
