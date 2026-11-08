@@ -21,6 +21,7 @@ import authRouter from './src/routes/auth.js';
 import auditRouter from './src/routes/audit.js';
 import etlRouter from './src/routes/etl.js';
 import matchingRouter from './src/routes/matching.js';
+import notificationsRouter from './src/routes/notifications.js';
 const app = express();
 app.set('trust proxy', 1);
 if (isProd && config.allowedOrigins.length > 0) {
@@ -54,6 +55,7 @@ app.use('/api', authRouter);
 app.use('/api', auditRouter);
 app.use('/api', etlRouter);
 app.use('/api', matchingRouter);
+app.use('/api', notificationsRouter);
 if (isDev) {
     app.use('/', docsRouter);
 }

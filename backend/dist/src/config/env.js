@@ -3,7 +3,7 @@ dotenv.config();
 const nodeEnv = process.env.NODE_ENV || 'development';
 export const isDev = nodeEnv === 'development';
 export const isProd = nodeEnv === 'production';
-const required = ['DATABASE_URL', 'REDIS_URL'];
+const required = ['DATABASE_URL', 'REDIS_URL', 'ENCRYPTION_KEY'];
 const missing = required.filter((key) => !process.env[key]);
 if (missing.length > 0) {
     throw new Error(`[env] Variabel environment wajib tidak ditemukan: ${missing.join(', ')}. ` +
@@ -23,6 +23,15 @@ export const config = {
         : [],
     jwtSecret: process.env.JWT_SECRET || 'clearsight-dev-jwt-secret-replace-in-production-1234567890',
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
+    encryptionKey: process.env.ENCRYPTION_KEY,
+    smtp: {
+        host: process.env.SMTP_HOST || null,
+        port: Number(process.env.SMTP_PORT) || 587,
+        user: process.env.SMTP_USER || null,
+        pass: process.env.SMTP_PASS || null,
+        from: process.env.MAIL_FROM || null,
+    },
+    appBaseUrl: process.env.APP_BASE_URL || 'http://localhost:5173',
 };
 const JWT_EXPIRES_IN_RE = /^\d+(ms|s|m|h|d|w)$/;
 if (!JWT_EXPIRES_IN_RE.test(config.jwtExpiresIn)) {
@@ -31,5 +40,8 @@ if (!JWT_EXPIRES_IN_RE.test(config.jwtExpiresIn)) {
 }
 if (isProd && config.jwtSecret.length < 32) {
     throw new Error('[env] JWT_SECRET harus minimal 32 karakter di production.');
+}
+if (isProd && config.encryptionKey.length < 32) {
+    throw new Error('[env] ENCRYPTION_KEY harus minimal 32 karakter di production.');
 }
 export default config;
