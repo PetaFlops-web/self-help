@@ -1,5 +1,6 @@
 const FIELD_MAP = {
     kode_rup: 'kode_rup',
+    kode_tender: 'kode_tender',
     nama_paket: 'nama',
     satker: 'dinas',
     kode_bps: 'kode_bps',
@@ -69,11 +70,12 @@ export function parseSiRUPCsv(csvContent) {
     const rows = tokenize(csvContent);
     if (rows.length === 0)
         return [];
-    const header = rows[0].map((h) => h.trim());
-    const columnMap = header.map((h) => {
-        if (h in FIELD_MAP)
-            return FIELD_MAP[h];
-        if (h === 'nama')
+    const rawHeaders = rows[0];
+    const headers = rawHeaders.map((header) => header.replace(/^\uFEFF/, '').trim());
+    const columnMap = headers.map((header) => {
+        if (header in FIELD_MAP)
+            return FIELD_MAP[header];
+        if (header === 'nama')
             return 'nama';
         return null;
     });
@@ -82,14 +84,17 @@ export function parseSiRUPCsv(csvContent) {
         const rawRow = rows[r];
         if (rawRow.length === 1 && rawRow[0] === '')
             continue;
-        const obj = {};
-        for (let c = 0; c < columnMap.length; c++) {
+        const normalized = {};
+        const raw = {};
+        for (let c = 0; c < headers.length; c++) {
+            const key = rawHeaders[c] || `kolom_${c + 1}`;
+            const value = rawRow[c] ?? '';
+            raw[key] = value;
             const internal = columnMap[c];
-            if (internal === null)
-                continue;
-            obj[internal] = rawRow[c] ?? '';
+            if (internal !== null)
+                normalized[internal] = value;
         }
-        result.push(obj);
+        result.push({ normalized, raw });
     }
     return result;
 }

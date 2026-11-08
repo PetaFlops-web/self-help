@@ -1,7 +1,8 @@
-import type { EtlRawRow } from '../../types/etl.js';
+import type { EtlParsedRow, EtlRawRow } from '../../types/etl.js';
 
 const FIELD_MAP: Record<string, string> = {
   kode_rup: 'kode_rup',
+  kode_tender: 'kode_tender',
   nama_paket: 'nama',
   satker: 'dinas',
   kode_bps: 'kode_bps',
@@ -78,28 +79,33 @@ function tokenize(csv: string): string[][] {
   return rows;
 }
 
-export function parseSiRUPCsv(csvContent: string): EtlRawRow[] {
+export function parseSiRUPCsv(csvContent: string): EtlParsedRow[] {
   const rows = tokenize(csvContent);
   if (rows.length === 0) return [];
 
-  const header = rows[0].map((h) => h.trim());
-  const columnMap: (string | null)[] = header.map((h) => {
-    if (h in FIELD_MAP) return FIELD_MAP[h];
-    if (h === 'nama') return 'nama';
+  const rawHeaders = rows[0];
+  const headers = rawHeaders.map((header) => header.replace(/^\uFEFF/, '').trim());
+  const columnMap = headers.map((header) => {
+    if (header in FIELD_MAP) return FIELD_MAP[header];
+    if (header === 'nama') return 'nama';
     return null;
   });
 
-  const result: EtlRawRow[] = [];
+  const result: EtlParsedRow[] = [];
   for (let r = 1; r < rows.length; r++) {
     const rawRow = rows[r];
     if (rawRow.length === 1 && rawRow[0] === '') continue;
-    const obj: Record<string, string> = {};
-    for (let c = 0; c < columnMap.length; c++) {
+
+    const normalized: EtlRawRow = {};
+    const raw: EtlRawRow = {};
+    for (let c = 0; c < headers.length; c++) {
+      const key = rawHeaders[c] || `kolom_${c + 1}`;
+      const value = rawRow[c] ?? '';
+      raw[key] = value;
       const internal = columnMap[c];
-      if (internal === null) continue;
-      obj[internal] = rawRow[c] ?? '';
+      if (internal !== null) normalized[internal] = value;
     }
-    result.push(obj);
+    result.push({ normalized, raw });
   }
 
   return result;

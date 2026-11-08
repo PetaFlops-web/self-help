@@ -1,5 +1,6 @@
-import { HttpError, positiveIntParam, intParam } from '../helpers/http.js';
-import { listUnmatchedProjects, findMatchCandidates, updateMatchStatus, } from '../repositories/matching.js';
+import pool from '../config/database.js';
+import { HttpError, isUuid, positiveIntParam, intParam } from '../helpers/http.js';
+import { listUnmatchedProjects, findMatchCandidates, findAutoMatchCandidates, lockProjectsForMatching, findPairDecision, insertPairDecision, markProjectsMatched, } from '../repositories/matching.js';
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 50;
 function tokenize(text) {
@@ -78,10 +79,86 @@ export async function getUnmatchedWithCandidates(query) {
     }
     return { rows, total, limit: finalLimit, offset: finalOffset };
 }
-export async function processMatchDecision(decision) {
-    if (decision.decision === 'match') {
-        await updateMatchStatus(decision.unmatched_id, 'matched', decision.matched_id);
-        return;
+function isUnmatched(project) {
+    return project.match_status === null || project.match_status === 'unmatched';
+}
+async function persistMatchDecision(decision, automatic) {
+    if (!['match', 'not_match'].includes(decision.decision)) {
+        throw new HttpError(400, 'decision harus match atau not_match');
     }
-    await updateMatchStatus(decision.unmatched_id, 'unmatched');
+    if (!isUuid(decision.unmatched_id) || !isUuid(decision.matched_id)) {
+        throw new HttpError(400, 'ID proyek harus UUID valid');
+    }
+    if (decision.unmatched_id === decision.matched_id) {
+        throw new HttpError(400, 'Proyek tidak dapat dicocokkan dengan dirinya sendiri');
+    }
+    const [proyekId, pasanganId] = [decision.unmatched_id, decision.matched_id].sort();
+    const storedDecision = decision.decision === 'match' ? 'matched' : 'not_match';
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const locked = await lockProjectsForMatching(client, [proyekId, pasanganId]);
+        if (locked.length !== 2) {
+            throw new HttpError(404, 'Satu atau kedua proyek tidak ditemukan');
+        }
+        const first = locked.find((project) => project.id === decision.unmatched_id);
+        const second = locked.find((project) => project.id === decision.matched_id);
+        if (!first || !second) {
+            throw new HttpError(404, 'Satu atau kedua proyek tidak ditemukan');
+        }
+        if (!first.source_id || !second.source_id || first.source_id === second.source_id) {
+            throw new HttpError(400, 'Pencocokan hanya dapat dilakukan antarsumber berbeda');
+        }
+        const existing = await findPairDecision(client, proyekId, pasanganId);
+        if (existing) {
+            if (existing.keputusan === storedDecision) {
+                await client.query('COMMIT');
+                return;
+            }
+            throw new HttpError(400, 'Pasangan sudah memiliki keputusan yang berbeda');
+        }
+        if (!isUnmatched(first) || !isUnmatched(second)) {
+            throw new HttpError(400, 'Kedua proyek harus berstatus unmatched');
+        }
+        if (automatic) {
+            const candidates = await findAutoMatchCandidates(first, client);
+            if (candidates.length !== 1 || candidates[0].id !== second.id) {
+                throw new HttpError(400, 'Kandidat pencocokan otomatis tidak lagi unik');
+            }
+        }
+        await insertPairDecision(client, proyekId, pasanganId, storedDecision);
+        if (decision.decision === 'match') {
+            await markProjectsMatched(client, [proyekId, pasanganId]);
+        }
+        await client.query('COMMIT');
+    }
+    catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    }
+    finally {
+        client.release();
+    }
+}
+export async function processMatchDecision(decision) {
+    await persistMatchDecision(decision, false);
+}
+export async function autoMatchProject(project) {
+    if (!isUnmatched(project) || !project.kode_tender || !project.source_id)
+        return;
+    const candidates = await findAutoMatchCandidates(project);
+    if (candidates.length !== 1)
+        return;
+    try {
+        await persistMatchDecision({
+            unmatched_id: project.id,
+            matched_id: candidates[0].id,
+            decision: 'match',
+        }, true);
+    }
+    catch (error) {
+        if (error instanceof HttpError)
+            return;
+        throw error;
+    }
 }

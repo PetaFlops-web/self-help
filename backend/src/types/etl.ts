@@ -1,7 +1,13 @@
 export type EtlRawRow = Record<string, string>;
 
+export interface EtlParsedRow {
+  normalized: EtlRawRow;
+  raw: EtlRawRow;
+}
+
 export interface EtlValidatedRow {
   kode_rup: string;
+  kode_tender: string | null;
   nama: string;
   dinas: string;
   kode_bps: string;

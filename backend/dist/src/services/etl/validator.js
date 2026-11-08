@@ -1,4 +1,6 @@
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MIN_YEAR = 2000;
+const MAX_YEAR = 2100;
 function isValidDate(value) {
     if (!DATE_RE.test(value))
         return false;
@@ -16,14 +18,21 @@ export function validateProjectRow(row, validKodeBps) {
         return { ok: false, reason: 'nama wajib diisi' };
     }
     const dinas = (row.dinas ?? '').trim();
+    const kode_tender = (row.kode_tender ?? '').trim() || null;
     const kode_bps = (row.kode_bps ?? '').trim();
     if (!kode_bps || !validKodeBps.has(kode_bps)) {
         return { ok: false, reason: 'kode_bps tidak terdaftar di wilayah' };
     }
     const tahunRaw = (row.tahun_anggaran ?? '').trim();
+    if (!tahunRaw) {
+        return { ok: false, reason: 'tahun_anggaran wajib diisi' };
+    }
     const tahunNum = Number(tahunRaw);
     if (!Number.isInteger(tahunNum)) {
         return { ok: false, reason: 'tahun_anggaran harus bilangan bulat' };
+    }
+    if (tahunNum < MIN_YEAR || tahunNum > MAX_YEAR) {
+        return { ok: false, reason: `tahun_anggaran harus antara ${MIN_YEAR} dan ${MAX_YEAR}` };
     }
     const paguRaw = (row.pagu ?? '').trim();
     let paguBigInt;
@@ -64,6 +73,7 @@ export function validateProjectRow(row, validKodeBps) {
     }
     const data = {
         kode_rup,
+        kode_tender,
         nama,
         dinas,
         kode_bps,

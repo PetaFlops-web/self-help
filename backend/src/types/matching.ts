@@ -28,3 +28,17 @@ export interface MatchDecision {
   matched_id: string;
   decision: 'match' | 'not_match';
 }
+
+export interface MatchProjectIdentity {
+  id: string;
+  kode_tender: string | null;
+  source_id: string | null;
+  match_status: string | null;
+}
+
+export interface ProjectMatch {
+  id: string;
+  proyek_id: string;
+  pasangan_id: string;
+  keputusan: 'matched' | 'not_match';
+}

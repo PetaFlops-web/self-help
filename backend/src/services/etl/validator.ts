@@ -1,6 +1,8 @@
 import type { EtlRawRow, EtlValidatedRow } from '../../types/etl.js';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MIN_YEAR = 2000;
+const MAX_YEAR = 2100;
 
 function isValidDate(value: string): boolean {
   if (!DATE_RE.test(value)) return false;
@@ -24,6 +26,7 @@ export function validateProjectRow(
   }
 
   const dinas = (row.dinas ?? '').trim();
+  const kode_tender = (row.kode_tender ?? '').trim() || null;
 
   const kode_bps = (row.kode_bps ?? '').trim();
   if (!kode_bps || !validKodeBps.has(kode_bps)) {
@@ -31,9 +34,15 @@ export function validateProjectRow(
   }
 
   const tahunRaw = (row.tahun_anggaran ?? '').trim();
+  if (!tahunRaw) {
+    return { ok: false, reason: 'tahun_anggaran wajib diisi' };
+  }
   const tahunNum = Number(tahunRaw);
   if (!Number.isInteger(tahunNum)) {
     return { ok: false, reason: 'tahun_anggaran harus bilangan bulat' };
+  }
+  if (tahunNum < MIN_YEAR || tahunNum > MAX_YEAR) {
+    return { ok: false, reason: `tahun_anggaran harus antara ${MIN_YEAR} dan ${MAX_YEAR}` };
   }
 
   const paguRaw = (row.pagu ?? '').trim();
@@ -77,6 +86,7 @@ export function validateProjectRow(
 
   const data: EtlValidatedRow = {
     kode_rup,
+    kode_tender,
     nama,
     dinas,
     kode_bps,

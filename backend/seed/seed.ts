@@ -49,7 +49,14 @@ const REGIONS = [
 ];
 
 const DATA_SOURCES = [
+  { source_id: 'SRC-01', nama: 'SiRUP LKPP (sirup.inaproc.id)', url: 'https://sirup.inaproc.id', lisensi: 'Publik', atribusi: 'LKPP RI' },
+  { source_id: 'SRC-02', nama: 'LPSE Provinsi Lampung dan kabupaten/kota (SPSE)', url: 'https://lpse.lampungprov.go.id', lisensi: 'Publik', atribusi: 'LPSE Lampung' },
+  { source_id: 'SRC-03', nama: 'INAPROC / data pengadaan LKPP', url: 'https://inaproc.id', lisensi: 'Publik', atribusi: 'LKPP RI' },
+  { source_id: 'SRC-04', nama: 'Data APBD (DJPK Kemenkeu, SIPD Kemendagri, BPKAD daerah)', url: 'https://www.djpk.kemenkeu.go.id', lisensi: 'Publik', atribusi: 'DJPK Kemenkeu RI' },
+  { source_id: 'SRC-05', nama: 'BPS Provinsi Lampung', url: 'https://lampung.bps.go.id', lisensi: 'Publik', atribusi: 'BPS RI' },
   { source_id: 'SRC-06', nama: 'LHP BPK RI Perwakilan Provinsi Lampung (via pemberitaan)', url: 'https://lampung.bpk.go.id', lisensi: 'Publik', atribusi: 'BPK RI' },
+  { source_id: 'SRC-07', nama: 'Standar harga satuan (SBU/HSPK/HSD) pemda dan Kementerian PU', url: 'https://pu.go.id', lisensi: 'Publik', atribusi: 'Kementerian PU RI' },
+  { source_id: 'SRC-08', nama: 'Batas wilayah administrasi (BIG, geoBoundaries, OpenStreetMap)', url: 'https://www.openstreetmap.org', lisensi: 'Open Data Commons ODbL', atribusi: 'OpenStreetMap contributors, BIG RI', boleh_otomatis: true },
   { source_id: 'SRC-11', nama: 'Pemberitaan media: InilampungCom', url: 'https://www.inilampung.com', lisensi: 'Kutipan berita', atribusi: 'InilampungCom' },
   { source_id: 'SRC-12', nama: 'Pemberitaan media: SinarLampung', url: 'https://sinarlampung.co', lisensi: 'Kutipan berita', atribusi: 'sinarlampung.co' },
   { source_id: 'SRC-13', nama: 'Pemberitaan media: Detik/Liputan6/Kompas', url: 'https://www.detik.com', lisensi: 'Kutipan berita', atribusi: 'Detik, Liputan6, Kompas' },
@@ -412,8 +419,14 @@ async function run(): Promise<void> {
   for (const s of DATA_SOURCES) {
     await pool.query(
       `INSERT INTO sumber_data (source_id, nama, url, lisensi, atribusi, boleh_otomatis, last_fetched_at, row_count)
-       VALUES ($1,$2,$3,$4,$5,false,now(),0) ON CONFLICT (source_id) DO NOTHING`,
-      [s.source_id, s.nama, s.url, s.lisensi, s.atribusi],
+       VALUES ($1,$2,$3,$4,$5,$6,now(),0)
+       ON CONFLICT (source_id) DO UPDATE SET
+         nama = EXCLUDED.nama,
+         url = EXCLUDED.url,
+         lisensi = EXCLUDED.lisensi,
+         atribusi = EXCLUDED.atribusi,
+         boleh_otomatis = EXCLUDED.boleh_otomatis`,
+      [s.source_id, s.nama, s.url, s.lisensi, s.atribusi, s.boleh_otomatis ?? false],
     );
   }
 
@@ -490,14 +503,17 @@ async function run(): Promise<void> {
 
     for (let i = 0; i < scenario.laporan; i += 1) {
       const fotoUrls = MEDIA_ASSETS.map((asset) => writeSeedMediaFile(asset));
+      const totalVolumeRab = rabSchedule.reduce((sum, item) => sum + item.volume, 0);
+      const shortfallPct = risk === 'tinggi' ? 0.20 : risk === 'perlu_perhatian' ? 0.10 : 0.05;
+      const ukuranLapangan = Math.round(totalVolumeRab * (1 - shortfallPct));
       await pool.query(
-        `INSERT INTO laporan_warga (tiket, proyek_id, kategori, keterangan, status, lat, lng, foto_urls, catatan_verifikator)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+        `INSERT INTO laporan_warga (tiket, proyek_id, kategori, keterangan, status, lat, lng, foto_urls, catatan_verifikator, ukuran_lapangan)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
          ON CONFLICT (tiket) DO NOTHING`,
         [
           `LPR-${p.n}-${String(i + 1).padStart(3, '0')}`, uuid(p.n), 'Kualitas pekerjaan',
           `Laporan dummy ${i + 1} untuk proyek ${p.n}`, 'Diverifikasi', 0, 0,
-          fotoUrls, 'Media simulasi untuk demo',
+          fotoUrls, 'Media simulasi untuk demo', ukuranLapangan,
         ],
       );
     }

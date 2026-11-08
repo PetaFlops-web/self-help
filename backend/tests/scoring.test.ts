@@ -140,3 +140,34 @@ test('validateConfig menolak arah ambang yang salah', () => {
     }),
   );
 });
+
+test('D3-01 selisih_volume_pct: ambang sedang ≥8, tinggi ≥15, dan data belum cukup bila kosong', () => {
+  const baseInput: ScoreInput = {
+    jumlah_penawar: 3,
+    menang_hps_pct: 95,
+    selisih_harga_acuan_pct: 28,
+    jumlah_laporan_terverifikasi: 1,
+    cair_minus_fisik_poin: 35,
+    hari_rup_ke_tender: 30,
+  };
+
+  const tinggi = scoreProject({ ...baseInput, selisih_volume_pct: 20 }, config);
+  const d3Tinggi = tinggi.indikator_temuan.find((f) => f.kode_aturan === 'D3-01');
+  assert.ok(d3Tinggi, 'D3-01 harus muncul saat selisih_volume_pct=20');
+  assert.equal(d3Tinggi!.tingkat, 'tinggi');
+  assert.equal(d3Tinggi!.nilai_terukur, 20);
+
+  const sedang = scoreProject({ ...baseInput, selisih_volume_pct: 10 }, config);
+  const d3Sedang = sedang.indikator_temuan.find((f) => f.kode_aturan === 'D3-01');
+  assert.ok(d3Sedang, 'D3-01 harus muncul saat selisih_volume_pct=10');
+  assert.equal(d3Sedang!.tingkat, 'sedang');
+
+  const rendah = scoreProject({ ...baseInput, selisih_volume_pct: 3 }, config);
+  const d3Rendah = rendah.indikator_temuan.find((f) => f.kode_aturan === 'D3-01');
+  assert.ok(d3Rendah, 'D3-01 muncul dengan tingkat rendah saat selisih_volume_pct=3');
+  assert.equal(d3Rendah!.tingkat, 'rendah');
+
+  const kosong = scoreProject(baseInput, config);
+  const d3Kosong = kosong.indikator_temuan.find((f) => f.kode_aturan === 'D3-01');
+  assert.ok(!d3Kosong, 'D3-01 tidak boleh muncul bila selisih_volume_pct tidak diisi (data belum cukup)');
+});

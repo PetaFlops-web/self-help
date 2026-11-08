@@ -3,16 +3,29 @@ import { runEtl } from '../services/etl/runner.js';
 import { listEtlErrors as fetchEtlErrors } from '../repositories/etl.js';
 import { HttpError, strParam, positiveIntParam, intParam } from '../helpers/http.js';
 import { respond } from '../middlewares/response.js';
+import { recordAudit } from '../helpers/audit.js';
+import type { EtlRunBody } from '../utils/validators/etl.js';
 
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 50;
 
 export async function runEtlHandler(req: Request, res: Response): Promise<void> {
-  const { source_id, csv_content } = req.body as { source_id: string; csv_content?: string };
-  if (!csv_content) {
-    throw new HttpError(400, 'csv_content wajib diisi');
-  }
-  const result = await runEtl(source_id, csv_content);
+  const { source_id, csv_content, source_url } = req.body as EtlRunBody;
+  const result = await runEtl(source_id, csv_content, source_url);
+  await recordAudit({
+    aktor_id: req.user?.id ?? null,
+    aktor_nama: req.user?.nama ?? 'Sistem ETL',
+    peran: req.user?.peran ?? 'system',
+    modul: 'etl',
+    aksi: 'SYNC_SOURCE',
+    target_id: result.source_id,
+    diff: {
+      total_rows: result.total_rows,
+      accepted: result.accepted,
+      rejected: result.rejected,
+    },
+    ip: (req.headers['x-real-ip'] as string) || req.ip || null,
+  });
   respond(res, 200, {
     source_id: result.source_id,
     status: result.status,

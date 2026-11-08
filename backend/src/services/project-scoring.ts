@@ -12,6 +12,8 @@ import {
   getUnfulfilledProcedureSummary,
   getProjectRow,
   getRabTotalReference,
+  getRabTotalVolume,
+  getVerifiedFieldMeasurements,
   getTenderRow,
   insertIndicatorFinding,
   updateProjectScore,
@@ -61,6 +63,24 @@ export async function collectScoreInput(client: DbClient, projectId: string): Pr
   }
   if (disbursedPct !== null && physicalPct !== null) {
     input.cair_minus_fisik_poin = Math.round(disbursedPct - physicalPct);
+  }
+
+  const rabTotalVolumeRaw = await getRabTotalVolume(client, projectId);
+  const verifiedMeasurements = await getVerifiedFieldMeasurements(client, projectId);
+
+  const rabTotalVolume = toNum(rabTotalVolumeRaw);
+  if (rabTotalVolume !== null && rabTotalVolume > 0 && verifiedMeasurements.length > 0) {
+    let maxSelisihPct: number | null = null;
+    for (const m of verifiedMeasurements) {
+      const fieldVol = toNum(m.ukuran_lapangan);
+      if (fieldVol !== null) {
+        const pct = Math.round(((rabTotalVolume - fieldVol) / rabTotalVolume) * 100);
+        if (maxSelisihPct === null || pct > maxSelisihPct) maxSelisihPct = pct;
+      }
+    }
+    if (maxSelisihPct !== null) {
+      input.selisih_volume_pct = maxSelisihPct;
+    }
   }
 
   return input;

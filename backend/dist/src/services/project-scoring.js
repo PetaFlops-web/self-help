@@ -1,7 +1,7 @@
 import { loadScoringConfig } from '../config/scoring.js';
 import { scoreProject } from './scoring.js';
 import { toNum } from '../helpers/number.js';
-import { deleteIndicatorFindingsByProjectId, getUnpublishedDocumentSummary, getVerifiedReportCount, getPaymentDisbursedPercentage, getPhysicalProgressPercentage, getUnfulfilledProcedureSummary, getProjectRow, getRabTotalReference, getTenderRow, insertIndicatorFinding, updateProjectScore, } from '../repositories/project-scoring.js';
+import { deleteIndicatorFindingsByProjectId, getUnpublishedDocumentSummary, getVerifiedReportCount, getPaymentDisbursedPercentage, getPhysicalProgressPercentage, getUnfulfilledProcedureSummary, getProjectRow, getRabTotalReference, getRabTotalVolume, getVerifiedFieldMeasurements, getTenderRow, insertIndicatorFinding, updateProjectScore, } from '../repositories/project-scoring.js';
 export async function collectScoreInput(client, projectId) {
     const projectRow = await getProjectRow(client, projectId);
     const tender = await getTenderRow(client, projectId);
@@ -40,6 +40,23 @@ export async function collectScoreInput(client, projectId) {
     }
     if (disbursedPct !== null && physicalPct !== null) {
         input.cair_minus_fisik_poin = Math.round(disbursedPct - physicalPct);
+    }
+    const rabTotalVolumeRaw = await getRabTotalVolume(client, projectId);
+    const verifiedMeasurements = await getVerifiedFieldMeasurements(client, projectId);
+    const rabTotalVolume = toNum(rabTotalVolumeRaw);
+    if (rabTotalVolume !== null && rabTotalVolume > 0 && verifiedMeasurements.length > 0) {
+        let maxSelisihPct = null;
+        for (const m of verifiedMeasurements) {
+            const fieldVol = toNum(m.ukuran_lapangan);
+            if (fieldVol !== null) {
+                const pct = Math.round(((rabTotalVolume - fieldVol) / rabTotalVolume) * 100);
+                if (maxSelisihPct === null || pct > maxSelisihPct)
+                    maxSelisihPct = pct;
+            }
+        }
+        if (maxSelisihPct !== null) {
+            input.selisih_volume_pct = maxSelisihPct;
+        }
     }
     return input;
 }

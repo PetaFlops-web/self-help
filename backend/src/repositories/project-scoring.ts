@@ -67,6 +67,31 @@ export async function getRabTotalReference(client: DbClient, projectId: string):
   return res.rows[0]?.total_acuan;
 }
 
+export async function getRabTotalVolume(client: DbClient, projectId: string): Promise<unknown> {
+  const res = await client.query<{ total_volume: string }>(
+    `SELECT COALESCE(SUM(volume), 0) AS total_volume
+       FROM rab_item
+      WHERE proyek_id = $1`,
+    [projectId],
+  );
+  return res.rows[0]?.total_volume;
+}
+
+export async function getVerifiedFieldMeasurements(
+  client: DbClient,
+  projectId: string,
+): Promise<{ ukuran_lapangan: string }[]> {
+  const res = await client.query<{ ukuran_lapangan: string }>(
+    `SELECT ukuran_lapangan
+       FROM laporan_warga
+      WHERE proyek_id = $1
+        AND status = 'Diverifikasi'
+        AND ukuran_lapangan IS NOT NULL`,
+    [projectId],
+  );
+  return res.rows;
+}
+
 export async function getUnpublishedDocumentSummary(client: DbClient, projectId: string): Promise<{ total: number; wajib: number; belum_publik: number }> {
   const res = await client.query<{ total: number; wajib: number; belum_publik: number }>(
     `SELECT COUNT(*)::int AS total,
