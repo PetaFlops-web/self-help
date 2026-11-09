@@ -22,10 +22,7 @@ function normalizeSourceUrl(sourceUrl) {
     }
     return value;
 }
-export async function runEtl(sourceId, csvContent, sourceUrl) {
-    if (!SUPPORTED_SOURCES.has(sourceId)) {
-        throw new HttpError(400, 'source_id tidak didukung');
-    }
+export async function runEtl(sourceId, csvContent, sourceUrl, jsonContent) {
     const lockClient = await pool.connect();
     let locked = false;
     try {
@@ -37,10 +34,29 @@ export async function runEtl(sourceId, csvContent, sourceUrl) {
         let provenanceUrl;
         let parsedRows;
         if (csvContent !== undefined && csvContent !== '') {
-            provenanceUrl = normalizeSourceUrl(sourceUrl ?? '');
+            // Manual CSV import — validate source_id exists in sumber_data
+            const sumber = await getSumberDataById(sourceId);
+            if (!sumber) {
+                throw new HttpError(400, 'source_id tidak ditemukan di sumber_data');
+            }
+            provenanceUrl = sourceUrl ? normalizeSourceUrl(sourceUrl) : (sumber.url ?? '');
             parsedRows = (await createSirupConnector({ csvContent }).fetchRows()).rows;
         }
+        else if (jsonContent !== undefined && jsonContent !== '') {
+            // Manual JSON import
+            const sumber = await getSumberDataById(sourceId);
+            if (!sumber) {
+                throw new HttpError(400, 'source_id tidak ditemukan di sumber_data');
+            }
+            provenanceUrl = sourceUrl ? normalizeSourceUrl(sourceUrl) : (sumber.url ?? '');
+            const { parseJsonImport } = await import('./json-parser.js');
+            parsedRows = parseJsonImport(jsonContent);
+        }
         else {
+            // Automatic fetch — only supported sources
+            if (!SUPPORTED_SOURCES.has(sourceId)) {
+                throw new HttpError(400, 'source_id tidak didukung untuk pengambilan otomatis');
+            }
             const sumber = await getSumberDataById(sourceId);
             if (!sumber) {
                 throw new HttpError(400, 'source_id tidak ditemukan');
@@ -59,11 +75,13 @@ export async function runEtl(sourceId, csvContent, sourceUrl) {
         const validKodeBps = new Set(wilayahRes.rows.map((r) => r.kode_bps));
         let accepted = 0;
         let rejected = 0;
+        const errors = [];
         const seenKodeRup = new Set();
-        for (const { normalized, raw } of parsedRows) {
+        for (const { normalized, raw, lineNumber } of parsedRows) {
             const kodeRup = (normalized.kode_rup ?? '').trim();
             if (kodeRup && seenKodeRup.has(kodeRup)) {
                 rejected += 1;
+                errors.push({ baris: lineNumber, alasan: 'kode_rup duplikat dalam file' });
                 await insertEtlError(sourceId, raw, 'kode_rup duplikat dalam file');
                 continue;
             }
@@ -72,12 +90,29 @@ export async function runEtl(sourceId, csvContent, sourceUrl) {
             const result = validateProjectRow(normalized, validKodeBps);
             if (!result.ok) {
                 rejected += 1;
+                errors.push({ baris: lineNumber, alasan: result.reason });
                 await insertEtlError(sourceId, raw, result.reason);
                 continue;
             }
             const v = result.data;
-            const upsert = await pool.query(`INSERT INTO proyek (kode_rup, kode_tender, nama, dinas, kode_bps, tahun_anggaran, pagu, hps, sumber_dana, metode_pemilihan, pengumuman_rup_tgl, source_id, source_url, fetched_at, match_status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now(), 'unmatched')
+            // 28.11: Don't overwrite manual_admin entries — record etl_error instead
+            if (v.kode_rup) {
+                const conflict = await pool.query('SELECT asal_data FROM proyek WHERE kode_rup = $1', [v.kode_rup]);
+                if (conflict.rows[0]?.asal_data === 'manual_admin') {
+                    rejected += 1;
+                    errors.push({ baris: lineNumber, alasan: 'bentrok_entri_manual' });
+                    await insertEtlError(sourceId, raw, 'bentrok_entri_manual');
+                    continue;
+                }
+            }
+            // asal_data di-set eksplisit 'pemerintah': seluruh baris yang masuk lewat
+            // ETL/impor berasal dari unduhan sumber resmi, bukan input manual admin.
+            // Ditulis eksplisit (bukan mengandalkan default kolom) agar provenansi
+            // terbaca di kode dan auditable (temuan review 24.4). Entri manual_admin
+            // yang sudah ada sudah dicegat guard bentrok_entri_manual di atas, jadi
+            // ON CONFLICT di sini tidak pernah menimpa asal_data entri manual.
+            const upsert = await pool.query(`INSERT INTO proyek (kode_rup, kode_tender, nama, dinas, kode_bps, tahun_anggaran, pagu, hps, sumber_dana, metode_pemilihan, pengumuman_rup_tgl, source_id, source_url, fetched_at, match_status, asal_data)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now(), 'unmatched', 'pemerintah')
          ON CONFLICT (kode_rup) DO UPDATE SET
            kode_tender = EXCLUDED.kode_tender,
            nama = EXCLUDED.nama,
@@ -91,7 +126,8 @@ export async function runEtl(sourceId, csvContent, sourceUrl) {
            pengumuman_rup_tgl = EXCLUDED.pengumuman_rup_tgl,
            source_id = EXCLUDED.source_id,
            source_url = EXCLUDED.source_url,
-           fetched_at = EXCLUDED.fetched_at
+           fetched_at = EXCLUDED.fetched_at,
+           asal_data = 'pemerintah'
          RETURNING id, kode_tender, source_id, match_status`, [
                 v.kode_rup,
                 v.kode_tender,
@@ -133,6 +169,7 @@ export async function runEtl(sourceId, csvContent, sourceUrl) {
             total_rows: totalRows,
             accepted,
             rejected,
+            errors,
         };
     }
     finally {

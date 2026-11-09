@@ -1035,6 +1035,35 @@ const swaggerSpec: JsonObject = {
       },
     },
 
+    '/admin/reports/recap': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Rekapitulasi cetak laporan verifikasi (FR-56)',
+        description:
+          'Mengembalikan HTML siap cetak berisi laporan yang sudah diverifikasi (bukan Dilaporkan). ' +
+          'Filter rentang tanggal wajib, status dan wilayah opsional. ' +
+          'Peran admin dan peninjau. Peramban dapat mencetak ke PDF.',
+        operationId: 'recapReports',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'start_date', in: 'query', required: true, schema: { type: 'string', format: 'date' }, description: 'Tanggal mulai (YYYY-MM-DD)' },
+          { name: 'end_date', in: 'query', required: true, schema: { type: 'string', format: 'date' }, description: 'Tanggal akhir (YYYY-MM-DD)' },
+          { name: 'status', in: 'query', required: false, schema: { type: 'string' } },
+          { name: 'kode_bps', in: 'query', required: false, schema: { type: 'string' } },
+        ],
+        responses: {
+          ...commonErrors,
+          '200': {
+            description: 'HTML siap cetak',
+            content: { 'text/html': { schema: { type: 'string' } } },
+          },
+          '400': { description: 'start_date dan end_date wajib diisi', content: errorContent },
+          '401': { description: 'Token autentikasi tidak valid', content: errorContent },
+          '403': { description: 'Peran tidak mencukupi (admin/peninjau)', content: errorContent },
+        },
+      },
+    },
+
     '/admin/reports/{tiket}/forward': {
       post: {
         tags: ['Admin'],
@@ -1198,6 +1227,80 @@ const swaggerSpec: JsonObject = {
           },
           '403': {
             description: 'Akses ditolak: peran tidak mencukupi',
+            content: errorContent,
+          },
+        },
+      },
+    },
+
+    '/admin/etl/import': {
+      post: {
+        tags: ['ETL'],
+        summary: 'Impor manual berkas CSV/JSON (Fase 24.4, FR-43)',
+        description:
+          'Mengunggah berkas CSV atau JSON untuk sumber yang hanya menyediakan unduhan ' +
+          '(mis. SRC-04, SRC-06, SRC-07). Dikirim sebagai multipart/form-data dengan field ' +
+          'berkas bernama "file" (maksimal 10 MB, hanya CSV/JSON). Baris valid di-upsert ' +
+          'berdasarkan kode_rup dan ditandai asal_data="pemerintah"; baris duplikat dalam ' +
+          'berkas dan baris invalid disimpan ke etl_error, serta dikembalikan di errors[] ' +
+          'dengan nomor baris. Baris yang bentrok dengan entri manual_admin yang sudah ada ' +
+          'ditolak (alasan "bentrok_entri_manual") agar input admin tidak tertimpa impor. ' +
+          'Membutuhkan peran admin.',
+        operationId: 'importEtlFile',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['source_id', 'file'],
+                properties: {
+                  source_id: {
+                    type: 'string',
+                    description: 'ID sumber data (harus ada di sumber_data)',
+                    example: 'SRC-04',
+                  },
+                  source_url: {
+                    type: 'string',
+                    description: 'URL asal berkas (opsional, dipakai sebagai provenance tiap baris)',
+                  },
+                  file: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Berkas CSV atau JSON, maksimal 10 MB',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          ...commonErrors,
+          '200': {
+            description: 'Hasil impor berkas (jumlah diterima/ditolak dan daftar error per baris)',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/EtlRunResponse' },
+              },
+            },
+          },
+          '400': {
+            description:
+              'source_id kosong/tidak ditemukan, berkas tidak diunggah, tipe berkas tidak ' +
+              'didukung (hanya CSV/JSON), atau ukuran melebihi 10 MB',
+            content: errorContent,
+          },
+          '401': {
+            description: 'Token autentikasi tidak valid atau tidak disertakan',
+            content: errorContent,
+          },
+          '403': {
+            description: 'Akses ditolak: peran tidak mencukupi',
+            content: errorContent,
+          },
+          '409': {
+            description: 'ETL sedang berjalan untuk sumber ini (advisory lock aktif)',
             content: errorContent,
           },
         },
