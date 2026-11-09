@@ -94,7 +94,7 @@ export function parseSiRUPCsv(csvContent) {
             if (internal !== null)
                 normalized[internal] = value;
         }
-        result.push({ normalized, raw });
+        result.push({ normalized, raw, lineNumber: r + 1 });
     }
     return result;
 }

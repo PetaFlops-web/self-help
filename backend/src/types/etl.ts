@@ -3,6 +3,7 @@ export type EtlRawRow = Record<string, string>;
 export interface EtlParsedRow {
   normalized: EtlRawRow;
   raw: EtlRawRow;
+  lineNumber: number;
 }
 
 export interface EtlValidatedRow {
@@ -25,6 +26,7 @@ export interface EtlRunResult {
   total_rows: number;
   accepted: number;
   rejected: number;
+  errors?: { baris: number; alasan: string }[];
 }
 
 export interface EtlErrorRow {
