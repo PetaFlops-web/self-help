@@ -43,7 +43,7 @@ export const adminProjectsApi = {
     cleanParams.offset = offset
 
     try {
-      const { data } = await http.get(endpoints.adminProjects, { params: cleanParams })
+      const { data } = await http.get(endpoints.projects, { params: cleanParams })
       if (data?.status === 'error') {
         throw new Error(data.message || 'Gagal memuat daftar proyek')
       }

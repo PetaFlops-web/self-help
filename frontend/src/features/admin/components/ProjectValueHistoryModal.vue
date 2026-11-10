@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="modal-head">
         <div>
-          <span class="badge-history">AUDIT TRAIL NILAI (FR-59)</span>
+          <span class="badge-history">AUDIT TRAIL NILAI</span>
           <h3 id="history-title" class="modal-title">Riwayat Perubahan Nilai &amp; Skor Risiko</h3>
           <p class="modal-sub">
             Proyek: <strong>{{ project?.nama }}</strong>
@@ -29,7 +29,7 @@
           </svg>
         </span>
         <span>
-          Setiap pergeseran angka pagu, HPS, atau kontrak tercatat tak terhapus untuk mencegah pengalihan nilai proyek secara diam-diam (FR-59, SRS §9.5).
+          Setiap pergeseran angka pagu, HPS, atau kontrak tercatat tak terhapus untuk mencegah pengalihan nilai proyek secara diam-diam.
         </span>
       </div>
 
@@ -381,5 +381,29 @@ watch(
   border: 1px solid var(--c-border, #E7E3DC);
   border-radius: var(--r-sm, 6px);
   cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .modal-backdrop {
+    padding: 8px;
+    align-items: flex-end;
+  }
+  .modal-card {
+    max-width: 100%;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    max-height: 90vh;
+  }
+  .history-table {
+    min-width: 650px;
+  }
+  .modal-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .btn-close-foot {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>

@@ -72,46 +72,56 @@ function formatValue(val) {
 
 <style scoped>
 .audit-diff {
-  font-size: var(--fs-xs);
-  line-height: 1.4;
+  font-size: 11.5px;
+  line-height: 1.45;
 }
 
 .diff-empty {
-  color: var(--c-subtle);
+  color: #9CA3AF;
 }
 
 .diff-status-change {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
+  flex-wrap: wrap;
 }
+
 .diff-badge {
-  font-size: var(--fs-micro);
+  font-size: 10.5px;
   font-weight: 700;
-  padding: 1px 6px;
-  border-radius: var(--r-pill);
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
 }
+
 .diff-badge.is-prev {
-  background: var(--c-bg);
-  color: var(--c-muted);
+  background: #F4F2EE;
+  color: #6B6760;
+  border: 1px solid #E7E3DC;
 }
+
 .diff-badge.is-next {
-  background: var(--c-success-soft);
-  color: var(--c-success);
+  background: #ECFDF5;
+  color: #059669;
+  border: 1px solid #A7F3D0;
 }
+
 .diff-arrow {
   font-weight: 700;
-  color: var(--c-muted);
+  color: #9CA3AF;
+  font-size: 11px;
 }
 
 .diff-detail-line {
-  margin: 2px 0 0 0;
-  font-size: var(--fs-micro);
-  color: var(--c-muted);
+  margin: 3px 0 0 0;
+  font-size: 11px;
+  color: #6B6760;
 }
-.diff-detail-line.text-danger { color: var(--c-danger); }
-.diff-detail-line.text-info { color: var(--c-info); }
+
+.diff-detail-line.text-danger { color: #DC2626; }
+.diff-detail-line.text-info { color: #0284C7; }
 
 .diff-etl-stats,
 .diff-match-info {
@@ -120,45 +130,66 @@ function formatValue(val) {
   flex-wrap: wrap;
   gap: 6px;
 }
+
 .diff-chip {
-  font-size: var(--fs-micro);
+  font-size: 11px;
   font-weight: 600;
-  background: var(--c-bg);
-  padding: 2px 6px;
-  border-radius: var(--r-xs);
-  color: var(--c-ink);
+  background: #F4F2EE;
+  padding: 2px 7px;
+  border-radius: 6px;
+  color: #111111;
+  border: 1px solid #E7E3DC;
 }
-.diff-chip.text-success { color: var(--c-success); background: var(--c-success-soft); }
-.diff-chip.text-danger { color: var(--c-danger); background: var(--c-danger-soft); }
-.diff-chip.text-muted { color: var(--c-muted); }
+
+.diff-chip.text-success {
+  color: #059669;
+  background: #ECFDF5;
+  border-color: #A7F3D0;
+}
+
+.diff-chip.text-danger {
+  color: #DC2626;
+  background: #FEE2E2;
+  border-color: #FECACA;
+}
+
+.diff-chip.text-muted {
+  color: #6B6760;
+}
 
 .diff-code {
   font-family: monospace;
-  font-size: var(--fs-micro);
-  background: var(--c-bg);
-  padding: 1px 4px;
-  border-radius: var(--r-xs);
+  font-size: 10.5px;
+  background: #F4F2EE;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid #E7E3DC;
+  color: #111111;
 }
 
 .diff-generic {
   max-width: 320px;
 }
+
 .diff-kv-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
+
 .diff-kv-item {
-  font-size: var(--fs-micro);
+  font-size: 11px;
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
+
 .diff-key {
   font-weight: 600;
-  color: var(--c-muted);
+  color: #6B6760;
 }
+
 .diff-val {
-  color: var(--c-ink);
+  color: #111111;
   word-break: break-all;
 }
 </style>

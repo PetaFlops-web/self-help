@@ -1,185 +1,297 @@
 <template>
   <div class="admin-audit-page">
-    <!-- Header -->
+
+    <!-- Topbar / Header -->
     <header class="audit-head">
-      <div>
-        <h2 class="audit-title">Log Audit Sistem Permanen</h2>
-        <p class="audit-desc">
-          Pencatatan tak terhapus (append-only) seluruh aksi moderasi, sinkronisasi ETL, dan aktivitas administratif (FR-18, FR-44).
-        </p>
-      </div>
-      <div class="audit-head-badge">
-        <span class="audit-badge-dot" />
-        <span>AUDIT TRAIL AKTIF</span>
+      <div class="audit-title-group">
+        <h1 class="audit-title">
+          Log Audit Sistem Permanen
+        </h1>
       </div>
     </header>
 
-    <!-- Top KPI Card -->
-    <div class="audit-kpi-row">
-      <div class="audit-kpi-card">
-        <span class="audit-kpi-label">TOTAL CATATAN AUDIT</span>
-        <div class="audit-kpi-val-wrap">
-          <SkeletonBlock v-if="loading && !dataLoaded" height="32px" width="120px" radius="6px" />
-          <span v-else class="audit-kpi-val">{{ total.toLocaleString('id-ID') }} Event</span>
+    <!-- Subheader Tabs (Pill Tab Bar Konsisten dengan Daftar Proyek & Laporan) -->
+    <nav class="audit-tabs-bar" aria-label="Tab kategori modul audit">
+      <div class="tabs-list">
+        <button
+          v-for="tab in auditTabs"
+          :key="tab.value"
+          class="tab-item"
+          :class="{ 'is-active': activeTab === tab.value }"
+          @click="switchTab(tab.value)"
+        >
+          <span>{{ tab.label }}</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- 4 KPI Cards (Ringkasan Eksekutif Rekam Jejak Audit) -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">TOTAL EVENT AUDIT</span>
+        <div class="kpi-val-row">
+          <SkeletonBlock v-if="loading && !dataLoaded" height="26px" width="70px" radius="6px" />
+          <span v-else class="kpi-val">{{ total.toLocaleString('id-ID') }} Event</span>
         </div>
-        <span class="audit-kpi-hint">Tercatat permanen di PostgreSQL (FR-44)</span>
+        <span class="kpi-sub">Append-only di basis data terproteksi</span>
       </div>
 
-      <div class="audit-kpi-card">
-        <span class="audit-kpi-label">AKSES &amp; OTORISASI</span>
-        <div class="audit-kpi-val-wrap">
-          <span class="audit-kpi-val text-success">RBAC Ditegakkan</span>
+      <div class="kpi-card kpi-card--warning">
+        <span class="kpi-label">MODERASI LAPORAN</span>
+        <div class="kpi-val-row">
+          <SkeletonBlock v-if="loading && !dataLoaded" height="26px" width="60px" radius="6px" />
+          <span v-else class="kpi-val text-warning">{{ kpiCounts.moderasi }} Event</span>
         </div>
-        <span class="audit-kpi-hint">Hanya dapat diakses oleh Administrator &amp; Peninjau</span>
+        <span class="kpi-sub">Verifikasi, eskalasi &amp; tolak laporan</span>
+      </div>
+
+      <div class="kpi-card kpi-card--success">
+        <span class="kpi-label">SINKRONISASI PIPA ETL</span>
+        <div class="kpi-val-row">
+          <SkeletonBlock v-if="loading && !dataLoaded" height="26px" width="60px" radius="6px" />
+          <span v-else class="kpi-val text-success">{{ kpiCounts.etl }} Event</span>
+        </div>
+        <span class="kpi-sub">Integritas data SiRUP &amp; SPSE</span>
+      </div>
+
+      <div class="kpi-card kpi-card--teal">
+        <span class="kpi-label">AKSES &amp; OTORISASI (RBAC)</span>
+        <div class="kpi-val-row">
+          <span class="kpi-val text-teal">RBAC Ditegakkan</span>
+        </div>
+        <span class="kpi-sub">Akses khusus Admin &amp; Peninjau</span>
       </div>
     </div>
 
-    <!-- Error state -->
-    <div v-if="error" class="audit-alert audit-alert--danger">
-      <p>{{ error }}</p>
-      <button class="audit-btn-retry" @click="fetchLogs">Coba Lagi</button>
+    <!-- Alert Notifikasi Galat -->
+    <div v-if="error" class="alert-banner alert-banner--danger">
+      <div class="alert-left">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="alert-icon">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <span>{{ error }}</span>
+      </div>
+      <button class="alert-btn-retry" @click="fetchLogs">Coba Lagi</button>
     </div>
 
-    <!-- Main Card: Filter + Table + Pagination -->
-    <div class="audit-card">
-      <!-- Filter Bar -->
-      <div class="audit-filters">
-        <div class="audit-filter-group">
-          <label class="audit-filter-lbl">Modul:</label>
-          <select v-model="filterModul" class="audit-select" @change="handleFilterChange">
-            <option value="">Semua Modul</option>
-            <option value="moderasi">Moderasi Laporan</option>
-            <option value="etl">Pipa ETL &amp; Pencocokan</option>
-            <option value="auth">Autentikasi &amp; Akses</option>
-            <option value="project">Kelola Proyek</option>
-          </select>
+    <!-- Kartu Filter Toolbar Mandiri (2 Baris Sesuai Mockup) -->
+    <div class="audit-filter-card">
+      <div class="filter-row-top">
+        <div class="search-box">
+          <svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="6" cy="6" r="4.5" />
+            <line x1="9.5" y1="9.5" x2="13" y2="13" />
+          </svg>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Cari aktor, ID target, aksi, atau IP address..."
+            aria-label="Pencarian rekam jejak audit"
+          />
+          <button v-if="searchQuery" class="search-clear-btn" aria-label="Hapus pencarian" @click="searchQuery = ''">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
 
-        <div class="audit-filter-group">
-          <label class="audit-filter-lbl">Dari:</label>
+        <select v-model="filterModul" class="filter-select" @change="handleFilterChange">
+          <option value="">Semua Modul Audit</option>
+          <option value="moderasi">Moderasi Laporan Warga</option>
+          <option value="etl">Pipa ETL &amp; Pencocokan Paket</option>
+          <option value="project">Kelola Proyek &amp; Tender</option>
+          <option value="auth">Autentikasi &amp; Akses Sistem</option>
+        </select>
+
+        <div class="date-input-group">
+          <label class="date-lbl">Dari:</label>
           <input
             v-model="filterStartDate"
             type="date"
-            class="audit-input-date"
+            class="filter-date-input"
+            aria-label="Filter tanggal awal"
             @change="handleFilterChange"
           />
         </div>
 
-        <div class="audit-filter-group">
-          <label class="audit-filter-lbl">Sampai:</label>
+        <div class="date-input-group">
+          <label class="date-lbl">Sampai:</label>
           <input
             v-model="filterEndDate"
             type="date"
-            class="audit-input-date"
+            class="filter-date-input"
+            aria-label="Filter tanggal akhir"
             @change="handleFilterChange"
           />
         </div>
-
-        <button class="audit-btn-refresh" :disabled="loading" @click="fetchLogs">
-          <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M14 8A6 6 0 1 1 9.5 2.5M14 2.5v4h-4" />
-          </svg>
-          <span>{{ loading ? 'Memuat…' : 'Segarkan' }}</span>
-        </button>
-
-        <span class="audit-counter">
-          Menampilkan {{ total ? offset + 1 : 0 }}–{{ Math.min(offset + limit, total) }} dari {{ total }} event
-        </span>
       </div>
 
-      <!-- Loading State -->
-      <div v-if="loading && !dataLoaded" class="audit-loading-wrap">
-        <SkeletonBlock v-for="i in 8" :key="i" height="46px" radius="6px" class="audit-skeleton-row" />
+      <div class="filter-row-bottom">
+        <div class="filter-chips-group">
+          <button
+            class="chip-filter"
+            :class="{ 'is-active': activeRange === 'today' }"
+            @click="setQuickRange('today')"
+          >
+            <span class="chip-dot">●</span>
+            <span>Hari Ini</span>
+          </button>
+          <button
+            class="chip-filter"
+            :class="{ 'is-active': activeRange === '7d' }"
+            @click="setQuickRange('7d')"
+          >
+            <span class="chip-dot">●</span>
+            <span>7 Hari Terakhir</span>
+          </button>
+          <button
+            class="chip-filter"
+            :class="{ 'is-active': activeRange === '30d' }"
+            @click="setQuickRange('30d')"
+          >
+            <span class="chip-dot">●</span>
+            <span>30 Hari Terakhir</span>
+          </button>
+        </div>
+
+        <div class="filter-right-actions">
+          <button class="btn-refresh" :disabled="loading" @click="fetchLogs">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" :class="{ 'spin-icon': loading }">
+              <path d="M23 4v6h-6" />
+              <path d="M1 20v-6h6" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+            <span>↻ Segarkan</span>
+          </button>
+          <span class="audit-counter">
+            Menampilkan {{ total ? offset + 1 : 0 }}–{{ Math.min(offset + limit, total) }} dari {{ total }} event
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kartu Tabel Mandiri (Radius 16px, Overflow Hidden) -->
+    <div class="audit-table-card">
+      <!-- Loading Skeleton State -->
+      <div v-if="loading && !dataLoaded" class="table-loading-wrap">
+        <div v-for="i in 8" :key="i" class="skeleton-row-item">
+          <SkeletonBlock height="16px" width="120px" radius="4px" />
+          <SkeletonBlock height="16px" width="160px" radius="4px" />
+          <SkeletonBlock height="16px" width="100px" radius="4px" />
+          <SkeletonBlock height="16px" width="110px" radius="4px" />
+          <SkeletonBlock height="16px" width="200px" radius="4px" />
+          <SkeletonBlock height="16px" width="90px" radius="4px" />
+        </div>
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="!logs.length" class="audit-empty-wrap">
-        <p>Tidak ada catatan audit yang cocok dengan kriteria filter saat ini.</p>
+      <div v-else-if="!filteredLogs.length" class="audit-empty-wrap">
+        <div class="empty-icon-wrap">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+        <h3 class="empty-title">Tidak Ada Catatan Audit</h3>
+        <p class="empty-desc">Tidak ditemukan event audit yang cocok dengan filter atau kata kunci pencarian Anda saat ini.</p>
+        <button class="btn-reset-filter" @click="resetFilters">Reset Filter</button>
       </div>
 
-      <!-- Table Scroll -->
-      <div v-else class="audit-table-scroll">
+      <!-- Tabel Data Audit -->
+      <div v-else class="table-container">
         <table class="audit-table">
           <thead>
             <tr>
-              <th>WAKTU (WIB)</th>
-              <th>AKTOR &amp; PERAN</th>
-              <th>MODUL</th>
-              <th>AKSI / EVENT</th>
-              <th>RINCIAN PERUBAHAN (DIFF)</th>
-              <th>IP ADDRESS</th>
+              <th scope="col" style="width: 170px;">WAKTU (WIB)</th>
+              <th scope="col" style="width: 190px;">AKTOR &amp; PERAN</th>
+              <th scope="col" style="width: 140px;">MODUL</th>
+              <th scope="col" style="width: 170px;">AKSI / EVENT</th>
+              <th scope="col">RINCIAN PERUBAHAN (DIFF)</th>
+              <th scope="col" style="width: 120px;">IP ADDRESS</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in logs" :key="row.id">
-              <!-- Waktu -->
+            <tr v-for="row in filteredLogs" :key="row.id">
+              <!-- Kolom 1: Waktu -->
               <td class="cell-time">
                 <span class="cell-time-main">{{ formatWib(row.waktu) }}</span>
-                <span class="cell-time-rel">{{ formatRelativeTime(row.waktu) }}</span>
+                <span v-if="formatRelativeTime(row.waktu)" class="cell-time-rel">
+                  {{ formatRelativeTime(row.waktu) }}
+                </span>
               </td>
 
-              <!-- Aktor & Peran -->
+              <!-- Kolom 2: Aktor & Peran -->
               <td class="cell-actor">
                 <div class="actor-wrap">
-                  <span class="actor-avatar">{{ getInitials(row.aktor_nama) }}</span>
+                  <span class="actor-avatar" :class="getAvatarClass(row.peran)">
+                    {{ getInitials(row.aktor_nama) }}
+                  </span>
                   <div class="actor-info">
-                    <span class="actor-name">{{ row.aktor_nama || 'Sistem' }}</span>
-                    <span class="actor-role">{{ row.peran || 'system' }}</span>
+                    <strong class="actor-name">{{ row.aktor_nama || 'Sistem Otomatis' }}</strong>
+                    <span class="actor-role-badge" :class="getRoleClass(row.peran)">
+                      {{ row.peran || 'system' }}
+                    </span>
                   </div>
                 </div>
               </td>
 
-              <!-- Modul -->
+              <!-- Kolom 3: Modul -->
               <td class="cell-modul">
                 <span class="modul-badge">{{ formatModul(row.modul) }}</span>
               </td>
 
-              <!-- Aksi / Event -->
+              <!-- Kolom 4: Aksi / Event -->
               <td class="cell-action">
                 <span class="action-badge" :class="actionClass(row.aksi)">
                   {{ row.aksi }}
                 </span>
-                <span v-if="row.target_id" class="target-tag">
-                  Target: {{ row.target_id }}
+                <span v-if="row.target_id" class="target-tag" :title="row.target_id">
+                  Target: {{ formatTarget(row.target_id) }}
                 </span>
               </td>
 
-              <!-- Rincian Perubahan (Diff) -->
+              <!-- Kolom 5: Rincian Diff -->
               <td class="cell-diff">
                 <AuditDiffViewer :diff="row.diff" />
               </td>
 
-              <!-- IP Address -->
+              <!-- Kolom 6: IP Address -->
               <td class="cell-ip">
-                <code>{{ row.ip || '—' }}</code>
+                <code class="ip-code">{{ row.ip || '—' }}</code>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- Pagination -->
-      <div class="audit-pagination">
-        <span class="audit-pag-info">
-          Halaman {{ currentPage }} dari {{ totalPages || 1 }}
+      <!-- Footer Paginasi Mandiri -->
+      <footer class="audit-footer">
+        <span class="pagination-info">
+          Menampilkan {{ total ? offset + 1 : 0 }}–{{ Math.min(offset + limit, total) }} dari {{ total.toLocaleString('id-ID') }} event audit
         </span>
-        <div class="audit-pag-actions">
+
+        <div class="pagination-controls">
           <button
-            class="audit-pag-btn"
+            class="btn-page"
             :disabled="offset === 0 || loading"
             @click="changePage(-1)"
           >
             Sebelumnya
           </button>
+          <span class="page-current">Hal {{ currentPage }} / {{ totalPages || 1 }}</span>
           <button
-            class="audit-pag-btn"
+            class="btn-page"
             :disabled="offset + limit >= total || loading"
             @click="changePage(1)"
           >
             Berikutnya
           </button>
         </div>
-      </div>
+      </footer>
     </div>
   </div>
 </template>
@@ -190,6 +302,7 @@ import { adminAuditApi } from '@/services/api/admin-audit.api'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import AuditDiffViewer from '@/features/admin/components/AuditDiffViewer.vue'
 
+// State
 const loading = ref(true)
 const dataLoaded = ref(false)
 const error = ref('')
@@ -199,13 +312,65 @@ const total = ref(0)
 const limit = ref(50)
 const offset = ref(0)
 
+const activeTab = ref('')
 const filterModul = ref('')
 const filterStartDate = ref('')
 const filterEndDate = ref('')
+const searchQuery = ref('')
+const activeRange = ref('')
 
+// KPI Counts
+const kpiCounts = computed(() => {
+  let moderasi = 0
+  let etl = 0
+  let project = 0
+  let auth = 0
+
+  for (const log of logs.value) {
+    if (log.modul === 'moderasi') moderasi++
+    else if (log.modul === 'etl') etl++
+    else if (log.modul === 'project') project++
+    else if (log.modul === 'auth') auth++
+  }
+
+  return { moderasi, etl, project, auth }
+})
+
+// Tabs Configuration
+const auditTabs = computed(() => [
+  { value: '', label: 'Semua Aktivitas', count: total.value, badgeClass: '' },
+  { value: 'moderasi', label: 'Moderasi Laporan', count: kpiCounts.value.moderasi || null, badgeClass: 'tab-count--warning' },
+  { value: 'etl', label: 'Pipa ETL & Pencocokan', count: kpiCounts.value.etl || null, badgeClass: 'tab-count--success' },
+  { value: 'project', label: 'Kelola Proyek', count: kpiCounts.value.project || null, badgeClass: '' },
+  { value: 'auth', label: 'Autentikasi & Akses', count: kpiCounts.value.auth || null, badgeClass: '' },
+])
+
+function switchTab(modulVal) {
+  activeTab.value = modulVal
+  filterModul.value = modulVal
+  handleFilterChange()
+}
+
+// Pagination
 const currentPage = computed(() => Math.floor(offset.value / limit.value) + 1)
-const totalPages = computed(() => Math.ceil(total.value / limit.value))
+const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit.value)))
 
+// Filtered Logs
+const filteredLogs = computed(() => {
+  if (!searchQuery.value.trim()) return logs.value
+  const q = searchQuery.value.toLowerCase().trim()
+  return logs.value.filter((row) => {
+    return (
+      (row.aktor_nama && row.aktor_nama.toLowerCase().includes(q)) ||
+      (row.target_id && row.target_id.toLowerCase().includes(q)) ||
+      (row.aksi && row.aksi.toLowerCase().includes(q)) ||
+      (row.ip && row.ip.toLowerCase().includes(q)) ||
+      (row.peran && row.peran.toLowerCase().includes(q))
+    )
+  })
+})
+
+// Format Helpers
 function formatWib(dateStr) {
   if (!dateStr) return '—'
   const date = new Date(dateStr)
@@ -245,6 +410,18 @@ function getInitials(name) {
     .join('')
 }
 
+function getAvatarClass(peran) {
+  if (peran === 'admin') return 'avatar--admin'
+  if (peran === 'verifikator') return 'avatar--verifikator'
+  return 'avatar--system'
+}
+
+function getRoleClass(peran) {
+  if (peran === 'admin') return 'role--admin'
+  if (peran === 'verifikator') return 'role--verifikator'
+  return 'role--system'
+}
+
 function formatModul(modul) {
   const map = {
     moderasi: 'Moderasi Laporan',
@@ -257,12 +434,21 @@ function formatModul(modul) {
 
 function actionClass(aksi) {
   if (aksi?.includes('VERIFY')) return 'badge-success'
-  if (aksi?.includes('REJECT') || aksi?.includes('FAIL')) return 'badge-danger'
+  if (aksi?.includes('REJECT') || aksi?.includes('FAIL') || aksi?.includes('DELETE')) return 'badge-danger'
   if (aksi?.includes('FORWARD')) return 'badge-info'
   if (aksi?.includes('SYNC') || aksi?.includes('MATCH')) return 'badge-warning'
   return 'badge-subtle'
 }
 
+function formatTarget(targetId) {
+  if (!targetId) return ''
+  if (targetId.length > 18) {
+    return targetId.slice(0, 8) + '…' + targetId.slice(-6)
+  }
+  return targetId
+}
+
+// Fetch Logs
 async function fetchLogs() {
   loading.value = true
   error.value = ''
@@ -289,6 +475,41 @@ async function fetchLogs() {
 }
 
 function handleFilterChange() {
+  activeTab.value = filterModul.value
+  offset.value = 0
+  activeRange.value = ''
+  fetchLogs()
+}
+
+function setQuickRange(range) {
+  activeRange.value = range
+  const now = new Date()
+  const yyyy = now.getFullYear()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  filterEndDate.value = `${yyyy}-${mm}-${dd}`
+
+  if (range === 'today') {
+    filterStartDate.value = `${yyyy}-${mm}-${dd}`
+  } else if (range === '7d') {
+    const past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    filterStartDate.value = past.toISOString().split('T')[0]
+  } else if (range === '30d') {
+    const past = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+    filterStartDate.value = past.toISOString().split('T')[0]
+  }
+
+  offset.value = 0
+  fetchLogs()
+}
+
+function resetFilters() {
+  searchQuery.value = ''
+  filterModul.value = ''
+  activeTab.value = ''
+  filterStartDate.value = ''
+  filterEndDate.value = ''
+  activeRange.value = ''
   offset.value = 0
   fetchLogs()
 }
@@ -310,8 +531,30 @@ onMounted(() => {
 .admin-audit-page {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-5);
+  gap: 20px;
   max-width: 1400px;
+  margin: 0 auto;
+  padding-bottom: 40px;
+}
+
+/* Breadcrumb Tag */
+.audit-breadcrumb-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-muted, #6B6760);
+  background: var(--c-surface, #FFFFFF);
+  border: 1px solid var(--c-border, #E7E3DC);
+  padding: 4px 12px;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.audit-breadcrumb-tag .dot-orange {
+  color: #ff5c00;
+  font-size: 12px;
 }
 
 /* Header */
@@ -319,330 +562,751 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   flex-wrap: wrap;
-  gap: var(--sp-3);
-  padding-bottom: var(--sp-3);
-  border-bottom: var(--bw) solid var(--c-border);
 }
+
+.audit-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .audit-title {
-  font-size: var(--fs-2xl);
+  font-size: 24px;
   font-weight: 800;
-  color: var(--c-ink);
-  margin: 0 0 4px 0;
-}
-.audit-desc {
-  font-size: var(--fs-sm);
-  color: var(--c-muted);
+  letter-spacing: -0.02em;
+  color: var(--c-ink, #111111);
   margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
 }
-.audit-head-badge {
+
+.audit-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--c-muted, #6B6760);
+  letter-spacing: 0;
+}
+
+.sync-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #059669;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* Subheader Tabs Bar */
+.audit-tabs-bar {
+  background: var(--c-surface, #FFFFFF);
+  border: 1px solid var(--c-border, #E7E3DC);
+  border-radius: 12px;
+  padding: 4px 8px;
+  overflow-x: auto;
+}
+
+.tabs-list {
+  display: flex;
+  gap: 4px;
+  min-width: max-content;
+}
+
+.tab-item {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--c-success-soft);
-  color: var(--c-success);
-  font-size: var(--fs-micro);
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: var(--r-pill);
-  border: 1px solid rgba(46, 139, 87, 0.2);
-}
-.audit-badge-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--c-success);
+  height: 34px;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-muted, #6B6760);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
-/* KPI Row */
-.audit-kpi-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--sp-4);
+.tab-item:hover {
+  color: var(--c-ink, #111111);
+  background: var(--c-bg, #F4F2EE);
 }
-.audit-kpi-card {
-  background: var(--c-surface);
-  border: var(--bw) solid var(--c-border);
-  border-radius: var(--r-lg);
-  padding: 16px 20px;
+
+.tab-item.is-active {
+  color: var(--c-ink, #111111);
+  background: var(--c-bg, #F4F2EE);
+  box-shadow: inset 0 -2px 0 #ff5c00;
+}
+
+.tab-count {
+  padding: 1px 7px;
+  font-size: 10px;
+  border-radius: 999px;
+  background: #e5e3dc;
+  color: #4b5563;
+  font-weight: 700;
+}
+
+.tab-count--warning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.tab-count--success {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+/* 4 KPI Cards */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.kpi-card {
+  padding: 16px 18px;
+  background: var(--c-surface, #FFFFFF);
+  border: 1px solid var(--c-border, #E7E3DC);
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
-}
-.audit-kpi-label {
-  font-size: var(--fs-micro);
-  font-weight: 700;
-  color: var(--c-muted);
-  letter-spacing: 0.5px;
-}
-.audit-kpi-val-wrap {
-  display: flex;
-  align-items: baseline;
-}
-.audit-kpi-val {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--c-ink);
-}
-.audit-kpi-val.text-success { color: var(--c-success); }
-.audit-kpi-hint {
-  font-size: var(--fs-xs);
-  color: var(--c-subtle);
+  justify-content: space-between;
+  min-height: 94px;
+  transition: border-color 0.15s ease;
 }
 
-/* Alert */
-.audit-alert {
+.kpi-card--warning { border-left: 3.5px solid #d97706; }
+.kpi-card--success { border-left: 3.5px solid #16a34a; }
+.kpi-card--teal { border-left: 3.5px solid #059669; }
+
+.kpi-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--c-muted, #6B6760);
+}
+
+.kpi-val-row {
+  min-height: 28px;
+  display: flex;
+  align-items: baseline;
+  margin: 4px 0 2px 0;
+}
+
+.kpi-val {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--c-ink, #111111);
+}
+
+.text-warning { color: #d97706; }
+.text-success { color: #16a34a; }
+.text-teal { color: #059669; }
+
+.kpi-sub {
+  font-size: 11px;
+  color: var(--c-subtle, #9CA3AF);
+  font-weight: 500;
+}
+
+/* Alert Banner */
+.alert-banner {
   padding: 12px 16px;
-  border-radius: var(--r-md);
-  font-size: var(--fs-sm);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-.audit-alert--danger {
-  background: var(--c-danger-soft);
-  color: var(--c-danger);
-  border: 1px solid rgba(214, 58, 31, 0.2);
-}
-.audit-btn-retry {
-  background: none;
-  border: 1px solid var(--c-danger);
-  color: var(--c-danger);
-  border-radius: var(--r-xs);
-  padding: 4px 8px;
-  font-size: var(--fs-xs);
-  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
 }
 
-/* Main Card */
-.audit-card {
-  background: var(--c-surface);
-  border: var(--bw) solid var(--c-border);
-  border-radius: var(--r-lg);
+.alert-banner--danger {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.alert-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alert-btn-retry {
+  background: #ffffff;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+/* Kartu Filter Mandiri */
+.audit-filter-card {
+  background: var(--c-surface, #FFFFFF);
+  border: 1px solid var(--c-border, #E7E3DC);
+  border-radius: 16px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.filter-row-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 12px;
+  background: #F8F7F4;
+  border: 1px solid var(--c-border, #E7E3DC);
+  border-radius: 8px;
+  flex: 1;
+  min-width: 260px;
+  color: var(--c-muted, #6B6760);
+}
+
+.search-box input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 11.5px;
+  color: var(--c-ink, #111111);
+  width: 100%;
+}
+
+.search-clear-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--c-muted, #6B6760);
+  display: flex;
+  padding: 0;
+}
+
+.filter-select {
+  height: 34px;
+  padding: 0 28px 0 12px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--c-ink, #111111);
+  background: #F8F7F4;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='%236B6760'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5' stroke='%236B6760' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  appearance: none;
+  border: 1px solid var(--c-border, #E7E3DC);
+  border-radius: 8px;
+  outline: none;
+}
+
+.date-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-lbl {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-muted, #6B6760);
+}
+
+.filter-date-input {
+  height: 34px;
+  padding: 0 10px;
+  font-family: inherit;
+  font-size: 11.5px;
+  background: #F8F7F4;
+  border: 1px solid var(--c-border, #E7E3DC);
+  border-radius: 8px;
+  color: var(--c-ink, #111111);
+  outline: none;
+}
+
+.filter-row-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-chips-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip-filter {
+  height: 32px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  background: #F8F7F4;
+  border: 1px solid var(--c-border, #E7E3DC);
+  border-radius: 8px;
+  color: var(--c-muted, #6B6760);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.chip-filter .chip-dot {
+  color: #ff5c00;
+  font-size: 9px;
+}
+
+.chip-filter.is-active {
+  background: #FFFBEB;
+  border-color: #F59E0B;
+  color: #92400E;
+}
+
+.filter-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-refresh {
+  height: 32px;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-ink, #111111);
+  background: #FFFFFF;
+  border: 1px solid var(--c-border, #E7E3DC);
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  background: #F8F7F4;
+}
+
+.audit-counter {
+  font-size: 11.5px;
+  color: var(--c-muted, #6B6760);
+  font-weight: 500;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+/* Standalone Kartu Tabel */
+.audit-table-card {
+  background: var(--c-surface, #FFFFFF);
+  border: 1px solid var(--c-border, #E7E3DC);
+  border-radius: 16px;
   overflow: hidden;
 }
 
-/* Filters */
-.audit-filters {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--sp-3);
+.table-loading-wrap {
   padding: 16px 20px;
-  border-bottom: var(--bw) solid var(--c-border);
-  background: var(--c-bg-alt);
-}
-.audit-filter-group {
   display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.audit-filter-lbl {
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--c-muted);
-}
-.audit-select,
-.audit-input-date {
-  height: 32px;
-  padding: 0 10px;
-  font-size: var(--fs-xs);
-  font-family: inherit;
-  color: var(--c-ink);
-  background: var(--c-surface);
-  border: var(--bw) solid var(--c-border-strong);
-  border-radius: var(--r-sm);
-}
-.audit-btn-refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 12px;
-  background: var(--c-surface);
-  border: var(--bw) solid var(--c-border);
-  border-radius: var(--r-sm);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--c-ink);
-  cursor: pointer;
-}
-.audit-btn-refresh:hover:not(:disabled) {
-  background: var(--c-bg);
-}
-.audit-counter {
-  margin-left: auto;
-  font-size: var(--fs-xs);
-  color: var(--c-muted);
+  flex-direction: column;
+  gap: 14px;
 }
 
-/* Table */
-.audit-table-scroll {
-  overflow-x: auto;
-}
-.audit-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--fs-xs);
-}
-.audit-table th {
-  background: var(--c-bg-alt);
-  color: var(--c-muted);
-  font-size: var(--fs-micro);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 10px 16px;
-  text-align: left;
-  border-bottom: var(--bw) solid var(--c-border);
-}
-.audit-table td {
-  padding: 12px 16px;
-  border-bottom: var(--bw) solid var(--c-border);
-  color: var(--c-ink);
-  vertical-align: top;
-}
-.audit-table tr:last-child td {
-  border-bottom: none;
-}
-
-/* Cells */
-.cell-time {
-  white-space: nowrap;
-}
-.cell-time-main {
-  display: block;
-  font-weight: 600;
-}
-.cell-time-rel {
-  display: block;
-  font-size: var(--fs-micro);
-  color: var(--c-muted);
-}
-
-.cell-actor {
-  min-width: 160px;
-}
-.actor-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.actor-avatar {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--c-bg);
-  border: 1px solid var(--c-border);
-  font-size: 10px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--c-ink);
-  flex: none;
-}
-.actor-name {
-  display: block;
-  font-weight: 600;
-}
-.actor-role {
-  display: block;
-  font-size: var(--fs-micro);
-  color: var(--c-subtle);
-}
-
-.modul-badge {
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: var(--r-xs);
-  background: var(--c-bg);
-  color: var(--c-muted);
-  white-space: nowrap;
-}
-
-.cell-action {
-  white-space: nowrap;
-}
-.action-badge {
-  display: inline-block;
-  font-size: var(--fs-micro);
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: var(--r-pill);
-}
-.action-badge.badge-success { background: var(--c-success-soft); color: var(--c-success); }
-.action-badge.badge-danger { background: var(--c-danger-soft); color: var(--c-danger); }
-.action-badge.badge-info { background: var(--c-info-soft); color: var(--c-info); }
-.action-badge.badge-warning { background: var(--c-warning-soft); color: var(--c-warning); }
-.action-badge.badge-subtle { background: var(--c-bg); color: var(--c-muted); }
-
-.target-tag {
-  display: block;
-  font-size: var(--fs-micro);
-  color: var(--c-subtle);
-  margin-top: 2px;
-}
-
-.cell-diff {
-  min-width: 200px;
-  max-width: 360px;
-}
-
-.cell-ip code {
-  font-family: monospace;
-  font-size: var(--fs-micro);
-  color: var(--c-muted);
-}
-
-/* Pagination */
-.audit-pagination {
+.skeleton-row-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
-  border-top: var(--bw) solid var(--c-border);
-  background: var(--c-surface);
+  gap: 16px;
 }
-.audit-pag-info {
-  font-size: var(--fs-xs);
-  color: var(--c-muted);
-}
-.audit-pag-actions {
+
+.audit-empty-wrap {
+  padding: 60px 24px;
+  text-align: center;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.empty-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #F4F2EE;
+  color: #9CA3AF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.empty-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--c-ink, #111111);
+  margin: 0 0 6px 0;
+}
+
+.empty-desc {
+  font-size: 12px;
+  color: var(--c-muted, #6B6760);
+  max-width: 380px;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.btn-reset-filter {
+  padding: 6px 14px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #ff5c00;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* Tabel */
+.table-container {
+  overflow-x: auto;
+}
+
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+
+.audit-table thead th {
+  background: #FAF8F5;
+  color: var(--c-muted, #6B6760);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--c-border, #E7E3DC);
+}
+
+.audit-table tbody tr {
+  border-bottom: 1px solid var(--c-border, #E7E3DC);
+  transition: background 0.1s ease;
+}
+
+.audit-table tbody tr:hover {
+  background: #FAF8F5;
+}
+
+.audit-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.audit-table td {
+  padding: 12px 18px;
+  vertical-align: middle;
+}
+
+/* Kolom 1: Waktu */
+.cell-time {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cell-time-main {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--c-ink, #111111);
+}
+
+.cell-time-rel {
+  font-size: 10.5px;
+  color: var(--c-muted, #6B6760);
+}
+
+/* Kolom 2: Aktor & Peran */
+.actor-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.actor-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.avatar--admin {
+  background: #ffedd5;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+
+.avatar--verifikator {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.avatar--system {
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+.actor-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.actor-name {
+  font-size: 11.5px;
+  color: var(--c-ink, #111111);
+}
+
+.actor-role-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.role--admin { color: #c2410c; }
+.role--verifikator { color: #1e40af; }
+.role--system { color: #6b7280; }
+
+/* Kolom 3: Modul */
+.modul-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  background: #F4F2EE;
+  color: #4b5563;
+  border-radius: 6px;
+  border: 1px solid #E7E3DC;
+}
+
+/* Kolom 4: Aksi */
+.cell-action {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+}
+
+.action-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.badge-success {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.badge-danger {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.badge-info {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-warning {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.badge-subtle {
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+.target-tag {
+  font-size: 10px;
+  font-family: monospace;
+  color: var(--c-muted, #6B6760);
+  background: #FAF8F5;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+/* Kolom 6: IP */
+.ip-code {
+  font-family: monospace;
+  font-size: 10.5px;
+  background: #F4F2EE;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid #E7E3DC;
+  color: #4b5563;
+}
+
+/* Footer Paginasi */
+.audit-footer {
+  padding: 12px 20px;
+  background: #FAF8F5;
+  border-top: 1px solid var(--c-border, #E7E3DC);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pagination-info {
+  font-size: 11.5px;
+  color: var(--c-muted, #6B6760);
+  font-weight: 500;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
-.audit-pag-btn {
-  height: 32px;
-  padding: 0 14px;
-  background: var(--c-surface);
-  border: var(--bw) solid var(--c-border);
-  border-radius: var(--r-sm);
-  font-size: var(--fs-xs);
+
+.btn-page {
+  height: 28px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--c-ink);
+  color: var(--c-ink, #111111);
+  background: #FFFFFF;
+  border: 1px solid var(--c-border, #E7E3DC);
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all 0.15s ease;
 }
-.audit-pag-btn:hover:not(:disabled) {
-  background: var(--c-bg);
+
+.btn-page:hover:not(:disabled) {
+  background: #F4F2EE;
 }
-.audit-pag-btn:disabled {
+
+.btn-page:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.audit-loading-wrap,
-.audit-empty-wrap {
-  padding: 32px 20px;
+.page-current {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-muted, #6B6760);
+  padding: 0 4px;
 }
-.audit-empty-wrap {
-  text-align: center;
-  color: var(--c-muted);
-  font-size: var(--fs-sm);
+
+/* Responsiveness */
+@media (max-width: 1024px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
-.audit-skeleton-row {
-  margin-bottom: 8px;
+
+@media (max-width: 640px) {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .audit-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .audit-head-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .btn-export-csv,
+  .btn-refresh {
+    width: 100%;
+    justify-content: center;
+  }
+  .filter-row-top,
+  .filter-row-bottom {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-select,
+  .filter-date-input,
+  .search-box {
+    width: 100%;
+  }
+  .audit-table {
+    min-width: 800px;
+  }
 }
 </style>

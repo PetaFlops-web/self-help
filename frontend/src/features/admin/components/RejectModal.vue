@@ -1,99 +1,145 @@
 <template>
   <Teleport to="body">
-    <Transition name="arx-fade">
+    <Transition name="modal-fade">
       <div
         v-if="show"
-        class="arx-backdrop"
+        class="modal-backdrop"
         @click.self="close"
       >
         <section
           ref="dialogRef"
-          class="arx-card"
+          class="modal-card"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="arx-title"
+          aria-labelledby="modal-title"
           tabindex="-1"
           @keydown.esc.stop="close"
         >
-          <header class="arx-head">
-            <h3 id="arx-title" class="arx-title">Tolak laporan</h3>
-            <button type="button" class="arx-close" aria-label="Tutup" @click="close">×</button>
+          <!-- Header Modal Sesuai Standar Panel Admin -->
+          <header class="modal-head">
+            <button type="button" class="btn-close" aria-label="Tutup modal" @click="close">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </header>
 
-          <div class="arx-body">
-            <p v-if="error" class="arx-alert" role="alert">{{ error }}</p>
+          <div class="modal-body">
+            <!-- Banner Peringatan Konsekuensi Penolakan -->
+            <div class="alert-block alert-block--warning">
+              <div class="alert-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#B45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+              </div>
+              <div class="alert-content">
+                <div class="alert-title">KONSEKUENSI PENOLAKAN LAPORAN:</div>
+                <p>
+                  Laporan warga ini akan ditutup dengan status <code>ditolak</code>. Alasan penolakan akan dicatat ke dalam rekam jejak audit dan diteruskan ke kontak pelapor (jika disediakan).
+                </p>
+              </div>
+            </div>
 
-            <!-- Kartu radio alasan — sesuai frame 03b (radio + judul + deskripsi) -->
-            <div class="arx-field">
-              <label class="arx-field-label">
-                Alasan penolakan <span class="arx-req" aria-hidden="true">*</span>
+            <!-- Error Banner jika request gagal -->
+            <div v-if="error" class="alert-block alert-block--danger" role="alert">
+              <div class="alert-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="15" y1="9" x2="9" y2="15" />
+                  <line x1="9" y1="9" x2="15" y2="15" />
+                </svg>
+              </div>
+              <div class="alert-content">
+                <p>{{ error }}</p>
+              </div>
+            </div>
+
+            <!-- Kartu radio alasan penolakan -->
+            <div class="form-group">
+              <label class="form-label">
+                ALASAN PENOLAKAN <span class="req-star" aria-hidden="true">*</span>
               </label>
-              <div class="arx-radio-group" role="radiogroup" aria-label="Alasan penolakan">
+              <div class="radio-group" role="radiogroup" aria-label="Alasan penolakan">
                 <label
                   v-for="opt in alasanOptions"
                   :key="opt.value"
-                  class="arx-radio-card"
+                  class="radio-card"
                   :class="{ 'is-selected': alasan === opt.value }"
                 >
                   <input
                     type="radio"
-                    class="arx-radio-input"
+                    class="radio-input"
                     :value="opt.value"
                     v-model="alasan"
                     :disabled="loading"
                   />
-                  <span class="arx-radio-outer" aria-hidden="true">
-                    <span class="arx-radio-inner"></span>
+                  <span class="radio-outer" aria-hidden="true">
+                    <span class="radio-inner"></span>
                   </span>
-                  <span class="arx-radio-text">
-                    <span class="arx-radio-title">{{ opt.label }}</span>
-                    <span v-if="opt.desc" class="arx-radio-desc">{{ opt.desc }}</span>
-                  </span>
+                  <div class="radio-text">
+                    <span class="radio-title">{{ opt.label }}</span>
+                    <span v-if="opt.desc" class="radio-desc">{{ opt.desc }}</span>
+                  </div>
                 </label>
               </div>
             </div>
 
-            <div v-if="alasan === '__other__'" class="arx-field">
-              <label for="arx-alasan-lain">
-                Tulis alasan lain <span class="arx-req" aria-hidden="true">*</span>
+            <!-- Alasan Spesifik jika memilih 'Alasan lain' -->
+            <div v-if="alasan === '__other__'" class="form-group">
+              <label for="arx-alasan-lain" class="form-label">
+                TULIS ALASAN SPESIFIK <span class="req-star" aria-hidden="true">*</span>
               </label>
               <textarea
                 id="arx-alasan-lain"
                 v-model="alasanLain"
-                class="arx-textarea"
+                class="form-textarea"
                 rows="3"
                 maxlength="500"
-                placeholder="Jelaskan alasan penolakan…"
+                placeholder="Jelaskan alasan penolakan secara spesifik…"
                 :disabled="loading"
               ></textarea>
             </div>
 
-            <div class="arx-field">
-              <label for="arx-catatan">
-                Catatan verifikator
-                <span class="arx-optional">(opsional)</span>
+            <!-- Catatan Verifikator Tambahan -->
+            <div class="form-group">
+              <label for="arx-catatan" class="form-label">
+                CATATAN VERIFIKATOR
+                <span class="optional-tag">(OPSIONAL)</span>
               </label>
               <textarea
                 id="arx-catatan"
                 v-model="catatan"
-                class="arx-textarea"
-                rows="4"
+                class="form-textarea"
+                rows="3"
                 maxlength="2000"
-                placeholder="Catatan internal untuk verifikator lain…"
+                placeholder="Catatan internal untuk tim verifikator dan tindak lanjut…"
                 :disabled="loading"
               ></textarea>
-              <p class="arx-counter" :class="{ 'is-max': catatan.length >= 2000 }">
+              <p class="char-counter" :class="{ 'is-max': catatan.length >= 2000 }">
                 {{ catatan.length }} / 2000
               </p>
             </div>
           </div>
 
-          <footer class="arx-foot">
-            <button type="button" class="arx-btn arx-btn-ghost" :disabled="loading" @click="close">
+          <!-- Footer Modal Sesuai Standar Panel Admin -->
+          <footer class="modal-foot">
+            <button type="button" class="btn-cancel" :disabled="loading" @click="close">
               Batal
             </button>
-            <button type="button" class="arx-btn arx-btn-danger" :disabled="!canSubmit" @click="submit">
-              {{ loading ? 'Memproses…' : 'Tolak laporan' }}
+            <button type="button" class="btn-danger" :disabled="!canSubmit" @click="submit">
+              <svg v-if="!loading" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+              <svg v-else class="spin-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="12" cy="12" r="10" stroke-opacity="0.25" />
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+              <span>{{ loading ? 'Memproses…' : 'Konfirmasi Tolak Laporan' }}</span>
             </button>
           </footer>
         </section>
@@ -123,7 +169,7 @@ const error = ref('')
 // Opsi preset + pilihan "alasan lain" yang membuka textarea.
 const alasanOptions = computed(() => [
   ...ALASAN_TOLAK_OPTIONS.map((o) => ({ value: o.value, label: o.value, desc: o.desc })),
-  { value: '__other__', label: 'Alasan lain…', desc: '' },
+  { value: '__other__', label: 'Alasan lain…', desc: 'Tuliskan alasan penolakan secara spesifik di bawah' },
 ])
 
 // Nilai akhir alasan_tolak: preset, atau teks bebas jika "alasan lain".
@@ -186,242 +232,425 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* Backdrop + kartu — token §9 admin, tanpa bayangan (§10). */
-.arx-backdrop {
+/* Backdrop & Card Konsisten Panel Admin */
+.modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 3000;
+  z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--sp-4);
-  background: rgba(17, 17, 17, 0.45);
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
 }
-.arx-card {
+
+.modal-card {
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  width: min(480px, 100%);
-  max-height: min(560px, 100%);
-  background: var(--c-surface);
-  border: var(--bw) solid var(--c-border-strong);
-  border-radius: var(--r-lg); /* 12 */
-  outline: none;
   overflow: hidden;
+  outline: none;
 }
 
-.arx-head {
+/* Header Modal */
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid #E2E8F0;
+  background: #FFFFFF;
+}
+
+.modal-head-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.badge-reject {
+  align-self: flex-start;
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #DC2626;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-bottom: 2px;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0F172A;
+  line-height: 1.3;
+}
+
+.text-danger {
+  color: #DC2626;
+}
+
+.modal-sub {
+  margin: 0;
+  font-size: 12px;
+  color: #64748B;
+  line-height: 1.4;
+}
+
+.modal-sub strong {
+  color: #1E293B;
+  font-family: monospace;
+}
+
+.btn-close {
+  flex: none;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-2);
-  padding: var(--sp-4) var(--sp-5) var(--sp-3);
-  border-bottom: var(--bw) solid var(--c-border);
-}
-.arx-title {
-  margin: 0;
-  font-size: var(--fs-lg); /* 13 */
-  font-weight: 700;
-  color: var(--c-ink);
-}
-.arx-close {
-  flex: none;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: var(--r-pill);
-  background: transparent;
-  color: var(--c-muted);
-  font-size: 18px;
-  line-height: 1;
+  justify-content: center;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  background: #F8FAFC;
+  color: #64748B;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
-.arx-close:hover { background: var(--c-bg); color: var(--c-ink); }
 
-.arx-body {
+.btn-close:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+  border-color: #CBD5E1;
+}
+
+/* Body Modal */
+.modal-body {
   flex: 1;
-  min-height: 80px;
   overflow-y: auto;
-  padding: var(--sp-4) var(--sp-5);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.arx-alert {
-  margin: 0 0 var(--sp-3);
-  padding: 10px 12px;
-  border-radius: var(--r-sm);
-  background: var(--c-danger-soft);
-  color: var(--c-danger);
-  font-size: var(--fs-sm);
+/* Alert Banners */
+.alert-block {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.alert-icon {
+  flex: none;
+  margin-top: 2px;
+}
+
+.alert-content {
+  flex: 1;
+}
+
+.alert-block--warning {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  color: #92400E;
+}
+
+.alert-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 3px;
+}
+
+.alert-block--warning p {
+  margin: 0;
+  font-size: 11.5px;
+}
+
+.alert-block--warning code {
+  background: #FEF3C7;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.alert-block--danger {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+}
+
+.alert-block--danger p {
+  margin: 0;
+  font-size: 12px;
   font-weight: 500;
 }
 
-.arx-field { margin-bottom: var(--sp-4); }
-.arx-field:last-child { margin-bottom: 0; }
-.arx-field label,
-.arx-field-label {
-  display: block;
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--c-ink);
-  margin-bottom: 6px;
-}
-.arx-req { color: var(--c-danger); }
-.arx-optional { font-weight: 400; color: var(--c-subtle); }
-
-/* ── Kartu radio alasan (frame 03b) ── */
-.arx-radio-group {
+/* Form Controls */
+.form-group {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2); /* 8 */
 }
-.arx-radio-card {
+
+.form-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #475467;
+  margin-bottom: 8px;
+}
+
+.req-star {
+  color: #EF4444;
+}
+
+.optional-tag {
+  font-size: 10px;
+  font-weight: 500;
+  color: #94A3B8;
+  letter-spacing: normal;
+}
+
+/* Radio Group & Cards */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.radio-card {
   position: relative;
   display: flex;
   align-items: flex-start;
-  gap: var(--sp-3); /* 12 — radio x≈472, teks x≈502 */
-  padding: var(--sp-3) var(--sp-4); /* 12 × 16 */
-  background: var(--c-surface);
-  border: var(--bw) solid var(--c-border); /* #E7E3DC tak terpilih */
-  border-radius: var(--r-md); /* 8 */
+  gap: 12px;
+  padding: 11px 14px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: all 0.15s ease;
 }
-.arx-radio-card:hover { border-color: var(--c-border-strong); }
-.arx-radio-card.is-selected {
-  border-color: var(--c-primary); /* #FF6B2B terpilih */
-  background: var(--c-primary-soft); /* #FFF2EB — aksen hangat terpilih */
+
+.radio-card:hover {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
 }
-/* Radio asli disembunyikan tetap dapat diakses keyboard */
-.arx-radio-input {
+
+.radio-card.is-selected {
+  border-color: #ff5c00;
+  background: #FFF7ED;
+  box-shadow: 0 1px 3px rgba(255, 92, 0, 0.08);
+}
+
+.radio-input {
   position: absolute;
   opacity: 0;
   inset: 0;
   cursor: pointer;
   margin: 0;
 }
-.arx-radio-input:focus-visible + .arx-radio-outer {
-  outline: 2px solid var(--c-primary);
-  outline-offset: 2px;
-}
-.arx-radio-input:disabled { cursor: not-allowed; }
-.arx-radio-card:has(.arx-radio-input:disabled) { opacity: 0.6; cursor: not-allowed; }
 
-.arx-radio-outer {
+.radio-outer {
   flex: none;
   width: 18px;
   height: 18px;
-  margin-top: 1px; /* sejajar dengan baris judul */
-  border-radius: var(--r-pill); /* lingkaran */
-  border: 1.5px solid var(--c-border-strong); /* #DCD8D0 tak terpilih */
-  background: var(--c-surface);
+  margin-top: 1px;
+  border-radius: 999px;
+  border: 1.5px solid #CBD5E1;
+  background: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: border-color 0.15s;
+  transition: all 0.15s ease;
 }
-.arx-radio-inner {
-  width: 10px;
-  height: 10px;
-  border-radius: var(--r-pill);
-  background: var(--c-primary); /* #FF6B2B dot terpilih */
-  opacity: 0;
-  transform: scale(0.5);
-  transition: opacity 0.15s, transform 0.15s;
-}
-.arx-radio-card.is-selected .arx-radio-outer { border-color: var(--c-primary); }
-.arx-radio-card.is-selected .arx-radio-inner { opacity: 1; transform: scale(1); }
 
-.arx-radio-text {
+.radio-inner {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #ff5c00;
+  opacity: 0;
+  transform: scale(0.4);
+  transition: all 0.15s ease;
+}
+
+.radio-card.is-selected .radio-outer {
+  border-color: #ff5c00;
+}
+
+.radio-card.is-selected .radio-inner {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.radio-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
 }
-.arx-radio-title {
-  font-size: var(--fs-sm); /* 11 — Bold */
+
+.radio-title {
+  font-size: 12.5px;
   font-weight: 700;
-  color: var(--c-ink); /* #111111 */
+  color: #0F172A;
   line-height: 1.3;
 }
-.arx-radio-desc {
-  font-size: var(--fs-xs); /* 10 — Medium */
-  font-weight: 500;
-  color: var(--c-muted); /* #6B6760 */
+
+.radio-desc {
+  font-size: 11px;
+  color: #64748B;
   line-height: 1.4;
 }
 
-.arx-textarea {
+/* Textareas */
+.form-textarea {
   width: 100%;
-  font-family: var(--font);
-  font-size: var(--fs-sm);
-  color: var(--c-ink);
-  background: var(--c-surface);
-  border: var(--bw) solid var(--c-border-strong);
-  border-radius: var(--r-sm);
+  font-family: inherit;
+  font-size: 12.5px;
+  color: #0F172A;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
   padding: 10px 12px;
   resize: vertical;
   line-height: 1.5;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.arx-textarea:focus {
-  outline: none;
-  border-color: var(--c-primary);
-}
-.arx-textarea:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.arx-counter {
+.form-textarea:focus {
+  outline: none;
+  border-color: #ff5c00;
+  box-shadow: 0 0 0 3px rgba(255, 92, 0, 0.12);
+}
+
+.form-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #F8FAFC;
+}
+
+.char-counter {
   margin: 4px 0 0;
   text-align: right;
-  font-size: var(--fs-xs);
-  color: var(--c-subtle);
+  font-size: 11px;
+  color: #94A3B8;
 }
-.arx-counter.is-max { color: var(--c-danger); }
 
-.arx-foot {
+.char-counter.is-max {
+  color: #DC2626;
+  font-weight: 600;
+}
+
+/* Footer Modal */
+.modal-foot {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--sp-2);
-  padding: var(--sp-3) var(--sp-5) calc(var(--sp-4) + env(safe-area-inset-bottom));
-  border-top: var(--bw) solid var(--c-border);
-  background: var(--c-bg-alt);
+  gap: 10px;
+  padding: 14px 24px;
+  border-top: 1px solid #E2E8F0;
+  background: #F8FAFC;
 }
 
-.arx-btn {
-  height: 36px;
+.btn-cancel {
+  height: 38px;
   padding: 0 16px;
-  font-family: var(--font);
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-.arx-btn:disabled { opacity: 0.65; cursor: not-allowed; }
-.arx-btn-ghost {
-  background: var(--c-surface);
-  border: var(--bw) solid var(--c-border-strong);
-  color: var(--c-muted);
+  font-family: inherit;
+  font-size: 12px;
   font-weight: 600;
+  color: #334155;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
-.arx-btn-ghost:hover:not(:disabled) { background: var(--c-bg); color: var(--c-ink); }
-.arx-btn-danger {
-  background: var(--c-danger);
-  border: var(--bw) solid var(--c-danger);
-  color: var(--c-surface);
-}
-.arx-btn-danger:hover:not(:disabled) { background: #c2341a; }
 
-.arx-fade-enter-active,
-.arx-fade-leave-active { transition: opacity 0.2s ease; }
-.arx-fade-enter-from,
-.arx-fade-leave-to { opacity: 0; }
+.btn-cancel:hover:not(:disabled) {
+  background: #F1F5F9;
+  border-color: #94A3B8;
+  color: #0F172A;
+}
+
+.btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-danger {
+  height: 38px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: #DC2626;
+  border: 1px solid #DC2626;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.2);
+  transition: all 0.15s ease;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #B91C1C;
+  border-color: #B91C1C;
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Transitions */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
 
 @media (max-width: 575.98px) {
-  .arx-backdrop { align-items: flex-end; padding: 0; }
-  .arx-card { width: 100%; max-height: 88vh; border-radius: var(--r-xl) var(--r-xl) 0 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .arx-fade-enter-active,
-  .arx-fade-leave-active { transition: none; }
+  .modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal-card {
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 16px 16px 0 0;
+  }
 }
 </style>

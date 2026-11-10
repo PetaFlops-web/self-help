@@ -4,7 +4,7 @@
       <!-- Head -->
       <div class="modal-head">
         <div>
-          <span class="badge-exec">DATA EKSEKUSI PROYEK (SRC-10)</span>
+          <span class="badge-exec">DATA EKSEKUSI PROYEK</span>
           <h3 id="exec-title" class="modal-title">Kelola Eksekusi Proyek</h3>
           <p class="modal-sub">
             Proyek: <strong>{{ project?.nama }}</strong> · Nilai Kontrak: <strong>{{ formatCurrency(project?.nilai_kontrak || project?.pagu) }}</strong>
@@ -1343,5 +1343,34 @@ async function confirmDeleteProgress(item) {
 }
 .btn-close-foot:hover {
   background: var(--c-border);
+}
+
+@media (max-width: 640px) {
+  .modal-backdrop {
+    padding: 8px;
+    align-items: flex-end;
+  }
+  .modal-card {
+    max-width: 100%;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    max-height: 92vh;
+  }
+  .tab-nav {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-responsive {
+    overflow-x: auto;
+  }
+  .modal-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .btn-close-foot {
+    width: 100%;
+    text-align: center;
+  }
 }
 </style>

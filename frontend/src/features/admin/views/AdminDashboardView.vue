@@ -33,6 +33,18 @@
           </div>
           <SkeletonBlock height="12px" width="80%" radius="4px" />
         </div>
+        <div class="dash-kpi-card dash-kpi-card--stats">
+          <div class="dash-stats-left">
+            <SkeletonBlock height="16px" width="180px" radius="4px" />
+            <SkeletonBlock height="12px" width="220px" radius="4px" />
+          </div>
+          <div class="dash-stats-center">
+            <SkeletonBlock height="32px" width="240px" radius="6px" />
+          </div>
+          <div class="dash-stats-right">
+            <SkeletonBlock height="28px" width="130px" radius="4px" />
+          </div>
+        </div>
       </template>
 
       <!-- Loaded KPI Cards -->
@@ -87,26 +99,38 @@
 
         <!-- KPI 5: Sebaran Kategori Risiko Proyek (Berdasarkan GET /api/stats) -->
         <div class="dash-kpi-card dash-kpi-card--stats">
-          <span class="dash-kpi-label">Profil Risiko Pengadaan ({{ summary.projectStats.total_proyek }} Proyek)</span>
-          <div class="dash-risk-distribution">
-            <div class="dash-risk-item is-high" title="Risiko Tinggi">
-              <span class="dash-risk-badge">Tinggi</span>
-              <span class="dash-risk-count">{{ summary.projectStats.kategori.Tinggi || 0 }}</span>
+          <div class="dash-stats-left">
+            <div class="dash-stats-title-wrap">
+              <span class="dash-kpi-label">Profil Risiko Pengadaan</span>
+              <span class="dash-stats-count-tag">{{ summary.projectStats.total_proyek }} Proyek</span>
             </div>
-            <div class="dash-risk-item is-medium" title="Perlu Perhatian">
-              <span class="dash-risk-badge">Perhatian</span>
-              <span class="dash-risk-count">{{ summary.projectStats.kategori['Perlu Perhatian'] || 0 }}</span>
-            </div>
-            <div class="dash-risk-item is-low" title="Risiko Rendah">
-              <span class="dash-risk-badge">Rendah</span>
-              <span class="dash-risk-count">{{ summary.projectStats.kategori.Rendah || 0 }}</span>
+            <p class="dash-stats-hint">Monitoring agregat skor risiko dan sebaran status proyek APBD</p>
+          </div>
+
+          <div class="dash-stats-center">
+            <div class="dash-risk-distribution">
+              <div class="dash-risk-item is-high" title="Risiko Tinggi">
+                <span class="dash-risk-badge">Tinggi</span>
+                <span class="dash-risk-count">{{ summary.projectStats.kategori.Tinggi || 0 }}</span>
+              </div>
+              <div class="dash-risk-item is-medium" title="Perlu Perhatian">
+                <span class="dash-risk-badge">Perhatian</span>
+                <span class="dash-risk-count">{{ summary.projectStats.kategori['Perlu Perhatian'] || 0 }}</span>
+              </div>
+              <div class="dash-risk-item is-low" title="Risiko Rendah">
+                <span class="dash-risk-badge">Rendah</span>
+                <span class="dash-risk-count">{{ summary.projectStats.kategori.Rendah || 0 }}</span>
+              </div>
             </div>
           </div>
-          <span class="dash-kpi-sub">
-            <span class="dash-kpi-hint">
-              Rata-rata Skor: <strong>{{ summary.projectStats.rata_rata_skor ?? '—' }}</strong> / 100
-            </span>
-          </span>
+
+          <div class="dash-stats-right">
+            <span class="dash-stats-score-label">Rata-rata Skor Risiko</span>
+            <div class="dash-stats-score-box">
+              <strong class="dash-stats-score-val">{{ summary.projectStats.rata_rata_skor ?? '—' }}</strong>
+              <span class="dash-stats-score-max">/ 100</span>
+            </div>
+          </div>
         </div>
       </template>
     </section>
@@ -775,29 +799,96 @@ onMounted(() => {
 .dash-kpi-pill.is-danger { background: var(--c-danger-soft); color: var(--c-danger); }
 .dash-kpi-pill.is-subtle { background: var(--c-bg); color: var(--c-muted); }
 
-/* KPI Stats Card */
+/* KPI Stats Card (Full-Width Banner) */
 .dash-kpi-card--stats {
-  grid-column: span 1;
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: 16px 20px;
+}
+.dash-stats-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+}
+.dash-stats-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dash-stats-count-tag {
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--c-bg-alt);
+  color: var(--c-muted);
+  border: var(--bw) solid var(--c-border);
+}
+.dash-stats-hint {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--c-subtle);
+}
+.dash-stats-center {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 .dash-risk-distribution {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 6px 0;
+  margin: 0;
 }
 .dash-risk-item {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border-radius: var(--r-sm);
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--r-md);
   font-size: var(--fs-xs);
 }
 .dash-risk-item.is-high { background: var(--c-danger-soft); color: var(--c-danger); }
 .dash-risk-item.is-medium { background: var(--c-warning-soft); color: var(--c-warning); }
 .dash-risk-item.is-low { background: var(--c-success-soft); color: var(--c-success); }
 .dash-risk-badge { font-weight: 600; }
-.dash-risk-count { font-weight: 800; }
+.dash-risk-count { font-weight: 800; font-size: var(--fs-sm); }
+
+.dash-stats-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 140px;
+}
+.dash-stats-score-label {
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--c-muted);
+}
+.dash-stats-score-box {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.dash-stats-score-val {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--c-ink);
+  line-height: 1;
+}
+.dash-stats-score-max {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--c-subtle);
+}
 
 /* Main Grid Layout */
 .dash-main-grid {
@@ -1229,6 +1320,53 @@ onMounted(() => {
 @media (max-width: 1024px) {
   .dash-main-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .dash-kpi-card--stats {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .dash-stats-center {
+    width: 100%;
+  }
+  .dash-risk-distribution {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .dash-risk-item {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+  .dash-stats-right {
+    align-items: flex-start;
+    padding-top: 8px;
+    border-top: var(--bw) dashed var(--c-border);
+  }
+}
+
+@media (max-width: 640px) {
+  .dash-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .dash-header-actions {
+    width: 100%;
+  }
+  .dash-refresh-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .dash-kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .dash-chart-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 </style>

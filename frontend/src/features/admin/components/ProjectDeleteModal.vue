@@ -14,7 +14,7 @@
       <div class="modal-body">
         <!-- Kasus Tidak Boleh Dihapus: Data Pemerintah -->
         <div v-if="project?.asal_data === 'pemerintah'" class="alert-block alert-block--danger">
-          <strong>AKSES DITOLAK: DATA RESMI PEMERINTAH (SRS §9.4)</strong>
+          <strong>AKSES DITOLAK: DATA RESMI PEMERINTAH</strong>
           <p>
             Proyek <strong>{{ project?.nama }}</strong> bersumber langsung dari pipa ETL SiRUP/SPSE resmi pemerintah.
             Data ini dilindungi oleh integritas sistem dan tidak dapat dihapus secara manual oleh admin.
@@ -34,7 +34,7 @@
           </div>
 
           <div class="alert-block alert-block--warning">
-            <strong>KONSEKUENSI PENGHAPUSAN (SRS §9.4):</strong>
+            <strong>KONSEKUENSI PENGHAPUSAN:</strong>
             <ul class="consequences-list">
               <li>Seluruh paket tender turunan di bawah proyek ini akan <strong>terhapus permanen</strong>.</li>
               <li>
@@ -260,5 +260,27 @@ async function handleDelete() {
 .btn-delete:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .modal-backdrop {
+    padding: 8px;
+    align-items: flex-end;
+  }
+  .modal-card {
+    max-width: 100%;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    max-height: 90vh;
+  }
+  .modal-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .btn-cancel,
+  .btn-delete {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>

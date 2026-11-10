@@ -2,11 +2,10 @@
   <div class="admin-projects-page">
     <!-- Topbar / Header -->
     <header class="projects-head">
-      <div>
-        <h2 class="projects-title">Daftar Proyek Pengawasan</h2>
-        <p class="projects-sub">
-          {{ formattedToday }} · Total {{ total.toLocaleString('id-ID') }} Proyek Terdaftar
-        </p>
+      <div class="projects-title-group">
+        <h1 class="projects-title">
+          Daftar Proyek Pengawasan
+        </h1>
       </div>
 
       <div class="projects-head-actions">
@@ -36,48 +35,22 @@
       </div>
     </header>
 
-    <!-- Subheader Tabs (5 Status Tabs) -->
+    <!-- Subheader Tabs (5 Status Tabs - Konsisten dengan AdminReportsView) -->
     <nav class="projects-tabs-bar" aria-label="Tab status proyek">
       <div class="tabs-list">
         <button
+          v-for="tab in projectTabs"
+          :key="tab.value"
           class="tab-item"
-          :class="{ 'is-active': activeTab === 'semua' }"
-          @click="switchTab('semua')"
+          :class="{ 'is-active': activeTab === tab.value }"
+          @click="switchTab(tab.value)"
         >
-          Semua Proyek
-        </button>
-        <button
-          class="tab-item is-danger"
-          :class="{ 'is-active': activeTab === 'tinggi' }"
-          @click="switchTab('tinggi')"
-        >
-          Risiko Tinggi
-        </button>
-        <button
-          class="tab-item is-warning"
-          :class="{ 'is-active': activeTab === 'perhatian' }"
-          @click="switchTab('perhatian')"
-        >
-          Perlu Perhatian
-        </button>
-        <button
-          class="tab-item is-success"
-          :class="{ 'is-active': activeTab === 'rendah' }"
-          @click="switchTab('rendah')"
-        >
-          Risiko Rendah
-        </button>
-        <button
-          class="tab-item is-unmatched"
-          :class="{ 'is-active': activeTab === 'belum_cocok' }"
-          @click="switchTab('belum_cocok')"
-        >
-          Belum Cocok
+          <span>{{ tab.label }}</span>
         </button>
       </div>
     </nav>
 
-    <!-- 5 KPI Cards (Frame 04: 180×84 r10) -->
+    <!-- 5 KPI Cards (4 + 1 Layout Sesuai Mockup) -->
     <div class="kpi-grid">
       <div class="kpi-card">
         <span class="kpi-label">TOTAL PROYEK</span>
@@ -88,31 +61,34 @@
         <span class="kpi-sub">Pagu {{ formatRupiahRingkas(totalPagu) }}</span>
       </div>
 
-      <div class="kpi-card">
+      <div class="kpi-card kpi-card--danger">
         <span class="kpi-label">RISIKO TINGGI</span>
         <div class="kpi-val-row">
           <SkeletonBlock v-if="loading && !dataLoaded" height="26px" width="40px" radius="6px" />
           <span v-else class="kpi-val text-danger">{{ kpiCounts.tinggi }}</span>
         </div>
+        <span class="kpi-sub">{{ pctTinggi }}% dari total</span>
       </div>
 
-      <div class="kpi-card">
+      <div class="kpi-card kpi-card--warning">
         <span class="kpi-label">PERLU PERHATIAN</span>
         <div class="kpi-val-row">
           <SkeletonBlock v-if="loading && !dataLoaded" height="26px" width="40px" radius="6px" />
           <span v-else class="kpi-val text-warning">{{ kpiCounts.perhatian }}</span>
         </div>
+        <span class="kpi-sub">{{ pctPerhatian }}% dari total</span>
       </div>
 
-      <div class="kpi-card">
+      <div class="kpi-card kpi-card--success">
         <span class="kpi-label">RISIKO RENDAH</span>
         <div class="kpi-val-row">
           <SkeletonBlock v-if="loading && !dataLoaded" height="26px" width="40px" radius="6px" />
           <span v-else class="kpi-val text-success">{{ kpiCounts.rendah }}</span>
         </div>
+        <span class="kpi-sub">{{ pctRendah }}% dari total</span>
       </div>
 
-      <div class="kpi-card">
+      <div class="kpi-card kpi-card--unmatched">
         <span class="kpi-label">BELUM COCOK</span>
         <div class="kpi-val-row">
           <SkeletonBlock v-if="loading && !dataLoaded" height="26px" width="40px" radius="6px" />
@@ -139,78 +115,87 @@
       </button>
     </div>
 
-    <!-- Container Utama: Filter Bar + Tabel Proyek -->
-    <div class="projects-main-card">
-      <!-- Filter Bar Lengkap (h32 r6) -->
-      <div class="projects-filter-bar">
-        <div class="filter-controls">
-          <!-- Wilayah -->
-          <div class="filter-item">
-            <select v-model="filterWilayah" class="filter-select" @change="handleFilterApply">
-              <option value="semua">Wilayah: Semua Kab/Kota</option>
-              <option v-for="w in regionOptions" :key="w.kode_bps" :value="w.kode_bps">
-                {{ w.nama }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Dinas -->
-          <div class="filter-item">
-            <select v-model="filterDinas" class="filter-select" @change="handleFilterApply">
-              <option value="semua">Dinas: Semua SKPD</option>
-              <option v-for="d in dinasOptions" :key="d" :value="d">
-                {{ d }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Kategori -->
-          <div class="filter-item">
-            <select v-model="filterKategori" class="filter-select" @change="handleFilterApply">
-              <option value="semua">Kategori: Semua Skor</option>
-              <option value="Tinggi">Tinggi</option>
-              <option value="Perlu Perhatian">Perlu Perhatian</option>
-              <option value="Rendah">Rendah</option>
-            </select>
-          </div>
-
-          <!-- Integrasi / Asal Data -->
-          <div class="filter-item">
-            <select v-model="filterAsalData" class="filter-select" @change="handleFilterApply">
-              <option value="semua">Integrasi: Semua Status</option>
-              <option value="pemerintah">Pemerintah (SiRUP/SPSE)</option>
-              <option value="manual_admin">Input Admin (Manual)</option>
-              <option value="dummy">Data Simulasi (Dummy)</option>
-            </select>
-          </div>
-
-          <!-- Tahun Anggaran -->
-          <div class="filter-item">
-            <select v-model="filterTA" class="filter-select" @change="handleFilterApply">
-              <option value="semua">TA: Semua</option>
-              <option value="2026">TA: 2026</option>
-              <option value="2025">TA: 2025</option>
-              <option value="2024">TA: 2024</option>
-            </select>
-          </div>
-
-          <!-- Chip Filter: Ada Laporan Menunggu -->
-          <button
-            class="chip-filter"
-            :class="{ 'is-active': filterHasWaitingReports }"
-            @click="toggleWaitingReports"
-          >
-            <span class="chip-dot">●</span>
-            <span>Ada Laporan Menunggu</span>
-          </button>
+    <!-- Filter Card Mandiri (2 Baris Sesuai Mockup Referensi) -->
+    <div class="projects-filter-card">
+      <!-- Baris 1: 5 Dropdown Selects -->
+      <div class="filter-row-dropdowns">
+        <!-- Wilayah -->
+        <div class="filter-select-wrap">
+          <select v-model="filterWilayah" class="filter-select" @change="handleFilterApply">
+            <option value="semua">Wilayah: Semua Kab/Kota</option>
+            <option v-for="w in regionOptions" :key="w.kode_bps" :value="w.kode_bps">
+              {{ w.nama }}
+            </option>
+          </select>
         </div>
+
+        <!-- Dinas -->
+        <div class="filter-select-wrap">
+          <select v-model="filterDinas" class="filter-select" @change="handleFilterApply">
+            <option value="semua">Dinas: Semua SKPD</option>
+            <option v-for="d in dinasOptions" :key="d" :value="d">
+              {{ d }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Kategori -->
+        <div class="filter-select-wrap">
+          <select v-model="filterKategori" class="filter-select" @change="handleFilterApply">
+            <option value="semua">Kategori: Semua Skor</option>
+            <option value="Tinggi">Tinggi</option>
+            <option value="Perlu Perhatian">Perlu Perhatian</option>
+            <option value="Rendah">Rendah</option>
+          </select>
+        </div>
+
+        <!-- Integrasi / Asal Data -->
+        <div class="filter-select-wrap">
+          <select v-model="filterAsalData" class="filter-select" @change="handleFilterApply">
+            <option value="semua">Integrasi: Semua Status</option>
+            <option value="pemerintah">Pemerintah (SiRUP/SPSE)</option>
+            <option value="manual_admin">Input Admin (Manual)</option>
+            <option value="dummy">Data Simulasi (Dummy)</option>
+          </select>
+        </div>
+
+        <!-- Tahun Anggaran -->
+        <div class="filter-select-wrap">
+          <select v-model="filterTA" class="filter-select" @change="handleFilterApply">
+            <option value="semua">TA: Semua</option>
+            <option value="2026">TA: 2026</option>
+            <option value="2025">TA: 2025</option>
+            <option value="2024">TA: 2024</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Baris 2: Actions Berjajar di Kiri -->
+      <div class="filter-row-actions">
+        <!-- Chip Filter: Ada Laporan Menunggu -->
+        <button
+          class="chip-filter"
+          :class="{ 'is-active': filterHasWaitingReports }"
+          @click="toggleWaitingReports"
+        >
+          <span class="chip-dot">●</span>
+          <span>Ada Laporan Menunggu</span>
+        </button>
 
         <!-- Tombol Segarkan -->
         <button class="btn-refresh" :disabled="loading" @click="fetchProjects">
-          <span>↻ Segarkan</span>
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M23 4v6h-6" />
+            <path d="M1 20v-6h6" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+          </svg>
+          <span>Segarkan</span>
         </button>
       </div>
+    </div>
 
+    <!-- Container Tabel Mandiri (Card Terpisah) -->
+    <div class="projects-table-card">
       <!-- Tabel Proyek 7 Kolom (Frame 04 FigCraft) -->
       <div class="table-container">
         <table class="projects-table">
@@ -226,13 +211,62 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-if="loading && !dataLoaded">
-              <td colspan="7" class="td-skeleton">
-                <SkeletonBlock height="24px" width="100%" radius="4px" />
-                <SkeletonBlock height="24px" width="100%" radius="4px" />
-                <SkeletonBlock height="24px" width="100%" radius="4px" />
-              </td>
-            </tr>
+            <template v-if="isTableLoading">
+              <tr v-for="n in 5" :key="`skel-proj-${n}`" class="project-row skeleton-row">
+                <!-- Kolom 1: Kode RUP / SPSE -->
+                <td class="td-code">
+                  <div class="code-wrap">
+                    <SkeletonBlock height="14px" width="85px" radius="4px" />
+                    <SkeletonBlock height="11px" width="70px" radius="4px" style="margin-top: 4px;" />
+                  </div>
+                </td>
+
+                <!-- Kolom 2: Nama Paket & Instansi Dinas -->
+                <td class="td-name">
+                  <div class="name-wrap">
+                    <SkeletonBlock height="15px" width="85%" radius="4px" />
+                    <SkeletonBlock height="12px" width="55%" radius="4px" style="margin-top: 5px;" />
+                  </div>
+                </td>
+
+                <!-- Kolom 3: Pagu & TA -->
+                <td class="td-budget">
+                  <div class="budget-wrap">
+                    <SkeletonBlock height="15px" width="110px" radius="4px" />
+                    <SkeletonBlock height="12px" width="85px" radius="4px" style="margin-top: 4px;" />
+                  </div>
+                </td>
+
+                <!-- Kolom 4: Skor & Risiko -->
+                <td class="td-score">
+                  <div class="score-wrap" style="display: flex; align-items: center; gap: 8px;">
+                    <SkeletonBlock height="24px" width="32px" radius="4px" />
+                    <SkeletonBlock height="20px" width="55px" radius="999px" />
+                  </div>
+                </td>
+
+                <!-- Kolom 5: Integrasi Data (ETL) -->
+                <td class="td-integration">
+                  <div class="integration-wrap" style="display: flex; flex-direction: column; gap: 4px;">
+                    <SkeletonBlock height="18px" width="85px" radius="4px" />
+                    <SkeletonBlock height="14px" width="75px" radius="4px" />
+                  </div>
+                </td>
+
+                <!-- Kolom 6: Laporan -->
+                <td class="td-reports">
+                  <SkeletonBlock height="20px" width="65px" radius="999px" />
+                </td>
+
+                <!-- Kolom 7: Aksi -->
+                <td class="td-action">
+                  <div class="actions-group" style="display: flex; align-items: center; gap: 6px;">
+                    <SkeletonBlock height="28px" width="65px" radius="6px" />
+                    <SkeletonBlock height="28px" width="28px" radius="999px" />
+                  </div>
+                </td>
+              </tr>
+            </template>
 
             <tr v-else-if="filteredProjects.length === 0">
               <td colspan="7" class="td-empty">
@@ -336,14 +370,14 @@
                   class="report-status-badge"
                   :class="{
                     'has-waiting': (p.laporan_menunggu || 0) > 0,
-                    'is-zero': !(p.laporan_menunggu || 0) && !(p.laporan_selesai || 0),
+                    'is-zero': !(p.total_laporan || 0),
                   }"
                 >
                   <span v-if="(p.laporan_menunggu || 0) > 0">
                     {{ p.laporan_menunggu }} Menunggu
                   </span>
-                  <span v-else-if="(p.laporan_selesai || 0) > 0">
-                    {{ p.laporan_selesai }} Selesai
+                  <span v-else-if="(p.total_laporan || 0) > 0">
+                    {{ p.total_laporan }} Laporan
                   </span>
                   <span v-else class="text-muted">
                     0 Laporan
@@ -471,7 +505,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { adminProjectsApi } from '@/services/api/admin-projects.api'
 import { useAuthStore } from '@/stores/auth'
@@ -490,9 +524,12 @@ const auth = useAuthStore()
 const projects = ref([])
 const total = ref(0)
 const loading = ref(false)
+const isSearching = ref(false)
 const dataLoaded = ref(false)
 const errorMsg = ref('')
 const feedbackMsg = ref('')
+
+const isTableLoading = computed(() => loading.value || isSearching.value)
 
 const activeTab = ref('semua')
 const searchQuery = ref('')
@@ -550,15 +587,6 @@ const regionOptions = [
 ]
 
 // Computed
-const formattedToday = computed(() => {
-  return new Intl.DateTimeFormat('id-ID', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date())
-})
-
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / currentLimit.value)))
 const currentPage = computed(() => Math.floor(currentOffset.value / currentLimit.value) + 1)
 const paginationStart = computed(() => (total.value === 0 ? 0 : currentOffset.value + 1))
@@ -593,6 +621,29 @@ const kpiCounts = computed(() => {
 
   return { tinggi, perhatian, rendah, unmatched }
 })
+
+const pctTinggi = computed(() => {
+  const tot = total.value || projects.value.length
+  return tot ? Math.round((kpiCounts.value.tinggi / tot) * 100) : 0
+})
+
+const pctPerhatian = computed(() => {
+  const tot = total.value || projects.value.length
+  return tot ? Math.round((kpiCounts.value.perhatian / tot) * 100) : 0
+})
+
+const pctRendah = computed(() => {
+  const tot = total.value || projects.value.length
+  return tot ? Math.round((kpiCounts.value.rendah / tot) * 100) : 0
+})
+
+const projectTabs = computed(() => [
+  { value: 'semua', label: 'Semua Proyek', count: total.value },
+  { value: 'tinggi', label: 'Risiko Tinggi', count: kpiCounts.value.tinggi },
+  { value: 'perhatian', label: 'Perlu Perhatian', count: kpiCounts.value.perhatian },
+  { value: 'rendah', label: 'Risiko Rendah', count: kpiCounts.value.rendah },
+  { value: 'belum_cocok', label: 'Belum Cocok', count: kpiCounts.value.unmatched },
+])
 
 // Filtered projects locally when local tab / waiting report filter is toggled
 const filteredProjects = computed(() => {
@@ -639,11 +690,16 @@ async function fetchProjects() {
 }
 
 function handleSearchDebounce() {
-  clearTimeout(searchDebounceTimer)
-  searchDebounceTimer = setTimeout(() => {
+  isSearching.value = true
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+  searchDebounceTimer = setTimeout(async () => {
     currentOffset.value = 0
-    fetchProjects()
-  }, 300)
+    try {
+      await fetchProjects()
+    } finally {
+      isSearching.value = false
+    }
+  }, 220)
 }
 
 function handleFilterApply() {
@@ -732,6 +788,11 @@ onMounted(() => {
   window.addEventListener('click', handleWindowClick)
   fetchProjects()
 })
+
+onUnmounted(() => {
+  window.removeEventListener('click', handleWindowClick)
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+})
 </script>
 
 <style scoped>
@@ -739,6 +800,22 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+/* Breadcrumb Tag */
+.projects-breadcrumb-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-ink, #111111);
+  margin-bottom: 2px;
+}
+
+.dot-orange {
+  color: #ff5c00;
+  font-size: 10px;
 }
 
 /* Head */
@@ -750,17 +827,26 @@ onMounted(() => {
   gap: 16px;
 }
 
+.projects-title-group {
+  flex: 1 1 auto;
+  min-width: 280px;
+}
+
 .projects-title {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 24px;
   font-weight: 800;
   color: var(--c-ink, #111111);
   line-height: 1.25;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.projects-sub {
-  margin: 0;
-  font-size: 11px;
+.projects-count {
+  font-size: 12px;
+  font-weight: 500;
   color: var(--c-muted, #6B6760);
 }
 
@@ -772,13 +858,13 @@ onMounted(() => {
 
 .search-box {
   position: relative;
-  width: 226px;
-  height: 36px;
+  width: 230px;
+  height: 38px;
 }
 
 .search-box svg {
   position: absolute;
-  left: 10px;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--c-muted, #6B6760);
@@ -787,9 +873,9 @@ onMounted(() => {
 .search-input {
   width: 100%;
   height: 100%;
-  padding: 0 10px 0 32px;
+  padding: 0 12px 0 34px;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 11.5px;
   background: var(--c-surface, #FFFFFF);
   border: 1px solid var(--c-border, #E7E3DC);
   border-radius: var(--r-md, 8px);
@@ -798,79 +884,108 @@ onMounted(() => {
 }
 
 .btn-add-project {
-  height: 36px;
-  padding: 0 14px;
-  font-size: 11px;
+  height: 38px;
+  padding: 0 18px;
+  font-size: 11.5px;
   font-weight: 700;
-  /* Aksesibilitas WCAG AA 6.65:1 (teks ink di latar oranye) */
-  color: var(--c-ink, #111111);
-  background: var(--c-primary, #FF6B2B);
+  color: #ffffff;
+  background: #ff5c00;
   border: none;
-  border-radius: var(--r-md, 8px);
+  border-radius: 10px;
   cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(255, 92, 0, 0.2);
+  transition: background 0.15s ease;
 }
 
 .btn-add-project:hover {
-  opacity: 0.92;
+  background: #e65300;
 }
 
-/* Tabs Bar */
+/* Tabs Bar (Konsisten dengan AdminReportsView) */
 .projects-tabs-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--c-border, #E7E3DC);
   background: var(--c-surface, #FFFFFF);
-  padding: 0 16px;
-  border-radius: var(--r-md, 8px);
+  border: 1px solid var(--c-border, #E7E3DC);
+  border-radius: var(--r-lg, 12px);
+  padding: 4px 8px;
   overflow-x: auto;
 }
 
 .tabs-list {
   display: flex;
-  gap: 8px;
+  gap: 4px;
+  min-width: max-content;
 }
 
 .tab-item {
-  background: none;
-  border: none;
-  padding: 14px 12px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--c-muted, #6B6760);
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-muted, #6B6760);
+  background: transparent;
+  border: none;
+  border-radius: var(--r-md, 8px);
+  cursor: pointer;
+  transition: all 0.15s ease;
   white-space: nowrap;
 }
 
 .tab-item:hover {
   color: var(--c-ink, #111111);
+  background: var(--c-bg, #F4F2EE);
 }
 
 .tab-item.is-active {
   color: var(--c-ink, #111111);
-  font-weight: 700;
-  border-bottom-color: var(--c-primary, #FF6B2B);
+  background: var(--c-bg, #F4F2EE);
+  box-shadow: inset 0 -2px 0 #ff5c00;
+}
+
+.tab-count {
+  padding: 1px 6px;
+  font-size: 10px;
+  border-radius: 999px;
+  background: #e5e3dc;
+  color: #4b5563;
 }
 
 /* KPI Grid */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
 }
 
 .kpi-card {
-  padding: 14px 16px;
+  padding: 16px 18px;
   background: var(--c-surface, #FFFFFF);
   border: 1px solid var(--c-border, #E7E3DC);
-  border-radius: 10px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  justify-content: space-between;
+  min-height: 94px;
+}
+
+.kpi-card--danger {
+  border-left: 3.5px solid #dc2626;
+}
+
+.kpi-card--warning {
+  border-left: 3.5px solid #d97706;
+}
+
+.kpi-card--success {
+  border-left: 3.5px solid #16a34a;
+}
+
+.kpi-card--unmatched {
+  grid-column: 1 / -1;
 }
 
 .kpi-label {
@@ -931,83 +1046,126 @@ onMounted(() => {
   color: inherit;
 }
 
-/* Main Table Card */
-.projects-main-card {
+/* Filter Card Mandiri (2 Baris Sesuai Mockup Referensi) */
+.projects-filter-card {
   background: var(--c-surface, #FFFFFF);
   border: 1px solid var(--c-border, #E7E3DC);
-  border-radius: var(--r-lg, 12px);
-  overflow: hidden;
+  border-radius: 16px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-/* Filter Bar */
-.projects-filter-bar {
+.filter-row-dropdowns {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  background: var(--c-surface, #FFFFFF);
-  border-bottom: 1px solid var(--c-border, #E7E3DC);
-  flex-wrap: wrap;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.filter-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+.filter-select-wrap {
+  flex: 1 1 180px;
+  min-width: 140px;
 }
 
 .filter-select {
-  height: 32px;
-  padding: 0 8px;
+  width: 100%;
+  height: 36px;
+  padding: 0 28px 0 12px;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--c-ink, #111111);
-  background: var(--c-bg, #F4F2EE);
+  background-color: var(--c-bg-alt, #F8F7F4);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B6760' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  appearance: none;
+  -webkit-appearance: none;
   border: 1px solid var(--c-border, #E7E3DC);
-  border-radius: var(--r-sm, 6px);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.filter-select:focus {
+  border-color: #ff5c00;
+}
+
+.filter-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .chip-filter {
-  height: 32px;
-  padding: 0 10px;
-  font-size: 10.5px;
+  height: 34px;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 11.5px;
   font-weight: 600;
-  background: var(--c-bg, #F4F2EE);
-  border: 1px solid var(--c-border, #E7E3DC);
-  border-radius: var(--r-sm, 6px);
-  color: var(--c-muted, #6B6760);
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 8px;
+  color: #92400E;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .chip-filter .chip-dot {
-  color: var(--c-warning, #D97706);
+  color: #ff5c00;
+  font-size: 10px;
+}
+
+.chip-filter:hover {
+  background: #FEF3C7;
+  border-color: #FCD34D;
 }
 
 .chip-filter.is-active {
-  background: var(--c-warning-soft, #FDF0D8);
-  border-color: #FCD34D;
-  color: #B45309;
+  background: #FEF3C7;
+  border-color: #F59E0B;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
 }
 
 .btn-refresh {
-  height: 32px;
-  padding: 0 12px;
-  font-size: 11px;
+  height: 34px;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--c-ink, #111111);
   background: var(--c-surface, #FFFFFF);
   border: 1px solid var(--c-border, #E7E3DC);
-  border-radius: var(--r-sm, 6px);
+  border-radius: 8px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .btn-refresh:hover:not(:disabled) {
   background: var(--c-bg-alt, #F8F7F4);
+  border-color: var(--c-border-strong, #DCD8D0);
+}
+
+/* Tabel Card Mandiri */
+.projects-table-card {
+  background: var(--c-surface, #FFFFFF);
+  border: 1px solid var(--c-border, #E7E3DC);
+  border-radius: 16px;
+  overflow: hidden;
 }
 
 /* Table */
@@ -1164,8 +1322,8 @@ onMounted(() => {
 }
 
 .badge-provenance.is-gov {
-  background: var(--c-success-soft, #E3F2EA);
-  color: #155724;
+  background: #ecfdf5;
+  color: #059669;
 }
 
 .badge-provenance.is-admin {
@@ -1183,11 +1341,20 @@ onMounted(() => {
 
 /* Col 6 */
 .report-status-badge {
-  font-weight: 600;
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  background: #f3f4f6;
+  color: #4b5563;
+  white-space: nowrap;
 }
 
 .report-status-badge.has-waiting {
-  color: var(--c-warning, #D97706);
+  background: #fef3c7;
+  color: #b45309;
+  font-weight: 600;
 }
 
 /* Col 7 Actions */
@@ -1202,18 +1369,20 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   height: 28px;
-  padding: 0 10px;
+  padding: 0 14px;
   font-size: 11px;
-  font-weight: 600;
-  color: var(--c-ink, #111111);
-  background: var(--c-surface, #FFFFFF);
-  border: 1px solid var(--c-border, #E7E3DC);
-  border-radius: var(--r-md, 8px);
+  font-weight: 700;
+  color: #ffffff;
+  background: #ff5c00;
+  border: none;
+  border-radius: 999px;
   text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s ease;
 }
 
 .btn-action-detail:hover {
-  background: var(--c-bg-alt, #F8F7F4);
+  background: #e65300;
 }
 
 .dropdown-actions {
@@ -1228,13 +1397,15 @@ onMounted(() => {
   height: 28px;
   background: var(--c-surface, #FFFFFF);
   border: 1px solid var(--c-border, #E7E3DC);
-  border-radius: var(--r-md, 8px);
+  border-radius: 50%;
   cursor: pointer;
-  color: var(--c-muted);
+  color: var(--c-muted, #6B6760);
+  transition: all 0.15s ease;
 }
+
 .btn-more:hover {
-  background: var(--c-bg);
-  color: var(--c-ink);
+  background: var(--c-bg, #F4F2EE);
+  color: var(--c-ink, #111111);
 }
 
 .menu-popover {
@@ -1380,17 +1551,56 @@ onMounted(() => {
 
 @media (max-width: 1024px) {
   .kpi-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .kpi-card--unmatched {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .projects-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .projects-head-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 10px;
+  }
+  .search-box {
+    width: 100%;
+  }
+  .btn-add-project {
+    width: 100%;
+    justify-content: center;
   }
 }
 
 @media (max-width: 640px) {
   .kpi-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
   }
-  .projects-head {
+  .kpi-card--unmatched {
+    grid-column: 1 / -1;
+  }
+  .filter-select-wrap {
+    flex: 1 1 100%;
+    min-width: 100%;
+  }
+  .filter-row-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+  .chip-filter,
+  .btn-reset-filter {
+    width: 100%;
+    justify-content: center;
+  }
+  .projects-table {
+    min-width: 850px;
   }
 }
 </style>

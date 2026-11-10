@@ -5,7 +5,7 @@
       <div class="drawer-head">
         <div>
           <span class="drawer-badge">GAGAL VALIDASI SKEMA</span>
-          <h3 class="drawer-title">#{{ errorItem?.id || 'ERR-000' }} · {{ errorItem?.source_id || 'Sumber Data' }}</h3>
+          <h3 class="drawer-title">#{{ errorItem?.id || 'ERR-000' }} · {{ sourceName || 'Sumber Data' }}</h3>
         </div>
         <button class="drawer-close-btn" aria-label="Tutup drawer" @click="$emit('close')">✕</button>
       </div>
@@ -34,7 +34,7 @@
           <dl class="drawer-diag-list">
             <div class="drawer-diag-row">
               <dt>Sumber Data:</dt>
-              <dd><code>{{ errorItem?.source_id || '—' }}</code></dd>
+              <dd><strong>{{ sourceName || 'Sumber Data Terintegrasi' }}</strong></dd>
             </div>
             <div class="drawer-diag-row">
               <dt>Status Integrasi:</dt>
@@ -62,6 +62,7 @@ import { ref, computed } from 'vue'
 const props = defineProps({
   open: { type: Boolean, default: false },
   errorItem: { type: Object, default: null },
+  sourceName: { type: String, default: '' },
 })
 
 defineEmits(['close'])
@@ -273,5 +274,15 @@ async function copyJson() {
   font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .drawer-panel {
+    max-width: 100%;
+    width: 100%;
+  }
+  .drawer-btn-done {
+    width: 100%;
+  }
 }
 </style>

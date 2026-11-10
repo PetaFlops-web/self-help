@@ -12,7 +12,7 @@
         </div>
         <div>
           <h3 id="etl-modal-title" class="etl-modal-title">Pipa Data &amp; ETL Publik</h3>
-          <p class="etl-modal-target">Sumber Target: <strong>{{ source?.nama || 'Sumber Data' }}</strong> (<code>{{ source?.source_id }}</code>)</p>
+          <p class="etl-modal-target">Sumber Target: <strong>{{ source?.nama || 'Sumber Data' }}</strong></p>
         </div>
         <button class="etl-modal-close" aria-label="Tutup" @click="$emit('close')">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -680,5 +680,29 @@ watch(
 .etl-btn-run:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .etl-modal-backdrop {
+    padding: 8px;
+    align-items: flex-end;
+  }
+  .etl-modal-card {
+    max-width: 100%;
+    margin: 0;
+    padding: 18px 16px;
+    border-radius: 16px 16px 0 0;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .etl-modal-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .etl-btn-cancel,
+  .etl-btn-run {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>

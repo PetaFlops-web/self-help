@@ -510,14 +510,33 @@ async function run(): Promise<void> {
       const totalVolumeRab = rabSchedule.reduce((sum, item) => sum + item.volume, 0);
       const shortfallPct = risk === 'tinggi' ? 0.20 : risk === 'perlu_perhatian' ? 0.10 : 0.05;
       const ukuranLapangan = Math.round(totalVolumeRab * (1 - shortfallPct));
+
+      let seedStatus = 'Diverifikasi';
+      let lembagaTujuan: string | null = null;
+      let alasanTolak: string | null = null;
+      let diteruskanPada: Date | null = null;
+
+      if (i === 0 && (p.n === 1 || p.n === 2 || p.n === 3 || p.n === 5 || p.n === 10)) {
+        seedStatus = 'Dilaporkan';
+      } else if (i === 2 && (p.n === 1 || p.n === 2 || p.n === 8 || p.n === 11)) {
+        seedStatus = 'Diteruskan';
+        lembagaTujuan = 'Inspektorat Provinsi Lampung';
+        diteruskanPada = new Date();
+      } else if ((i === 1 && p.n === 3) || (i === 0 && p.n === 9) || (i === 2 && (p.n === 11 || p.n === 12))) {
+        seedStatus = 'Selesai';
+      } else if (i === 2 && (p.n === 3 || p.n === 4)) {
+        seedStatus = 'Ditolak';
+        alasanTolak = 'Bukti fisik tidak memadai atau berada di luar batas lingkup paket pekerjaan.';
+      }
+
       await pool.query(
-        `INSERT INTO laporan_warga (tiket, proyek_id, kategori, keterangan, status, lat, lng, foto_urls, catatan_verifikator, ukuran_lapangan)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        `INSERT INTO laporan_warga (tiket, proyek_id, kategori, keterangan, status, lat, lng, foto_urls, catatan_verifikator, ukuran_lapangan, lembaga_tujuan, diteruskan_pada, alasan_tolak)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
          ON CONFLICT (tiket) DO NOTHING`,
         [
           `LPR-${p.n}-${String(i + 1).padStart(3, '0')}`, uuid(p.n), 'Kualitas pekerjaan',
-          `Laporan dummy ${i + 1} untuk proyek ${p.n}`, 'Diverifikasi', 0, 0,
-          fotoUrls, 'Media simulasi untuk demo', ukuranLapangan,
+          `Laporan dummy ${i + 1} untuk proyek ${p.n}`, seedStatus, 0, 0,
+          fotoUrls, 'Media simulasi untuk demo', ukuranLapangan, lembagaTujuan, diteruskanPada, alasanTolak,
         ],
       );
     }

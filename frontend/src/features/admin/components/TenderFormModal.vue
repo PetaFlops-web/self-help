@@ -4,7 +4,7 @@
       <!-- Head -->
       <div class="modal-head">
         <div>
-          <span class="badge-tender">PAKET TENDER SPSE (SRS §9.3)</span>
+          <span class="badge-tender">PAKET TENDER SPSE</span>
           <h3 id="tender-title" class="modal-title">Kelola Tender Turunan Proyek</h3>
           <p class="modal-sub">
             Proyek: <strong>{{ project?.nama }}</strong> · Pagu: <strong>{{ formatCurrency(project?.pagu) }}</strong>
@@ -147,7 +147,7 @@
                   required
                 />
                 <span class="field-hint">
-                  Jika &lt; 3 penawar, memicu indikator risiko persaingan semu lelang (SRS D1-01).
+                  Jika &lt; 3 penawar, memicu indikator risiko persaingan semu lelang.
                 </span>
               </div>
 

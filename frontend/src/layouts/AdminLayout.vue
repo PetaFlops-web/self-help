@@ -25,9 +25,9 @@
               viewBox="0 0 14 14"
               width="14"
               height="14"
-              :fill="item.iconFill ? 'currentColor' : 'none'"
-              :stroke="item.iconFill ? 'none' : 'currentColor'"
-              stroke-width="1.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.3"
               stroke-linecap="round"
               stroke-linejoin="round"
               aria-hidden="true"
@@ -107,8 +107,7 @@ const menuConfig = [
         to: '/admin',
         label: 'Ringkasan',
         roles: ['admin', 'verifikator', 'peninjau'],
-        iconFill: true,
-        icon: 'M0 0h5.44v5.44H0V0Zm8.56 0H14v5.44H8.56V0ZM0 8.56h5.44V14H0V8.56Zm8.56 0H14V14H8.56V8.56Z',
+        icon: 'M1.2 1.2h4.2v4.2h-4.2zM8.6 1.2h4.2v4.2h-4.2zM1.2 8.6h4.2v4.2h-4.2zM8.6 8.6h4.2v4.2h-4.2z',
       },
       {
         to: '/admin/laporan',
@@ -154,7 +153,7 @@ const menuConfig = [
         to: '/admin/notifikasi',
         label: 'Notifikasi Surel',
         roles: ['admin', 'peninjau'],
-        icon: 'M1.5 3h11a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 0 11.5v-7A1.5 1.5 0 0 1 1.5 3Zm0 1.5v.38l5.5 3.44 5.5-3.44v-.38h-11Zm11 7v-5.44l-5.18 3.24a.6.6 0 0 1-.64 0L1.5 6.06v5.44h11Z',
+        icon: 'M1.5 3h11a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-6.5a1 1 0 0 1 1-1ZM1.5 4.2l5.5 3.8 5.5-3.8',
       },
       {
         label: 'Pengguna & Peran',
@@ -203,5 +202,34 @@ async function handleLogout() {
 .admin-fallback {
   color: var(--c-muted);
   font-size: var(--fs-sm);
+}
+
+.admin-profile-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-profile-name {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-ink, #111111);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.admin-profile-role {
+  display: block;
+  font-size: 11px;
+  color: var(--c-muted, #6B6760);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
 }
 </style>

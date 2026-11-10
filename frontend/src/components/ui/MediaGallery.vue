@@ -12,7 +12,11 @@
           />
           <template v-else>
             <video class="media-video-thumb" :src="m.url" preload="metadata" muted playsinline />
-            <span class="media-play" aria-hidden="true">▶</span>
+            <span class="media-play-circle" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <polygon points="7,5 19,12 7,19"></polygon>
+              </svg>
+            </span>
           </template>
           <span class="media-type" :class="`media-type--${m.type}`">
             {{ m.type === 'video' ? 'Video' : 'Foto' }}
@@ -33,14 +37,23 @@
           @click.self="close"
           @keydown.esc="close"
         >
-          <button type="button" class="mg-close" aria-label="Tutup" @click="close">×</button>
+          <button type="button" class="mg-close" aria-label="Tutup" @click="close">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
           <button
             v-if="items.length > 1"
             type="button"
             class="mg-nav mg-prev"
             aria-label="Sebelumnya"
             @click.stop="step(-1)"
-          >‹</button>
+          >
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
           <div class="mg-stage" @click.stop>
             <img
               v-if="current && current.type === 'image'"
@@ -62,7 +75,11 @@
             class="mg-nav mg-next"
             aria-label="Berikutnya"
             @click.stop="step(1)"
-          >›</button>
+          >
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
           <span v-if="items.length > 1" class="mg-counter">{{ lightboxIndex + 1 }} / {{ items.length }}</span>
         </div>
       </Transition>
@@ -111,7 +128,20 @@ onBeforeUnmount(() => {
 .media-gallery { width: 100%; }
 .media-empty { margin: 0; font-size: 12px; color: var(--muted, #6f6f6f); }
 
-.media-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.media-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.media-grid--lg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.media-grid--lg .media-cell {
+  flex: 0 0 auto;
+  width: 148px;
+}
+.media-grid--lg .media-thumb {
+  aspect-ratio: 1.15 / 1;
+  border-radius: 16px;
+}
 .media-grid--md { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .media-grid--sm { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
 
@@ -130,13 +160,31 @@ onBeforeUnmount(() => {
 }
 .media-thumb img,
 .media-video-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
+.media-play-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1f2937;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  padding-left: 2px;
+}
 .media-play {
   position: absolute; inset: 0; display: grid; place-items: center;
   font-size: 22px; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.6); pointer-events: none;
 }
 .media-type {
-  position: absolute; left: 4px; bottom: 4px; padding: 1px 7px; border-radius: 999px;
-  font-size: 10px; font-weight: 700; color: #fff;
+  position: absolute; left: 8px; bottom: 8px; padding: 2px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; color: #fff;
+  letter-spacing: 0.02em;
 }
 .media-type--image { background: rgba(42, 138, 90, 0.9); }
 .media-type--video { background: rgba(43, 91, 184, 0.9); }

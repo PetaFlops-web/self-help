@@ -4,12 +4,12 @@
       <!-- Modal Header -->
       <div class="modal-head">
         <div class="modal-head-info">
-          <span class="badge-dummy">INPUT DATA MANUAL (SRC-10 / DR-01)</span>
+          <span class="badge-dummy">INPUT DATA MANUAL</span>
           <h3 :id="modalTitleId" class="modal-title">
             {{ isEdit ? 'Ubah Data Proyek Manual' : 'Tambah Proyek Pengawasan Baru' }}
           </h3>
           <p class="modal-sub">
-            Data dicatat dengan label <code>asal_data = 'manual_admin'</code> dan diaudit secara transparan di seluruh sistem (SRS §9.2).
+            Data dicatat dengan label <code>asal_data = 'manual_admin'</code> dan diaudit secara transparan di seluruh sistem.
           </p>
         </div>
         <button class="btn-close" aria-label="Tutup modal" @click="close">
@@ -23,17 +23,16 @@
       <!-- Warning Integrity Data -->
       <div class="modal-alert-integrity">
         <div class="alert-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#B45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
           </svg>
         </div>
         <div class="alert-content">
-          <strong>PENGESAHAN INTEGRITAS DATA (SRS DR-01 &amp; DR-09):</strong>
+          <div class="alert-title">PENGESAHAN INTEGRITAS DATA :</div>
           <p>
-            Proyek ini akan ditandai dengan label "Input Admin" secara permanen.
-            Sesuai aturan FR-17, <em>skor risiko dihitung secara otomatis oleh backend</em> setelah data tersimpan, tanpa manipulasi manual di browser.
+            Proyek ini akan ditandai dengan label "Input Admin" secara permanen, skor risiko dihitung secara otomatis oleh backend setelah data tersimpan, tanpa manipulasi manual di browser.
           </p>
         </div>
       </div>
@@ -116,6 +115,7 @@
               class="form-input"
               min="2020"
               max="2035"
+              placeholder="2026"
               required
             />
           </div>
@@ -124,12 +124,13 @@
             <label class="form-label" for="proj-source">
               SUMBER DANA
             </label>
-            <select id="proj-source" v-model="form.sumber_dana" class="form-select">
-              <option value="APBD">APBD Provinsi Lampung</option>
-              <option value="APBD Kab/Kota">APBD Kabupaten / Kota</option>
-              <option value="APBN">APBN (Kementerian PUPR / DAK)</option>
-              <option value="Pinjaman Daerah">Pinjaman Daerah / Lainnya</option>
-            </select>
+            <input
+              id="proj-source"
+              v-model="form.sumber_dana"
+              type="text"
+              class="form-input"
+              placeholder="APBD Provinsi Lampung"
+            />
           </div>
         </div>
 
@@ -148,7 +149,7 @@
               placeholder="Contoh: 7500000000"
               required
             />
-            <span class="form-hint">
+            <span v-if="form.pagu" class="form-hint">
               Nominal terformat: <strong>{{ formatCurrency(form.pagu) }}</strong>
             </span>
           </div>
@@ -166,7 +167,7 @@
               step="1000"
               placeholder="Contoh: 7420000000"
             />
-            <span class="form-hint">
+            <span v-if="form.hps" class="form-hint">
               Nominal terformat: <strong>{{ formatCurrency(form.hps) }}</strong>
             </span>
             <!-- Rentang Wajar (20% - 300% Pagu) Helper -->
@@ -193,55 +194,68 @@
           </div>
         </div>
 
-        <div class="form-grid-2">
-          <div class="form-group">
-            <label class="form-label" for="proj-method">
-              METODE PEMILIHAN PENYEDIA
-            </label>
-            <select id="proj-method" v-model="form.metode_pemilihan" class="form-select">
-              <option value="Tender">Tender Terbuka / Pasca-kualifikasi</option>
-              <option value="Seleksi">Seleksi Konsultan</option>
-              <option value="e-Purchasing">e-Purchasing (Katalog Elektronik)</option>
-              <option value="Pengadaan Langsung">Pengadaan Langsung</option>
-              <option value="Penunjukan Langsung">Penunjukan Langsung (Darurat)</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">
-              KOORDINAT PETA (LAT, LNG)
-            </label>
-            <div class="coord-inputs">
-              <input
-                v-model.number="form.lat"
-                type="number"
-                step="0.0001"
-                class="form-input"
-                placeholder="Lat, mis: -5.385"
-              />
-              <input
-                v-model.number="form.lng"
-                type="number"
-                step="0.0001"
-                class="form-input"
-                placeholder="Lng, mis: 105.297"
-              />
-            </div>
-            <span class="form-hint">Wilayah Lampung: Lat -6.0 s/d -3.5, Lng 103.5 s/d 106.0</span>
-          </div>
+        <!-- Pengaturan Tambahan (Opsional) -->
+        <div class="optional-toggle-wrap">
+          <button
+            type="button"
+            class="btn-toggle-optional"
+            @click="showOptionalFields = !showOptionalFields"
+          >
+            <span class="toggle-icon">{{ showOptionalFields ? '−' : '+' }}</span>
+            <span>{{ showOptionalFields ? 'Sembunyikan Pengaturan Tambahan' : 'Pengaturan Tambahan (Metode, Koordinat, Deskripsi)' }}</span>
+          </button>
         </div>
 
-        <div class="form-group full-width">
-          <label class="form-label" for="proj-desc">
-            DESKRIPSI / LINGKUP PEKERJAAN
-          </label>
-          <textarea
-            id="proj-desc"
-            v-model="form.deskripsi"
-            rows="3"
-            class="form-textarea"
-            placeholder="Uraian singkat lingkup pekerjaan konstruksi, spesifikasi, atau catatan pengawasan..."
-          />
+        <div v-show="showOptionalFields" class="optional-fields-box">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label class="form-label" for="proj-method">
+                METODE PEMILIHAN PENYEDIA
+              </label>
+              <select id="proj-method" v-model="form.metode_pemilihan" class="form-select">
+                <option value="Tender">Tender Terbuka / Pasca-kualifikasi</option>
+                <option value="Seleksi">Seleksi Konsultan</option>
+                <option value="e-Purchasing">e-Purchasing (Katalog Elektronik)</option>
+                <option value="Pengadaan Langsung">Pengadaan Langsung</option>
+                <option value="Penunjukan Langsung">Penunjukan Langsung (Darurat)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                KOORDINAT PETA (LAT, LNG)
+              </label>
+              <div class="coord-inputs">
+                <input
+                  v-model.number="form.lat"
+                  type="number"
+                  step="0.0001"
+                  class="form-input"
+                  placeholder="Lat, mis: -5.385"
+                />
+                <input
+                  v-model.number="form.lng"
+                  type="number"
+                  step="0.0001"
+                  class="form-input"
+                  placeholder="Lng, mis: 105.297"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group full-width" style="margin-top: 12px;">
+            <label class="form-label" for="proj-desc">
+              DESKRIPSI / LINGKUP PEKERJAAN
+            </label>
+            <textarea
+              id="proj-desc"
+              v-model="form.deskripsi"
+              rows="3"
+              class="form-textarea"
+              placeholder="Uraian singkat lingkup pekerjaan konstruksi, spesifikasi, atau catatan pengawasan..."
+            />
+          </div>
         </div>
       </form>
 
@@ -280,6 +294,7 @@ const modalTitleId = 'project-modal-title'
 const submitting = ref(false)
 const errorMsg = ref('')
 const successFeedback = ref(null)
+const showOptionalFields = ref(false)
 
 const isEdit = computed(() => Boolean(props.project?.id))
 
@@ -347,12 +362,18 @@ function resetForm() {
       tahun_anggaran: props.project.tahun_anggaran || 2026,
       pagu: props.project.pagu || null,
       hps: props.project.hps || null,
-      sumber_dana: props.project.sumber_dana || 'APBD',
+      sumber_dana: props.project.sumber_dana || 'APBD Provinsi Lampung',
       metode_pemilihan: props.project.metode_pemilihan || 'Tender',
       lat: props.project.lat || null,
       lng: props.project.lng || null,
       deskripsi: props.project.deskripsi || '',
     }
+    showOptionalFields.value = Boolean(
+      props.project.lat ||
+      props.project.lng ||
+      props.project.deskripsi ||
+      (props.project.metode_pemilihan && props.project.metode_pemilihan !== 'Tender')
+    )
   } else {
     form.value = {
       nama: '',
@@ -361,12 +382,13 @@ function resetForm() {
       tahun_anggaran: 2026,
       pagu: null,
       hps: null,
-      sumber_dana: 'APBD',
+      sumber_dana: 'APBD Provinsi Lampung',
       metode_pemilihan: 'Tender',
       lat: null,
       lng: null,
       deskripsi: '',
     }
+    showOptionalFields.value = false
   }
   errorMsg.value = ''
   successFeedback.value = null
@@ -441,11 +463,12 @@ async function handleSubmit() {
 
 .modal-card {
   width: 100%;
-  max-width: 720px;
+  max-width: 680px;
   max-height: 90vh;
-  background: var(--c-surface, #FFFFFF);
-  border: 1px solid var(--c-border-strong, #DCD8D0);
-  border-radius: var(--r-lg, 12px);
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 20px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -455,8 +478,8 @@ async function handleSubmit() {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--c-border, #E7E3DC);
+  padding: 24px 28px 16px;
+  border-bottom: none;
 }
 
 .modal-head-info {
@@ -466,79 +489,104 @@ async function handleSubmit() {
 }
 
 .badge-dummy {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   align-self: flex-start;
-  padding: 3px 8px;
-  font-size: 9px;
+  padding: 4px 12px;
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--c-warning, #D97706);
-  background: var(--c-warning-soft, #FDF0D8);
-  border: 1px solid #FCD34D;
-  border-radius: var(--r-xs, 4px);
-  margin-bottom: 4px;
+  letter-spacing: 0.03em;
+  color: #92400E;
+  background: #FEF3C7;
+  border: 1px solid #FDE68A;
+  border-radius: 999px;
+  margin-bottom: 6px;
 }
 
 .modal-title {
-  margin: 0;
-  font-size: 18px;
+  margin: 0 0 6px 0;
+  font-size: 21px;
   font-weight: 800;
-  color: var(--c-ink, #111111);
-  line-height: 1.3;
+  color: #111827;
+  line-height: 1.25;
 }
 
 .modal-sub {
   margin: 0;
-  font-size: 11px;
-  color: var(--c-muted, #6B6760);
-  line-height: 1.4;
+  font-size: 12px;
+  color: #6B7280;
+  line-height: 1.45;
 }
 
 .modal-sub code {
-  font-size: 10.5px;
-  color: var(--c-ink, #111111);
-  background: var(--c-bg, #F4F2EE);
-  padding: 2px 4px;
-  border-radius: 3px;
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 600;
+  color: #111827;
+  background: #F3F4F6;
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 .btn-close {
-  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #F3F4F6;
   border: none;
-  font-size: 18px;
-  color: var(--c-muted, #6B6760);
+  border-radius: 8px;
+  color: #6B7280;
   cursor: pointer;
-  padding: 4px 8px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-close:hover {
+  background: #E5E7EB;
+  color: #111827;
 }
 
 .modal-alert-integrity {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  margin: 16px 24px 0;
-  padding: 12px 14px;
-  background: var(--c-warning-soft, #FDF0D8);
-  border: 1px solid #FCD34D;
-  border-radius: var(--r-sm, 6px);
-  font-size: 11px;
-  line-height: 1.45;
-  color: #78350F;
+  gap: 12px;
+  margin: 0 28px 14px;
+  padding: 14px 16px;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 12px;
 }
 
 .alert-icon {
-  font-weight: bold;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.alert-content {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #92400E;
+}
+
+.alert-title {
+  font-weight: 700;
+  color: #78350F;
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
 }
 
 .alert-content p {
-  margin: 3px 0 0;
+  margin: 0;
 }
 
 .modal-alert-error {
-  margin: 16px 24px 0;
+  margin: 0 28px 14px;
   padding: 10px 14px;
   background: var(--c-danger-soft, #FCE4DF);
   border: 1px solid #F5C6CB;
-  border-radius: var(--r-sm, 6px);
+  border-radius: 10px;
   font-size: 11px;
   color: var(--c-danger, #D63A1F);
   display: flex;
@@ -551,11 +599,11 @@ async function handleSubmit() {
 }
 
 .modal-alert-success {
-  margin: 16px 24px 0;
+  margin: 0 28px 14px;
   padding: 10px 14px;
   background: var(--c-success-soft, #E3F2EA);
   border: 1px solid #C3E6CB;
-  border-radius: var(--r-sm, 6px);
+  border-radius: 10px;
   font-size: 11px;
   color: #155724;
 }
@@ -571,7 +619,7 @@ async function handleSubmit() {
 }
 
 .modal-form {
-  padding: 16px 24px;
+  padding: 0 28px 20px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -597,12 +645,14 @@ async function handleSubmit() {
 .form-label {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  color: var(--c-ink, #111111);
+  letter-spacing: 0.02em;
+  color: #4B5563;
+  text-transform: uppercase;
 }
 
 .req {
-  color: var(--c-danger, #D63A1F);
+  color: #EF4444;
+  margin-left: 2px;
 }
 
 .form-input,
@@ -610,23 +660,34 @@ async function handleSubmit() {
 .form-textarea {
   width: 100%;
   font-family: inherit;
-  font-size: 11px;
-  color: var(--c-ink, #111111);
-  background: var(--c-surface, #FFFFFF);
-  border: 1px solid var(--c-border-strong, #DCD8D0);
-  border-radius: var(--r-sm, 6px);
-  padding: 0 10px;
+  font-size: 12px;
+  color: #111827;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  padding: 0 14px;
   box-sizing: border-box;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .form-input,
 .form-select {
-  height: 38px;
+  height: 42px;
+}
+
+.form-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: #FFFFFF;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+  padding-right: 34px;
 }
 
 .form-textarea {
-  padding: 8px 10px;
+  padding: 10px 14px;
   resize: vertical;
 }
 
@@ -634,7 +695,48 @@ async function handleSubmit() {
 .form-select:focus,
 .form-textarea:focus {
   outline: none;
-  border-color: var(--c-primary, #FF6B2B);
+  border-color: #ff5c00;
+  box-shadow: 0 0 0 3px rgba(255, 92, 0, 0.1);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: #9CA3AF;
+}
+
+.optional-toggle-wrap {
+  margin-top: 2px;
+}
+
+.btn-toggle-optional {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #6B7280;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s ease;
+}
+
+.btn-toggle-optional:hover {
+  color: #ff5c00;
+}
+
+.toggle-icon {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.optional-fields-box {
+  padding: 14px;
+  background: #F9FAFB;
+  border: 1px dashed #E5E7EB;
+  border-radius: 10px;
 }
 
 .coord-inputs {
@@ -645,7 +747,7 @@ async function handleSubmit() {
 
 .form-hint {
   font-size: 10px;
-  color: var(--c-muted, #6B6760);
+  color: #6B7280;
 }
 
 .range-indicator {
@@ -665,39 +767,48 @@ async function handleSubmit() {
 .modal-foot {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  padding: 16px 24px;
-  border-top: 1px solid var(--c-border, #E7E3DC);
-  background: var(--c-bg-alt, #F8F7F4);
+  gap: 12px;
+  padding: 18px 28px;
+  border-top: 1px solid #F3F4F6;
+  background: #FFFFFF;
 }
 
 .btn-cancel {
-  height: 38px;
-  padding: 0 16px;
-  font-size: 11px;
+  height: 42px;
+  padding: 0 24px;
+  font-family: inherit;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--c-ink, #111111);
-  background: var(--c-surface, #FFFFFF);
-  border: 1px solid var(--c-border, #E7E3DC);
-  border-radius: var(--r-sm, 6px);
+  color: #111827;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: #F9FAFB;
+  border-color: #D1D5DB;
 }
 
 .btn-save {
-  height: 38px;
-  padding: 0 20px;
-  font-size: 11px;
+  height: 42px;
+  padding: 0 24px;
+  font-family: inherit;
+  font-size: 12px;
   font-weight: 700;
-  /* Aksesibilitas WCAG AA 6.65:1 (teks ink bold di latar oranye) */
-  color: var(--c-ink, #111111);
-  background: var(--c-primary, #FF6B2B);
+  color: #FFFFFF;
+  background: #ff5c00;
   border: none;
-  border-radius: var(--r-sm, 6px);
+  border-radius: 10px;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(255, 92, 0, 0.25);
+  transition: background 0.15s ease;
 }
 
 .btn-save:hover:not(:disabled) {
-  opacity: 0.92;
+  background: #e65300;
 }
 
 .btn-save:disabled {
