@@ -40,6 +40,7 @@ const swaggerSpec = {
         { name: 'Financials', description: 'Data pembayaran, progres, dan RAB proyek' },
         { name: 'Reports', description: 'Pelaporan warga' },
         { name: 'Admin', description: 'Panel admin untuk verifikasi laporan' },
+        { name: 'Proyek Admin', description: 'Manajemen manual proyek, tender, dan data eksekusi (RAB, pembayaran, progres)' },
         { name: 'Documents', description: 'Document wajib publik dan checklist prosedur proyek' },
         { name: 'Auth', description: 'Autentikasi dan otorisasi pengguna panel admin' },
         { name: 'Audit', description: 'Log audit perubahan data dan status' },
@@ -817,6 +818,57 @@ const swaggerSpec = {
                 },
             },
         },
+        '/admin/reports/trend': {
+            get: {
+                tags: ['Admin'],
+                summary: 'Tren deret waktu laporan warga harian',
+                description: 'Deret waktu jumlah laporan masuk, terverifikasi, dan selesai per hari selama rentang hari (default 14 hari).',
+                operationId: 'getReportTrend',
+                security: [{ bearerAuth: [] }],
+                parameters: [
+                    {
+                        name: 'days',
+                        in: 'query',
+                        required: false,
+                        schema: { type: 'integer', minimum: 1, maximum: 90, default: 14 },
+                        description: 'Jumlah hari deret waktu (default 14, maks 90)',
+                    },
+                ],
+                responses: {
+                    ...commonErrors,
+                    '200': {
+                        description: 'Deret waktu laporan harian berhasil diambil',
+                        content: {
+                            'application/json': {
+                                schema: {
+                                    type: 'object',
+                                    properties: {
+                                        status: { type: 'string', example: 'success' },
+                                        trend: {
+                                            type: 'array',
+                                            items: {
+                                                type: 'object',
+                                                properties: {
+                                                    tanggal: { type: 'string', format: 'date', example: '2026-11-10' },
+                                                    total_masuk: { type: 'integer', example: 5 },
+                                                    diverifikasi: { type: 'integer', example: 3 },
+                                                    selesai: { type: 'integer', example: 1 },
+                                                    ditolak: { type: 'integer', example: 0 },
+                                                },
+                                                required: ['tanggal', 'total_masuk', 'diverifikasi', 'selesai', 'ditolak'],
+                                            },
+                                        },
+                                    },
+                                    required: ['status', 'trend'],
+                                },
+                            },
+                        },
+                    },
+                    '401': { description: 'Tidak terotentikasi', content: errorContent },
+                    '403': { description: 'Akses ditolak', content: errorContent },
+                },
+            },
+        },
         '/admin/reports': {
             get: {
                 tags: ['Admin'],
@@ -1517,6 +1569,157 @@ const swaggerSpec = {
                 },
             },
         },
+        '/admin/projects/{id}/rab-items': {
+            post: {
+                summary: 'Tambah item anggaran RAB manual',
+                description: 'Menambahkan baris rincian RAB ke proyek. Memerlukan peran admin. Menghitung ulang skor risiko proyek.',
+                tags: ['Proyek Admin'],
+                security: [{ bearerAuth: [] }],
+                parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' }, description: 'ID proyek' }],
+                requestBody: {
+                    required: true,
+                    content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateRabItemRequest' } } },
+                },
+                responses: {
+                    '201': { description: 'Item RAB berhasil dibuat' },
+                    '400': { description: 'Input tidak valid', content: errorContent },
+                    '401': { description: 'Token tidak valid', content: errorContent },
+                    '403': { description: 'Peran tidak mencukupi (khusus admin)', content: errorContent },
+                    '404': { description: 'Proyek tidak ditemukan', content: errorContent },
+                },
+            },
+        },
+        '/admin/rab-items/{id}': {
+            patch: {
+                summary: 'Perbarui item anggaran RAB',
+                tags: ['Proyek Admin'],
+                security: [{ bearerAuth: [] }],
+                parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+                requestBody: {
+                    required: true,
+                    content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateRabItemRequest' } } },
+                },
+                responses: {
+                    '200': { description: 'Item RAB berhasil diperbarui' },
+                    '400': { description: 'Input tidak valid', content: errorContent },
+                    '401': { description: 'Token tidak valid', content: errorContent },
+                    '403': { description: 'Peran tidak mencukupi (khusus admin)', content: errorContent },
+                    '404': { description: 'Item RAB tidak ditemukan', content: errorContent },
+                },
+            },
+            delete: {
+                summary: 'Hapus item anggaran RAB',
+                tags: ['Proyek Admin'],
+                security: [{ bearerAuth: [] }],
+                parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+                responses: {
+                    '200': { description: 'Item RAB berhasil dihapus' },
+                    '401': { description: 'Token tidak valid', content: errorContent },
+                    '403': { description: 'Peran tidak mencukupi (khusus admin)', content: errorContent },
+                    '404': { description: 'Item RAB tidak ditemukan', content: errorContent },
+                },
+            },
+        },
+        '/admin/projects/{id}/payments': {
+            post: {
+                summary: 'Tambah termin pembayaran manual',
+                tags: ['Proyek Admin'],
+                security: [{ bearerAuth: [] }],
+                parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+                requestBody: {
+                    required: true,
+                    content: { 'application/json': { schema: { $ref: '#/components/schemas/CreatePaymentRequest' } } },
+                },
+                responses: {
+                    '201': { description: 'Pembayaran berhasil dibuat' },
+                    '400': { description: 'Input tidak valid', content: errorContent },
+                    '401': { description: 'Token tidak valid', content: errorContent },
+                    '403': { description: 'Peran tidak mencukupi (khusus admin)', content: errorContent },
+                    '404': { description: 'Proyek tidak ditemukan', content: errorContent },
+                },
+            },
+        },
+        '/admin/payments/{id}': {
+            patch: {
+                summary: 'Perbarui termin pembayaran',
+                tags: ['Proyek Admin'],
+                security: [{ bearerAuth: [] }],
+                parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+                requestBody: {
+                    required: true,
+                    content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdatePaymentRequest' } } },
+                },
+                responses: {
+                    '200': { description: 'Pembayaran berhasil diperbarui' },
+                    '400': { description: 'Input tidak valid', content: errorContent },
+                    '401': { description: 'Token tidak valid', content: errorContent },
+                    '403': { description: 'Peran tidak mencukupi (khusus admin)', content: errorContent },
+                    '404': { description: 'Pembayaran tidak ditemukan', content: errorContent },
+                },
+            },
+            delete: {
+                summary: 'Hapus termin pembayaran',
+                tags: ['Proyek Admin'],
+                security: [{ bearerAuth: [] }],
+                parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+                responses: {
+                    '200': { description: 'Pembayaran berhasil dihapus' },
+                    '401': { description: 'Token tidak valid', content: errorContent },
+                    '403': { description: 'Peran tidak mencukupi (khusus admin)', content: errorContent },
+                    '404': { description: 'Pembayaran tidak ditemukan', content: errorContent },
+                },
+            },
+        },
+        '/admin/projects/{id}/progress': {
+            post: {
+                summary: 'Tambah progres fisik manual',
+                tags: ['Proyek Admin'],
+                security: [{ bearerAuth: [] }],
+                parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+                requestBody: {
+                    required: true,
+                    content: { 'application/json': { schema: { $ref: '#/components/schemas/CreateProgressRequest' } } },
+                },
+                responses: {
+                    '201': { description: 'Progres berhasil dibuat' },
+                    '400': { description: 'Input tidak valid', content: errorContent },
+                    '401': { description: 'Token tidak valid', content: errorContent },
+                    '403': { description: 'Peran tidak mencukupi (khusus admin)', content: errorContent },
+                    '404': { description: 'Proyek tidak ditemukan', content: errorContent },
+                },
+            },
+        },
+        '/admin/progress/{id}': {
+            patch: {
+                summary: 'Perbarui progres fisik',
+                tags: ['Proyek Admin'],
+                security: [{ bearerAuth: [] }],
+                parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+                requestBody: {
+                    required: true,
+                    content: { 'application/json': { schema: { $ref: '#/components/schemas/UpdateProgressRequest' } } },
+                },
+                responses: {
+                    '200': { description: 'Progres berhasil diperbarui' },
+                    '400': { description: 'Input tidak valid', content: errorContent },
+                    '401': { description: 'Token tidak valid', content: errorContent },
+                    '403': { description: 'Peran tidak mencukupi (khusus admin)', content: errorContent },
+                    '404': { description: 'Progres tidak ditemukan', content: errorContent },
+                },
+            },
+            delete: {
+                summary: 'Hapus progres fisik',
+                tags: ['Proyek Admin'],
+                security: [{ bearerAuth: [] }],
+                parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string', format: 'uuid' } }],
+                responses: {
+                    '200': { description: 'Progres berhasil dihapus' },
+                    '401': { description: 'Token tidak valid', content: errorContent },
+                    '403': { description: 'Peran tidak mencukupi (khusus admin)', content: errorContent },
+                    '404': { description: 'Progres tidak ditemukan', content: errorContent },
+                },
+            },
+        },
         '/admin/audit': {
             get: {
                 tags: ['Audit'],
@@ -1796,6 +1999,9 @@ const swaggerSpec = {
                     source_url: { type: 'string', nullable: true },
                     fetched_at: { type: 'string', format: 'date-time', nullable: true },
                     kabupaten: { type: 'string', nullable: true, description: 'Nama kabupaten dari join wilayah' },
+                    total_laporan: { type: 'integer', example: 3, description: 'Jumlah total laporan warga untuk proyek ini' },
+                    laporan_menunggu: { type: 'integer', example: 1, description: 'Jumlah laporan warga berstatus Dilaporkan' },
+                    laporan_selesai: { type: 'integer', example: 2, description: 'Jumlah laporan warga berstatus Selesai' },
                 },
                 required: ['id', 'nama', 'tahun_anggaran', 'is_dummy'],
             },
@@ -2712,6 +2918,61 @@ const swaggerSpec = {
                     total: { type: 'integer', example: 12 },
                     limit: { type: 'integer', example: 50 },
                     offset: { type: 'integer', example: 0 },
+                },
+            },
+            CreateRabItemRequest: {
+                type: 'object',
+                required: ['uraian', 'satuan', 'volume', 'harga_satuan'],
+                properties: {
+                    uraian: { type: 'string', minLength: 3, maxLength: 255, example: 'Semen Portland Type 1' },
+                    satuan: { type: 'string', minLength: 1, maxLength: 50, example: 'sak' },
+                    volume: { type: 'number', minimum: 0.001, example: 500 },
+                    harga_satuan: { type: 'integer', minimum: 1, example: 75000 },
+                    kode_harga_acuan: { type: 'string', nullable: true, example: 'HA-SMN-01' },
+                },
+            },
+            UpdateRabItemRequest: {
+                type: 'object',
+                properties: {
+                    uraian: { type: 'string', minLength: 3, maxLength: 255 },
+                    satuan: { type: 'string', minLength: 1, maxLength: 50 },
+                    volume: { type: 'number', minimum: 0.001 },
+                    harga_satuan: { type: 'integer', minimum: 1 },
+                    kode_harga_acuan: { type: 'string', nullable: true },
+                },
+            },
+            CreatePaymentRequest: {
+                type: 'object',
+                required: ['termin_ke', 'tanggal', 'jumlah', 'persen_kontrak'],
+                properties: {
+                    termin_ke: { type: 'integer', minimum: 1, maximum: 20, example: 1 },
+                    tanggal: { type: 'string', format: 'date', example: '2026-04-15' },
+                    jumlah: { type: 'integer', minimum: 1, example: 250000000 },
+                    persen_kontrak: { type: 'number', minimum: 0.01, maximum: 100, example: 25.0 },
+                },
+            },
+            UpdatePaymentRequest: {
+                type: 'object',
+                properties: {
+                    termin_ke: { type: 'integer', minimum: 1, maximum: 20 },
+                    tanggal: { type: 'string', format: 'date' },
+                    jumlah: { type: 'integer', minimum: 1 },
+                    persen_kontrak: { type: 'number', minimum: 0.01, maximum: 100 },
+                },
+            },
+            CreateProgressRequest: {
+                type: 'object',
+                required: ['tanggal', 'persen_fisik'],
+                properties: {
+                    tanggal: { type: 'string', format: 'date', example: '2026-04-15' },
+                    persen_fisik: { type: 'number', minimum: 0, maximum: 100, example: 30.5 },
+                },
+            },
+            UpdateProgressRequest: {
+                type: 'object',
+                properties: {
+                    tanggal: { type: 'string', format: 'date' },
+                    persen_fisik: { type: 'number', minimum: 0, maximum: 100 },
                 },
             },
             MatchDecisionBody: {

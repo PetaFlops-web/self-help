@@ -5,7 +5,22 @@ const PROJECT_COLUMNS = `
   p.pagu, p.hps, p.nilai_kontrak, p.status, p.pengumuman_rup_tgl,
   p.match_status, p.skor_total, p.kategori, p.is_dummy,
   p.source_id, p.source_url, p.fetched_at,
-  w.nama AS kabupaten
+  p.asal_data,
+  w.nama AS kabupaten,
+  COALESCE(lw.total_laporan, 0)::int AS total_laporan,
+  COALESCE(lw.laporan_menunggu, 0)::int AS laporan_menunggu,
+  COALESCE(lw.laporan_selesai, 0)::int AS laporan_selesai
+`;
+const REPORT_AGGREGATE_JOIN = `
+  LEFT JOIN (
+    SELECT proyek_id,
+           COUNT(*)::int AS total_laporan,
+           COUNT(*) FILTER (WHERE status = 'Dilaporkan')::int AS laporan_menunggu,
+           COUNT(*) FILTER (WHERE status = 'Selesai')::int AS laporan_selesai
+      FROM laporan_warga
+     WHERE proyek_id IS NOT NULL
+     GROUP BY proyek_id
+  ) lw ON lw.proyek_id = p.id
 `;
 export async function listProjects(f) {
     const where = [];
@@ -52,6 +67,7 @@ export async function listProjects(f) {
     SELECT ${PROJECT_COLUMNS}
       FROM proyek p
       LEFT JOIN wilayah w ON w.kode_bps = p.kode_bps
+      ${REPORT_AGGREGATE_JOIN}
     ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
      ORDER BY p.skor_total DESC NULLS LAST, p.nama
      LIMIT $${params.length}
@@ -63,6 +79,7 @@ export async function getProjectById(id) {
     const res = await pool.query(`SELECT ${PROJECT_COLUMNS}
        FROM proyek p
        LEFT JOIN wilayah w ON w.kode_bps = p.kode_bps
+       ${REPORT_AGGREGATE_JOIN}
       WHERE p.id = $1`, [id]);
     return res.rows[0] ?? null;
 }

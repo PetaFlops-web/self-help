@@ -1,9 +1,11 @@
 import { Router } from 'express';
-import { runEtlHandler, listEtlErrors } from '../controllers/etl.js';
+import { runEtlHandler, listEtlErrors, importEtlFile } from '../controllers/etl.js';
 import { requireAuth, requireRole } from '../middlewares/auth.js';
 import { validateBody } from '../middlewares/validate.js';
 import { EtlRunBodySchema } from '../utils/validators/etl.js';
+import { uploadEtlFile } from '../middlewares/upload.js';
 const router = Router();
 router.post('/admin/etl/run', requireAuth, requireRole('admin'), validateBody(EtlRunBodySchema), runEtlHandler);
 router.get('/admin/etl/errors', requireAuth, requireRole('admin'), listEtlErrors);
+router.post('/admin/etl/import', requireAuth, requireRole('admin'), uploadEtlFile, importEtlFile);
 export default router;

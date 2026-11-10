@@ -390,6 +390,8 @@ function uuid(n: number): string {
 
 async function clearPreviousRealSeed(): Promise<void> {
   const ids = PROJECTS.map((p) => uuid(p.n));
+  await pool.query('DELETE FROM proyek_pencocokan WHERE proyek_id = ANY($1::uuid[]) OR pasangan_id = ANY($1::uuid[])', [ids]);
+  await pool.query('DELETE FROM riwayat_nilai WHERE proyek_id = ANY($1::uuid[])', [ids]);
   for (const table of ['laporan_warga', 'indikator_temuan', 'penjelasan_llm', 'pembayaran', 'progres', 'rab_item', 'tender', 'dokumen', 'prosedur_checklist']) {
     await pool.query(`DELETE FROM ${table} WHERE proyek_id = ANY($1::uuid[])`, [ids]);
   }
@@ -397,6 +399,8 @@ async function clearPreviousRealSeed(): Promise<void> {
 }
 
 async function clearDummySeed(): Promise<void> {
+  await pool.query('DELETE FROM proyek_pencocokan WHERE proyek_id IN (SELECT id FROM proyek WHERE is_dummy = true) OR pasangan_id IN (SELECT id FROM proyek WHERE is_dummy = true)');
+  await pool.query('DELETE FROM riwayat_nilai WHERE proyek_id IN (SELECT id FROM proyek WHERE is_dummy = true)');
   for (const table of ['laporan_warga', 'indikator_temuan', 'penjelasan_llm', 'pembayaran', 'progres', 'rab_item', 'tender', 'dokumen', 'prosedur_checklist']) {
     await pool.query(`DELETE FROM ${table} WHERE proyek_id IN (SELECT id FROM proyek WHERE is_dummy = true)`);
   }

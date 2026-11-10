@@ -117,8 +117,9 @@ const menuConfig = [
         icon: 'M8.56.64v3.82h4.66M4.67 7h6.22M4.67 9.55h4.66M1.56 0h7.77L14 3.82v8.9c0 .71-.7 1.28-1.56 1.28H1.56C.7 14 0 13.43 0 12.73V1.27C0 .57.7 0 1.56 0Z',
       },
       {
+        to: '/admin/proyek',
         label: 'Daftar Proyek',
-        roles: ['admin'],
+        roles: ['admin', 'peninjau'],
         icon: 'M0 10.5L7 14l7-3.5M0 7l7 3.5L14 7M7 0L0 3.5L7 7l7-3.5L7 0Z',
       },
     ],
@@ -127,11 +128,13 @@ const menuConfig = [
     category: 'PENGAWASAN',
     items: [
       {
+        to: '/admin/data',
         label: 'Data & ETL',
         roles: ['admin'],
         icon: 'M14 7c0-3.87-3.13-7-7-7C5.04.01 3.17.77 1.76 2.13L0 3.89M0 0v3.89h3.89M0 7c0 3.87 3.13 7 7 7c1.96-.01 3.83-.77 5.24-2.13L14 10.11M14 14v-3.89h-3.89',
       },
       {
+        to: '/admin/ai',
         label: 'AI (LLM)',
         roles: ['admin'],
         icon: 'M7 0v2.8M7 11.2V14M2.05 2.05l1.98 1.98M9.97 9.97l1.98 1.98M0 7h2.8M11.2 7H14M2.05 11.95l1.98-1.98M9.97 4.03l1.98-1.98',
@@ -146,6 +149,12 @@ const menuConfig = [
         label: 'Log Audit',
         roles: ['admin', 'peninjau'],
         icon: 'M7 14S14 11.2 14 7V2.1L7 0 0 2.1V7c0 4.2 7 7 7 7Z',
+      },
+      {
+        to: '/admin/notifikasi',
+        label: 'Notifikasi Surel',
+        roles: ['admin', 'peninjau'],
+        icon: 'M1.5 3h11a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 0 11.5v-7A1.5 1.5 0 0 1 1.5 3Zm0 1.5v.38l5.5 3.44 5.5-3.44v-.38h-11Zm11 7v-5.44l-5.18 3.24a.6.6 0 0 1-.64 0L1.5 6.06v5.44h11Z',
       },
       {
         label: 'Pengguna & Peran',

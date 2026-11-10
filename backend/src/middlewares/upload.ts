@@ -7,6 +7,70 @@ import multer, { MulterError } from 'multer';
 import { HttpError } from '../helpers/http.js';
 import { MediaMetadataError, stripMediaMetadata } from '../helpers/media-metadata.js';
 
+// ===== ETL file upload (CSV/JSON) — Fase 24.4 =====
+const ETL_ALLOWED_MIME: Record<string, string> = {
+  'text/csv': 'csv',
+  'text/plain': 'csv',
+  'application/csv': 'csv',
+  'application/json': 'json',
+  'text/json': 'json',
+};
+
+const ETL_MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const ETL_FILE_FIELD = 'file';
+
+const etlStorage = multer.memoryStorage();
+
+function etlFileFilter(
+  _req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback,
+): void {
+  if (ETL_ALLOWED_MIME[file.mimetype]) {
+    cb(null, true);
+    return;
+  }
+  cb(new HttpError(400, `Tipe file tidak didukung. Hanya CSV dan JSON yang diizinkan (dapat: ${file.mimetype})`));
+}
+
+const etlUploader = multer({
+  storage: etlStorage,
+  fileFilter: etlFileFilter,
+  limits: { fileSize: ETL_MAX_SIZE, files: 1 },
+});
+
+const etlMulterHandler = etlUploader.single(ETL_FILE_FIELD);
+
+export function uploadEtlFile(req: Request, res: Response, next: NextFunction): void {
+  etlMulterHandler(req, res, (err: unknown) => {
+    if (err) {
+      if (err instanceof MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          next(new HttpError(400, 'Ukuran file melebihi batas maksimal 10 MB'));
+          return;
+        }
+        next(new HttpError(400, `Upload gagal: ${err.message}`));
+        return;
+      }
+      if (err instanceof HttpError) {
+        next(err);
+        return;
+      }
+      next(new HttpError(400, err instanceof Error ? err.message : 'Upload gagal'));
+      return;
+    }
+    if (!req.file) {
+      next(new HttpError(400, `File wajib diunggah pada field "${ETL_FILE_FIELD}"`));
+      return;
+    }
+    next();
+  });
+}
+
+export function getEtlFileType(file: Express.Multer.File): 'csv' | 'json' {
+  return (ETL_ALLOWED_MIME[file.mimetype] as 'csv' | 'json') ?? 'csv';
+}
+
 export const UPLOAD_ROOT: string = path.resolve(process.cwd(), 'uploads');
 export const REPORT_UPLOAD_DIR: string = path.join(UPLOAD_ROOT, 'reports');
 

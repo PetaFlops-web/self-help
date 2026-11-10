@@ -25,11 +25,39 @@ export const endpoints = {
   authLogout: '/auth/logout',
   authMe: '/auth/me',
 
-  // --- Admin: Laporan (backend Fase 21) ---
+  // --- Admin: Laporan (backend Fase 21 & 29) ---
   adminReports: '/admin/reports',
   adminReport: (tiket) => `/admin/reports/${encodeURIComponent(tiket)}`,
   adminReportForward: (tiket) => `/admin/reports/${encodeURIComponent(tiket)}/forward`,
+  adminReportsTrend: '/admin/reports/trend',
 
   // --- Admin: Audit (backend Fase 20) ---
   adminAudit: '/admin/audit',
+
+  // --- Admin: ETL & Pencocokan (backend Fase 22-25) ---
+  adminEtlRun: '/admin/etl/run',
+  adminEtlImport: '/admin/etl/import',
+  adminEtlErrors: '/admin/etl/errors',
+  adminEtlUnmatched: '/admin/etl/unmatched',
+  adminEtlMatch: '/admin/etl/match',
+
+  // --- Admin: Notifikasi (backend Fase 26) ---
+  adminNotifications: '/admin/notifications',
+  adminNotificationRetry: (id) => `/admin/notifications/${encodeURIComponent(id)}/retry`,
+  adminNotificationRetention: '/admin/notifications/retention',
+
+  // --- Admin: Kelola Proyek & Tender (backend Fase 28 / FR-42, FR-57, FR-58, FR-59) ---
+  adminProjects: '/admin/projects',
+  adminProject: (id) => `/admin/projects/${encodeURIComponent(id)}`,
+  adminProjectTenders: (id) => `/admin/projects/${encodeURIComponent(id)}/tenders`,
+  adminTender: (id) => `/admin/tenders/${encodeURIComponent(id)}`,
+  adminProjectValueHistory: (id) => `/admin/projects/${encodeURIComponent(id)}/value-history`,
+
+  // --- Admin: Eksekusi Proyek (RAB, Pembayaran, Progres - backend Fase 29) ---
+  adminProjectRabItems: (id) => `/admin/projects/${encodeURIComponent(id)}/rab-items`,
+  adminRabItem: (id) => `/admin/rab-items/${encodeURIComponent(id)}`,
+  adminProjectPayments: (id) => `/admin/projects/${encodeURIComponent(id)}/payments`,
+  adminPayment: (id) => `/admin/payments/${encodeURIComponent(id)}`,
+  adminProjectProgress: (id) => `/admin/projects/${encodeURIComponent(id)}/progress`,
+  adminProgress: (id) => `/admin/progress/${encodeURIComponent(id)}`,
 }

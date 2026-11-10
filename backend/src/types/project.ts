@@ -23,6 +23,10 @@ export interface Project {
   source_url: string | null;
   fetched_at: Date | null;
   kabupaten: string | null;
+  asal_data: string;
+  total_laporan?: number;
+  laporan_menunggu?: number;
+  laporan_selesai?: number;
 }
 
 export interface ProjectFilters {

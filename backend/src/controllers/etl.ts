@@ -4,6 +4,7 @@ import { listEtlErrors as fetchEtlErrors } from '../repositories/etl.js';
 import { HttpError, strParam, positiveIntParam, intParam } from '../helpers/http.js';
 import { respond } from '../middlewares/response.js';
 import { recordAudit } from '../helpers/audit.js';
+import { uploadEtlFile, getEtlFileType } from '../middlewares/upload.js';
 import type { EtlRunBody } from '../utils/validators/etl.js';
 
 const MAX_LIMIT = 100;
@@ -60,5 +61,52 @@ export async function listEtlErrors(req: Request, res: Response): Promise<void> 
     total: result.total,
     limit: finalLimit,
     offset: finalOffset,
+  });
+}
+
+export async function importEtlFile(req: Request, res: Response): Promise<void> {
+  const sourceId = req.body.source_id as string | undefined;
+  if (!sourceId) {
+    throw new HttpError(400, 'source_id wajib diisi');
+  }
+  const sourceUrl = typeof req.body.source_url === 'string' ? req.body.source_url : undefined;
+  const file = req.file!;
+  const fileType = getEtlFileType(file);
+  const fileContent = file.buffer.toString('utf8');
+
+  const result = await runEtl(
+    sourceId,
+    fileType === 'csv' ? fileContent : undefined,
+    sourceUrl,
+    fileType === 'json' ? fileContent : undefined,
+  );
+
+  const rawIp = req.headers['x-real-ip'];
+  const clientIp = typeof rawIp === 'string' ? rawIp : (req.ip || null);
+  await recordAudit({
+    aktor_id: req.user?.id ?? null,
+    aktor_nama: req.user?.nama ?? 'Sistem ETL',
+    peran: req.user?.peran ?? 'system',
+    modul: 'etl',
+    aksi: 'SYNC_SOURCE',
+    target_id: result.source_id,
+    diff: {
+      method: 'file_import',
+      file_type: fileType,
+      file_name: file.originalname,
+      total_rows: result.total_rows,
+      accepted: result.accepted,
+      rejected: result.rejected,
+    },
+    ip: clientIp,
+  });
+
+  respond(res, 200, {
+    source_id: result.source_id,
+    status: result.status,
+    total_rows: result.total_rows,
+    accepted: result.accepted,
+    rejected: result.rejected,
+    errors: result.errors ?? [],
   });
 }

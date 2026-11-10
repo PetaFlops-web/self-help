@@ -79,6 +79,19 @@ export const adminReportsApi = {
   },
 
   /**
+   * Mengambil tren volume laporan deret waktu harian (default 14 hari).
+   * @param {number} [days=14]
+   * @returns {Promise<Array<{ tanggal: string, total_masuk: number, diverifikasi: number, selesai: number }>>}
+   */
+  async getTrend(days = 14) {
+    const { data } = await http.get(endpoints.adminReportsTrend, { params: { days } })
+    if (data?.status === 'error') {
+      throw new Error(data.message || 'Gagal memuat tren laporan')
+    }
+    return Array.isArray(data.trend) ? data.trend : []
+  },
+
+  /**
    * Memperbarui status laporan (verifikasi/tolak/dst) lewat PATCH.
    * @param {string} tiket
    * @param {{ status: string, catatan_verifikator?: string, alasan_tolak?: string }} input

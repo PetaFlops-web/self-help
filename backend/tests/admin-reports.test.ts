@@ -6,6 +6,7 @@ import {
   listAdminReports,
   getAdminReport,
   forwardReportByTiket,
+  getReportTrend,
 } from '../src/services/admin-reports.js';
 import {
   createReport,
@@ -190,4 +191,14 @@ test('limit validasi: limit=abc melempar HttpError 400', async () => {
       return true;
     },
   );
+});
+
+test('admin trend: getReportTrend mengembalikan 14 hari deret waktu berurutan', async () => {
+  const trend = await getReportTrend(14);
+  assert.equal(trend.length, 14);
+  assert.ok(trend[0].tanggal <= trend[13].tanggal);
+  assert.equal(typeof trend[0].total_masuk, 'number');
+  assert.equal(typeof trend[0].diverifikasi, 'number');
+  assert.equal(typeof trend[0].selesai, 'number');
+  assert.equal(typeof trend[0].ditolak, 'number');
 });

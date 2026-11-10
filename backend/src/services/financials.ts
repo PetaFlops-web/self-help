@@ -1,12 +1,20 @@
+import pool from '../config/database.js';
 import {
   getPaymentsByProjectId,
+  getPaymentById,
+  insertPayment,
+  updatePayment,
+  deletePayment,
   getProgressByProjectId,
   getRabItemsByProjectId,
 } from '../repositories/financials.js';
 import { getProjectById } from '../repositories/project.js';
+import { recalculateProjectScoreInTx } from './project-scoring.js';
 import { HttpError, isUuid } from '../helpers/http.js';
 import { toNum } from '../helpers/number.js';
 import type { Payment, Progress, RabItem, RabItemsResponse, FinancialSummary } from '../types/financials.js';
+import type { CreatePaymentInput, UpdatePaymentInput } from '../utils/validators/project-execution.js';
+import type { ScoreResult } from '../types/scoring.js';
 
 export interface PaymentsResponse {
   proyek_id: string;
@@ -17,6 +25,11 @@ export interface PaymentsResponse {
 export interface ProgressResponse {
   proyek_id: string;
   progres: Progress[];
+}
+
+export interface PaymentMutationResult {
+  pembayaran: Payment;
+  scoring: ScoreResult;
 }
 
 export async function getProjectPayments(id: string): Promise<PaymentsResponse> {
@@ -51,6 +64,107 @@ export async function getProjectPayments(id: string): Promise<PaymentsResponse> 
   };
 
   return { proyek_id: id, pembayaran: payments, ringkasan };
+}
+
+export async function createPayment(
+  projectId: string,
+  input: CreatePaymentInput,
+): Promise<PaymentMutationResult> {
+  if (!isUuid(projectId)) {
+    throw new HttpError(400, 'id project harus UUID yang valid');
+  }
+
+  const project = await getProjectById(projectId);
+  if (!project) {
+    throw new HttpError(404, 'Proyek tidak ditemukan');
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const payment = await insertPayment(client, {
+      proyek_id: projectId,
+      termin_ke: input.termin_ke,
+      tanggal: input.tanggal,
+      jumlah: input.jumlah,
+      persen_kontrak: input.persen_kontrak,
+      is_dummy: false,
+    });
+
+    const scoring = await recalculateProjectScoreInTx(client, projectId);
+
+    await client.query('COMMIT');
+    return { pembayaran: payment, scoring };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function updatePaymentById(
+  id: string,
+  input: UpdatePaymentInput,
+): Promise<PaymentMutationResult> {
+  if (!isUuid(id)) {
+    throw new HttpError(400, 'id pembayaran harus UUID yang valid');
+  }
+
+  const existing = await getPaymentById(pool, id);
+  if (!existing) {
+    throw new HttpError(404, 'Pembayaran tidak ditemukan');
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const updated = await updatePayment(client, id, input);
+    if (!updated) {
+      throw new HttpError(404, 'Pembayaran tidak ditemukan');
+    }
+
+    const scoring = await recalculateProjectScoreInTx(client, existing.proyek_id);
+
+    await client.query('COMMIT');
+    return { pembayaran: updated, scoring };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+export async function deletePaymentById(
+  id: string,
+): Promise<{ deleted: Payment; scoring: ScoreResult }> {
+  if (!isUuid(id)) {
+    throw new HttpError(400, 'id pembayaran harus UUID yang valid');
+  }
+
+  const existing = await getPaymentById(pool, id);
+  if (!existing) {
+    throw new HttpError(404, 'Pembayaran tidak ditemukan');
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    await deletePayment(client, id);
+    const scoring = await recalculateProjectScoreInTx(client, existing.proyek_id);
+
+    await client.query('COMMIT');
+    return { deleted: existing, scoring };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 export async function getProjectProgress(id: string): Promise<ProgressResponse> {
@@ -103,4 +217,3 @@ export async function getProjectRabItems(id: string): Promise<RabItemsResponse> 
   const items = rows.map(computeRabItem);
   return { proyek_id: id, items };
 }
-

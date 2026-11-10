@@ -50,6 +50,36 @@ const router = createRouter({
           },
         },
         {
+          path: 'proyek',
+          name: 'admin-projects',
+          component: () => import('@/features/admin/views/AdminProjectsView.vue'),
+          meta: {
+            requiresAuth: true,
+            roles: ['admin', 'peninjau'],
+            title: 'Daftar Proyek Pengawasan',
+          },
+        },
+        {
+          path: 'data',
+          name: 'admin-data',
+          component: () => import('@/features/admin/views/AdminDataView.vue'),
+          meta: {
+            requiresAuth: true,
+            roles: ['admin'],
+            title: 'Manajemen Data & Pipa ETL',
+          },
+        },
+        {
+          path: 'ai',
+          name: 'admin-ai',
+          component: () => import('@/features/admin/views/AdminAiView.vue'),
+          meta: {
+            requiresAuth: true,
+            roles: ['admin'],
+            title: 'Pemantauan Model AI & Guardrails',
+          },
+        },
+        {
           path: 'audit',
           name: 'admin-audit',
           component: () => import('@/features/admin/views/AdminAuditView.vue'),
@@ -57,6 +87,16 @@ const router = createRouter({
             requiresAuth: true,
             roles: ['admin', 'peninjau'],
             title: 'Log Audit',
+          },
+        },
+        {
+          path: 'notifikasi',
+          name: 'admin-notifications',
+          component: () => import('@/features/admin/views/AdminNotificationsView.vue'),
+          meta: {
+            requiresAuth: true,
+            roles: ['admin', 'peninjau'],
+            title: 'Log & Retensi Notifikasi Surel',
           },
         },
         {

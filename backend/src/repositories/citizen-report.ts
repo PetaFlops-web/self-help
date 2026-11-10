@@ -8,6 +8,8 @@ import type {
   VerifyReportInput,
   AdminReportListItem,
   AdminReportDetail,
+  RecapReportRow,
+  DailyReportTrendItem,
 } from '../types/citizen-report.js';
 
 export async function listVerifiedReportsByProjectId(projectId: string): Promise<VerifiedReport[]> {
@@ -203,6 +205,50 @@ export async function verifyReport(
   return toPublicView(res.rows[0], projectDetail);
 }
 
+export async function listRecapReports(filters: {
+  start_date?: string;
+  end_date?: string;
+  status?: string;
+  kode_bps?: string;
+}): Promise<RecapReportRow[]> {
+  const conditions: string[] = [`lw.status != 'Dilaporkan'`];
+  const params: unknown[] = [];
+
+  if (filters.start_date) {
+    params.push(filters.start_date);
+    conditions.push(`lw.dibuat_pada >= $${params.length}::date`);
+  }
+  if (filters.end_date) {
+    params.push(filters.end_date);
+    conditions.push(`lw.dibuat_pada <= $${params.length}::date`);
+  }
+  if (filters.status) {
+    params.push(filters.status);
+    conditions.push(`lw.status = $${params.length}`);
+  }
+  if (filters.kode_bps) {
+    params.push(filters.kode_bps);
+    conditions.push(`p.kode_bps = $${params.length}`);
+  }
+
+  const res = await pool.query<RecapReportRow>(
+    `SELECT lw.tiket, lw.kategori, lw.status, lw.keterangan,
+            lw.catatan_verifikator, lw.alasan_tolak,
+            lw.dibuat_pada, lw.diubah_pada,
+            p.nama AS proyek_nama,
+            w.nama AS proyek_kabupaten,
+            p.kode_bps AS proyek_kode_bps,
+            p.is_dummy AS proyek_is_dummy
+       FROM laporan_warga lw
+       LEFT JOIN proyek p ON p.id = lw.proyek_id
+       LEFT JOIN wilayah w ON w.kode_bps = p.kode_bps
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY lw.dibuat_pada ASC`,
+    params,
+  );
+  return res.rows;
+}
+
 export async function listAdminReports(filters: {
   status?: string;
   kategori?: string;
@@ -357,4 +403,29 @@ export async function forwardReport(
   if (!res.rows[0]) return null;
   const projectDetail = await getProjectDetailForReport(res.rows[0].proyek_id);
   return toPublicView(res.rows[0], projectDetail);
+}
+
+export async function getDailyReportTrend(days: number = 14): Promise<DailyReportTrendItem[]> {
+  const safeDays = Math.max(1, Math.min(days, 90));
+  const res = await pool.query<DailyReportTrendItem>(
+    `WITH dates AS (
+       SELECT generate_series(
+         CURRENT_DATE - ($1::int - 1) * INTERVAL '1 day',
+         CURRENT_DATE,
+         INTERVAL '1 day'
+       )::date AS tgl
+     )
+     SELECT 
+       to_char(d.tgl, 'YYYY-MM-DD') AS tanggal,
+       COUNT(lw.tiket)::int AS total_masuk,
+       COUNT(lw.tiket) FILTER (WHERE lw.status = 'Diverifikasi')::int AS diverifikasi,
+       COUNT(lw.tiket) FILTER (WHERE lw.status = 'Selesai')::int AS selesai,
+       COUNT(lw.tiket) FILTER (WHERE lw.status = 'Ditolak')::int AS ditolak
+     FROM dates d
+     LEFT JOIN laporan_warga lw ON date(lw.dibuat_pada) = d.tgl
+     GROUP BY d.tgl
+     ORDER BY d.tgl ASC`,
+    [safeDays],
+  );
+  return res.rows;
 }

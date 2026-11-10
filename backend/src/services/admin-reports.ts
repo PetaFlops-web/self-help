@@ -7,6 +7,7 @@ import {
   getAdminReportDetail,
   forwardReport,
   countReportsByStatus,
+  getDailyReportTrend,
 } from '../repositories/citizen-report.js';
 import { HttpError, strParam, positiveIntParam, intParam } from '../helpers/http.js';
 import pool from '../config/database.js';
@@ -15,6 +16,7 @@ import type {
   VerifyReportInput,
   AdminReportListItem,
   AdminReportDetail,
+  DailyReportTrendItem,
 } from '../types/citizen-report.js';
 
 const TRANSITIONS: Record<string, string[]> = {
@@ -156,4 +158,9 @@ export async function forwardReportByTiket(
   const notification = await triggerNotification(tiket, existing.status, 'Diteruskan');
 
   return { report: updated, previousStatus: existing.status, notification };
+}
+
+export async function getReportTrend(days?: number): Promise<DailyReportTrendItem[]> {
+  const targetDays = days && days > 0 ? Math.min(days, 90) : 14;
+  return getDailyReportTrend(targetDays);
 }

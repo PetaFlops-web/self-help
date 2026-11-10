@@ -86,22 +86,33 @@ export async function collectScoreInput(client: DbClient, projectId: string): Pr
   return input;
 }
 
-export async function recalculateProjectScore(pool: Pool, projectId: string): Promise<ScoreResult> {
+/**
+ * Hitung ulang skor memakai client yang sudah berada di dalam transaksi
+ * pemanggil. Tidak membuka/menutup transaksi sendiri, sehingga perubahan data,
+ * skor, dan riwayat_nilai dapat di-commit atau di-rollback bersama (Fase 28).
+ */
+export async function recalculateProjectScoreInTx(
+  client: DbClient,
+  projectId: string,
+): Promise<ScoreResult> {
   const config = loadScoringConfig();
+  const input = await collectScoreInput(client, projectId);
+  const result = scoreProject(input, config);
+
+  await updateProjectScore(client, projectId, result.skor_total, result.kategori);
+  await deleteIndicatorFindingsByProjectId(client, projectId);
+  for (const f of result.indikator_temuan) {
+    await insertIndicatorFinding(client, projectId, f);
+  }
+  return result;
+}
+
+export async function recalculateProjectScore(pool: Pool, projectId: string): Promise<ScoreResult> {
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
-
-    const input = await collectScoreInput(client, projectId);
-    const result = scoreProject(input, config);
-
-    await updateProjectScore(client, projectId, result.skor_total, result.kategori);
-    await deleteIndicatorFindingsByProjectId(client, projectId);
-    for (const f of result.indikator_temuan) {
-      await insertIndicatorFinding(client, projectId, f);
-    }
-
+    const result = await recalculateProjectScoreInTx(client, projectId);
     await client.query('COMMIT');
     return result;
   } catch (err) {

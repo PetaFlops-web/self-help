@@ -60,18 +60,27 @@ export async function collectScoreInput(client, projectId) {
     }
     return input;
 }
-export async function recalculateProjectScore(pool, projectId) {
+/**
+ * Hitung ulang skor memakai client yang sudah berada di dalam transaksi
+ * pemanggil. Tidak membuka/menutup transaksi sendiri, sehingga perubahan data,
+ * skor, dan riwayat_nilai dapat di-commit atau di-rollback bersama (Fase 28).
+ */
+export async function recalculateProjectScoreInTx(client, projectId) {
     const config = loadScoringConfig();
+    const input = await collectScoreInput(client, projectId);
+    const result = scoreProject(input, config);
+    await updateProjectScore(client, projectId, result.skor_total, result.kategori);
+    await deleteIndicatorFindingsByProjectId(client, projectId);
+    for (const f of result.indikator_temuan) {
+        await insertIndicatorFinding(client, projectId, f);
+    }
+    return result;
+}
+export async function recalculateProjectScore(pool, projectId) {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-        const input = await collectScoreInput(client, projectId);
-        const result = scoreProject(input, config);
-        await updateProjectScore(client, projectId, result.skor_total, result.kategori);
-        await deleteIndicatorFindingsByProjectId(client, projectId);
-        for (const f of result.indikator_temuan) {
-            await insertIndicatorFinding(client, projectId, f);
-        }
+        const result = await recalculateProjectScoreInTx(client, projectId);
         await client.query('COMMIT');
         return result;
     }

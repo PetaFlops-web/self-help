@@ -84,6 +84,29 @@ export interface AdminReportListItem {
   } | null;
 }
 
+export interface RecapReportRow {
+  tiket: string;
+  kategori: string | null;
+  status: string;
+  keterangan: string | null;
+  catatan_verifikator: string | null;
+  alasan_tolak: string | null;
+  dibuat_pada: Date | null;
+  diubah_pada: Date | null;
+  proyek_nama: string | null;
+  proyek_kabupaten: string | null;
+  proyek_kode_bps: string | null;
+  proyek_is_dummy: boolean;
+}
+
+export interface DailyReportTrendItem {
+  tanggal: string;
+  total_masuk: number;
+  diverifikasi: number;
+  selesai: number;
+  ditolak: number;
+}
+
 export interface AdminReportDetail {
   tiket: string;
   proyek_id: string | null;

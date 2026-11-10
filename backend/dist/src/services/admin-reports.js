@@ -1,6 +1,6 @@
 import { recalculateProjectScore } from './project-scoring.js';
 import { triggerNotification } from './notification/index.js';
-import { getReportInternal, verifyReport, listAdminReports as listAdminReportsFromRepo, getAdminReportDetail, forwardReport, countReportsByStatus, } from '../repositories/citizen-report.js';
+import { getReportInternal, verifyReport, listAdminReports as listAdminReportsFromRepo, getAdminReportDetail, forwardReport, countReportsByStatus, getDailyReportTrend, } from '../repositories/citizen-report.js';
 import { HttpError, strParam, positiveIntParam, intParam } from '../helpers/http.js';
 import pool from '../config/database.js';
 const TRANSITIONS = {
@@ -103,4 +103,8 @@ export async function forwardReportByTiket(tiket, lembaga) {
     // Fail-safe notification trigger (NFR-23): lihat catatan di verifyReportByTiket.
     const notification = await triggerNotification(tiket, existing.status, 'Diteruskan');
     return { report: updated, previousStatus: existing.status, notification };
+}
+export async function getReportTrend(days) {
+    const targetDays = days && days > 0 ? Math.min(days, 90) : 14;
+    return getDailyReportTrend(targetDays);
 }
