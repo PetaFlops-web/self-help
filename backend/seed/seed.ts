@@ -83,6 +83,8 @@ interface SeedProject {
   penyedia: string | null;
   source_id: string;
   source_url: string;
+  match_status?: 'matched' | 'unmatched';
+  kode_tender?: string | null;
 }
 
 const PROJECTS: SeedProject[] = [
@@ -169,6 +171,8 @@ const PROJECTS: SeedProject[] = [
     kode_bps: '1813', tahun: 2025, sumber_dana: 'APBD', nilai_kontrak: 12_650_667_000, status: 'selesai',
     penyedia: 'PT Manunggal Sulthon Raya', source_id: 'SRC-06',
     source_url: 'https://spse.inaproc.id/lampungprov',
+    match_status: 'unmatched',
+    kode_tender: null,
   },
   {
     n: 15, nama: 'Rekonstruksi Jalan Padang Ratu - Kalirejo', dinas: 'Dinas BMBK Provinsi Lampung',
@@ -181,6 +185,7 @@ const PROJECTS: SeedProject[] = [
     kode_bps: '1802', tahun: 2025, sumber_dana: 'APBD', nilai_kontrak: 12_964_714_773, status: 'selesai',
     penyedia: 'CV Uzza Agil Konstruksi', source_id: 'SRC-02',
     source_url: 'https://spse.inaproc.id/lampungprov',
+    match_status: 'unmatched',
   },
   {
     n: 17, nama: 'Pembangunan Jalan Tol Bakauheni - Terbanggi Besar Paket 1', dinas: 'Project Jalan Tol Trans Sumatera',
@@ -235,12 +240,15 @@ const PROJECTS: SeedProject[] = [
     kode_bps: '1801', tahun: 2024, sumber_dana: 'APBD', nilai_kontrak: 5_000_000_000, status: 'selesai',
     penyedia: 'CV Batin Alam Perkasa', source_id: 'SRC-02',
     source_url: 'https://spse.inaproc.id/lampungselatankab',
+    match_status: 'unmatched',
   },
   {
     n: 26, nama: 'Rekonstruksi Jalan Ruas Puji Rahayu - Tanjung Harapan', dinas: 'Dinas PUPR Kabupaten Lampung Selatan',
     kode_bps: '1801', tahun: 2025, sumber_dana: 'APBD', nilai_kontrak: 4_946_652_242, status: 'pelaksanaan',
     penyedia: 'CV Tama Grup', source_id: 'SRC-11',
     source_url: 'https://koranlampung.id',
+    match_status: 'unmatched',
+    kode_tender: null,
   },
   {
     n: 27, nama: 'Rekonstruksi Jalan Pardasuka - Suban', dinas: 'Dinas PUPR Kabupaten Lampung Selatan',
@@ -906,7 +914,8 @@ async function run(): Promise<void> {
     const pagu = Math.round(hps * 1.05);
     const rupAnnouncementDate = `${p.tahun}-01-15`;
     const rupCode = `RUP-${p.tahun}-${String(p.n).padStart(4, '0')}`;
-    const tenderCode = `TDR-${p.tahun}-${String(p.n).padStart(4, '0')}`;
+    const tenderCode = p.kode_tender === undefined ? `TDR-${p.tahun}-${String(p.n).padStart(4, '0')}` : p.kode_tender;
+    const matchStatus = p.match_status ?? 'matched';
     const fundingSource = p.sumber_dana ?? 'APBD';
     const selectionMethod = hps >= 10_000_000_000 ? 'Tender Umum' : hps >= 1_000_000_000 ? 'Tender Terbatas' : 'Pengadaan Langsung';
     const contractValue = p.nilai_kontrak ?? hps;
@@ -916,11 +925,11 @@ async function run(): Promise<void> {
          (id, kode_rup, kode_tender, nama, dinas, kode_bps, tahun_anggaran,
           sumber_dana, metode_pemilihan, pagu, hps, nilai_kontrak, status,
           pengumuman_rup_tgl, match_status, source_id, source_url, fetched_at, is_dummy)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,'unmatched',$15,$16,now(),false)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,now(),false)`,
       [
         uuid(p.n), rupCode, tenderCode, p.nama, p.dinas, p.kode_bps, p.tahun,
         fundingSource, selectionMethod, pagu, hps, contractValue, p.status,
-        rupAnnouncementDate, p.source_id, p.source_url,
+        rupAnnouncementDate, matchStatus, p.source_id, p.source_url,
       ],
     );
 
