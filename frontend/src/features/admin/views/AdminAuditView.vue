@@ -31,7 +31,7 @@
         <span class="kpi-label">TOTAL EVENT AUDIT</span>
         <div class="kpi-val-row">
           <SkeletonBlock v-if="loading && !dataLoaded" height="26px" width="70px" radius="6px" />
-          <span v-else class="kpi-val">{{ total.toLocaleString('id-ID') }} Event</span>
+          <span v-else class="kpi-val">{{ kpiSummary.total.toLocaleString('id-ID') }} Event</span>
         </div>
         <span class="kpi-sub">Append-only di basis data terproteksi</span>
       </div>
@@ -40,7 +40,7 @@
         <span class="kpi-label">MODERASI LAPORAN</span>
         <div class="kpi-val-row">
           <SkeletonBlock v-if="loading && !dataLoaded" height="26px" width="60px" radius="6px" />
-          <span v-else class="kpi-val text-warning">{{ kpiCounts.moderasi }} Event</span>
+          <span v-else class="kpi-val text-warning">{{ kpiSummary.moderasi.toLocaleString('id-ID') }} Event</span>
         </div>
         <span class="kpi-sub">Verifikasi, eskalasi &amp; tolak laporan</span>
       </div>
@@ -49,7 +49,7 @@
         <span class="kpi-label">SINKRONISASI PIPA ETL</span>
         <div class="kpi-val-row">
           <SkeletonBlock v-if="loading && !dataLoaded" height="26px" width="60px" radius="6px" />
-          <span v-else class="kpi-val text-success">{{ kpiCounts.etl }} Event</span>
+          <span v-else class="kpi-val text-success">{{ kpiSummary.etl.toLocaleString('id-ID') }} Event</span>
         </div>
         <span class="kpi-sub">Integritas data SiRUP &amp; SPSE</span>
       </div>
@@ -87,7 +87,7 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Cari aktor, ID target, aksi, atau IP address..."
+            placeholder="Cari aktor, modul, ID target, aksi, atau IP address..."
             aria-label="Pencarian rekam jejak audit"
           />
           <button v-if="searchQuery" class="search-clear-btn" aria-label="Hapus pencarian" @click="searchQuery = ''">
@@ -98,12 +98,11 @@
           </button>
         </div>
 
-        <select v-model="filterModul" class="filter-select" @change="handleFilterChange">
+        <select v-model="filterModul" class="filter-select" aria-label="Filter modul audit" @change="handleModuleChange">
           <option value="">Semua Modul Audit</option>
-          <option value="moderasi">Moderasi Laporan Warga</option>
-          <option value="etl">Pipa ETL &amp; Pencocokan Paket</option>
-          <option value="project">Kelola Proyek &amp; Tender</option>
-          <option value="auth">Autentikasi &amp; Akses Sistem</option>
+          <option v-for="mod in AUDIT_MODULES" :key="mod.value" :value="mod.value">
+            {{ mod.selectLabel }}
+          </option>
         </select>
 
         <div class="date-input-group">
@@ -113,7 +112,8 @@
             type="date"
             class="filter-date-input"
             aria-label="Filter tanggal awal"
-            @change="handleFilterChange"
+            :max="filterEndDate || undefined"
+            @change="handleDateChange('start')"
           />
         </div>
 
@@ -124,7 +124,8 @@
             type="date"
             class="filter-date-input"
             aria-label="Filter tanggal akhir"
-            @change="handleFilterChange"
+            :min="filterStartDate || undefined"
+            @change="handleDateChange('end')"
           />
         </div>
       </div>
@@ -158,7 +159,7 @@
         </div>
 
         <div class="filter-right-actions">
-          <button class="btn-refresh" :disabled="loading" @click="fetchLogs">
+          <button class="btn-refresh" :disabled="loading" @click="refreshAuditView">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" :class="{ 'spin-icon': loading }">
               <path d="M23 4v6h-6" />
               <path d="M1 20v-6h6" />
@@ -167,7 +168,7 @@
             <span>↻ Segarkan</span>
           </button>
           <span class="audit-counter">
-            Menampilkan {{ total ? offset + 1 : 0 }}–{{ Math.min(offset + limit, total) }} dari {{ total }} event
+            {{ counterSummary }}
           </span>
         </div>
       </div>
@@ -271,7 +272,7 @@
       <!-- Footer Paginasi Mandiri -->
       <footer class="audit-footer">
         <span class="pagination-info">
-          Menampilkan {{ total ? offset + 1 : 0 }}–{{ Math.min(offset + limit, total) }} dari {{ total.toLocaleString('id-ID') }} event audit
+          {{ counterSummary }}
         </span>
 
         <div class="pagination-controls">
@@ -302,6 +303,49 @@ import { adminAuditApi } from '@/services/api/admin-audit.api'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import AuditDiffViewer from '@/features/admin/components/AuditDiffViewer.vue'
 
+// Konfigurasi modul tunggal agar selaras dengan modul aktual backend
+const AUDIT_MODULES = [
+  {
+    value: 'moderasi',
+    tabLabel: 'Moderasi Laporan',
+    selectLabel: 'Moderasi Laporan Warga',
+    badgeLabel: 'Moderasi Laporan',
+  },
+  {
+    value: 'etl',
+    tabLabel: 'Pipa ETL & Pencocokan',
+    selectLabel: 'Pipa ETL & Pencocokan Paket',
+    badgeLabel: 'Pipa ETL',
+  },
+  {
+    value: 'proyek',
+    tabLabel: 'Kelola Proyek & RAB',
+    selectLabel: 'Kelola Proyek, Tender & RAB',
+    badgeLabel: 'Kelola Proyek',
+  },
+  {
+    value: 'notifikasi',
+    tabLabel: 'Notifikasi Pelapor',
+    selectLabel: 'Notifikasi & Retensi Kontak',
+    badgeLabel: 'Notifikasi',
+  },
+  {
+    value: 'rekap',
+    tabLabel: 'Rekap Cetak',
+    selectLabel: 'Rekapitulasi Cetak',
+    badgeLabel: 'Rekap Cetak',
+  },
+]
+
+const MODULE_LABEL_MAP = Object.fromEntries(
+  AUDIT_MODULES.map((mod) => [mod.value, mod.badgeLabel]),
+)
+
+const auditTabs = [
+  { value: '', label: 'Semua Aktivitas' },
+  ...AUDIT_MODULES.map((mod) => ({ value: mod.value, label: mod.tabLabel })),
+]
+
 // State
 const loading = ref(true)
 const dataLoaded = ref(false)
@@ -309,8 +353,14 @@ const error = ref('')
 
 const logs = ref([])
 const total = ref(0)
-const limit = ref(50)
+const limit = ref(100)
 const offset = ref(0)
+
+const kpiSummary = ref({
+  total: 0,
+  moderasi: 0,
+  etl: 0,
+})
 
 const activeTab = ref('')
 const filterModul = ref('')
@@ -319,55 +369,51 @@ const filterEndDate = ref('')
 const searchQuery = ref('')
 const activeRange = ref('')
 
-// KPI Counts
-const kpiCounts = computed(() => {
-  let moderasi = 0
-  let etl = 0
-  let project = 0
-  let auth = 0
-
-  for (const log of logs.value) {
-    if (log.modul === 'moderasi') moderasi++
-    else if (log.modul === 'etl') etl++
-    else if (log.modul === 'project') project++
-    else if (log.modul === 'auth') auth++
-  }
-
-  return { moderasi, etl, project, auth }
-})
-
-// Tabs Configuration
-const auditTabs = computed(() => [
-  { value: '', label: 'Semua Aktivitas', count: total.value, badgeClass: '' },
-  { value: 'moderasi', label: 'Moderasi Laporan', count: kpiCounts.value.moderasi || null, badgeClass: 'tab-count--warning' },
-  { value: 'etl', label: 'Pipa ETL & Pencocokan', count: kpiCounts.value.etl || null, badgeClass: 'tab-count--success' },
-  { value: 'project', label: 'Kelola Proyek', count: kpiCounts.value.project || null, badgeClass: '' },
-  { value: 'auth', label: 'Autentikasi & Akses', count: kpiCounts.value.auth || null, badgeClass: '' },
-])
+let latestRequestId = 0
 
 function switchTab(modulVal) {
   activeTab.value = modulVal
   filterModul.value = modulVal
-  handleFilterChange()
+  handleModuleChange()
 }
 
 // Pagination
 const currentPage = computed(() => Math.floor(offset.value / limit.value) + 1)
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit.value)))
 
-// Filtered Logs
+// Filtered Logs (client-side pada halaman termuat)
+const hasSearchQuery = computed(() => searchQuery.value.trim().length > 0)
+
 const filteredLogs = computed(() => {
-  if (!searchQuery.value.trim()) return logs.value
+  if (!hasSearchQuery.value) return logs.value
   const q = searchQuery.value.toLowerCase().trim()
   return logs.value.filter((row) => {
+    const modulLabel = formatModul(row.modul).toLowerCase()
+    const diffText = row.diff ? JSON.stringify(row.diff).toLowerCase() : ''
     return (
       (row.aktor_nama && row.aktor_nama.toLowerCase().includes(q)) ||
       (row.target_id && row.target_id.toLowerCase().includes(q)) ||
       (row.aksi && row.aksi.toLowerCase().includes(q)) ||
       (row.ip && row.ip.toLowerCase().includes(q)) ||
-      (row.peran && row.peran.toLowerCase().includes(q))
+      (row.peran && row.peran.toLowerCase().includes(q)) ||
+      (row.modul && row.modul.toLowerCase().includes(q)) ||
+      modulLabel.includes(q) ||
+      diffText.includes(q)
     )
   })
+})
+
+const counterSummary = computed(() => {
+  if (hasSearchQuery.value) {
+    const base = `${filteredLogs.value.length} cocok dari ${logs.value.length} event pada halaman ini`
+    if (total.value > logs.value.length) {
+      return `${base} (total ${total.value.toLocaleString('id-ID')} event terfilter)`
+    }
+    return base
+  }
+  const start = total.value ? offset.value + 1 : 0
+  const end = Math.min(offset.value + logs.value.length, total.value)
+  return `Menampilkan ${start}–${end} dari ${total.value.toLocaleString('id-ID')} event`
 })
 
 // Format Helpers
@@ -376,6 +422,7 @@ function formatWib(dateStr) {
   const date = new Date(dateStr)
   if (Number.isNaN(date.getTime())) return dateStr
   return new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -410,33 +457,32 @@ function getInitials(name) {
     .join('')
 }
 
+function isReviewerRole(peran) {
+  return peran === 'peninjau' || peran === 'verifikator'
+}
+
 function getAvatarClass(peran) {
   if (peran === 'admin') return 'avatar--admin'
-  if (peran === 'verifikator') return 'avatar--verifikator'
+  if (isReviewerRole(peran)) return 'avatar--verifikator'
   return 'avatar--system'
 }
 
 function getRoleClass(peran) {
   if (peran === 'admin') return 'role--admin'
-  if (peran === 'verifikator') return 'role--verifikator'
+  if (isReviewerRole(peran)) return 'role--verifikator'
   return 'role--system'
 }
 
 function formatModul(modul) {
-  const map = {
-    moderasi: 'Moderasi Laporan',
-    etl: 'Pipa ETL',
-    auth: 'Autentikasi',
-    project: 'Kelola Proyek',
-  }
-  return map[modul] || modul || 'Sistem'
+  return MODULE_LABEL_MAP[modul] || modul || 'Sistem'
 }
 
 function actionClass(aksi) {
-  if (aksi?.includes('VERIFY')) return 'badge-success'
-  if (aksi?.includes('REJECT') || aksi?.includes('FAIL') || aksi?.includes('DELETE')) return 'badge-danger'
-  if (aksi?.includes('FORWARD')) return 'badge-info'
-  if (aksi?.includes('SYNC') || aksi?.includes('MATCH')) return 'badge-warning'
+  if (!aksi) return 'badge-subtle'
+  if (aksi.includes('VERIFY') || aksi.includes('CREATE')) return 'badge-success'
+  if (aksi.includes('REJECT') || aksi.includes('FAIL') || aksi.includes('DELETE')) return 'badge-danger'
+  if (aksi.includes('FORWARD') || aksi.includes('UPDATE') || aksi.includes('PRINT')) return 'badge-info'
+  if (aksi.includes('SYNC') || aksi.includes('MATCH') || aksi.includes('RETRY')) return 'badge-warning'
   return 'badge-subtle'
 }
 
@@ -448,8 +494,36 @@ function formatTarget(targetId) {
   return targetId
 }
 
+function formatLocalYmd(date) {
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+function addLocalDays(baseDate, deltaDays) {
+  return new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + deltaDays)
+}
+
+async function fetchKpiSummary(unfilteredTotal = null) {
+  const [totalRes, moderasiRes, etlRes] = await Promise.allSettled([
+    unfilteredTotal !== null
+      ? Promise.resolve({ total: unfilteredTotal })
+      : adminAuditApi.list({ limit: 1 }),
+    adminAuditApi.list({ modul: 'moderasi', limit: 1 }),
+    adminAuditApi.list({ modul: 'etl', limit: 1 }),
+  ])
+
+  kpiSummary.value = {
+    total: totalRes.status === 'fulfilled' ? totalRes.value.total : kpiSummary.value.total,
+    moderasi: moderasiRes.status === 'fulfilled' ? moderasiRes.value.total : kpiSummary.value.moderasi,
+    etl: etlRes.status === 'fulfilled' ? etlRes.value.total : kpiSummary.value.etl,
+  }
+}
+
 // Fetch Logs
 async function fetchLogs() {
+  const requestId = ++latestRequestId
   loading.value = true
   error.value = ''
   try {
@@ -462,41 +536,67 @@ async function fetchLogs() {
     if (filterEndDate.value) params.end_date = filterEndDate.value
 
     const res = await adminAuditApi.list(params)
+    if (requestId !== latestRequestId) return
     logs.value = res.logs
     total.value = res.total
     limit.value = res.limit
     offset.value = res.offset
     dataLoaded.value = true
   } catch (err) {
+    if (requestId !== latestRequestId) return
     error.value = err.message || 'Gagal memuat log audit'
   } finally {
-    loading.value = false
+    if (requestId === latestRequestId) {
+      loading.value = false
+    }
   }
 }
 
-function handleFilterChange() {
+async function refreshAuditView() {
+  await fetchLogs()
+  const hasFilter = Boolean(filterModul.value || filterStartDate.value || filterEndDate.value)
+  await fetchKpiSummary(hasFilter ? null : total.value)
+}
+
+function handleModuleChange() {
   activeTab.value = filterModul.value
   offset.value = 0
+  fetchLogs()
+}
+
+function handleDateChange(changedBound) {
   activeRange.value = ''
+  if (filterStartDate.value && filterEndDate.value && filterStartDate.value > filterEndDate.value) {
+    if (changedBound === 'start') {
+      filterEndDate.value = filterStartDate.value
+    } else {
+      filterStartDate.value = filterEndDate.value
+    }
+  }
+  offset.value = 0
   fetchLogs()
 }
 
 function setQuickRange(range) {
+  if (activeRange.value === range) {
+    activeRange.value = ''
+    filterStartDate.value = ''
+    filterEndDate.value = ''
+    offset.value = 0
+    fetchLogs()
+    return
+  }
+
   activeRange.value = range
   const now = new Date()
-  const yyyy = now.getFullYear()
-  const mm = String(now.getMonth() + 1).padStart(2, '0')
-  const dd = String(now.getDate()).padStart(2, '0')
-  filterEndDate.value = `${yyyy}-${mm}-${dd}`
+  filterEndDate.value = formatLocalYmd(now)
 
   if (range === 'today') {
-    filterStartDate.value = `${yyyy}-${mm}-${dd}`
+    filterStartDate.value = formatLocalYmd(now)
   } else if (range === '7d') {
-    const past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-    filterStartDate.value = past.toISOString().split('T')[0]
+    filterStartDate.value = formatLocalYmd(addLocalDays(now, -7))
   } else if (range === '30d') {
-    const past = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-    filterStartDate.value = past.toISOString().split('T')[0]
+    filterStartDate.value = formatLocalYmd(addLocalDays(now, -30))
   }
 
   offset.value = 0
@@ -522,8 +622,11 @@ function changePage(direction) {
   }
 }
 
-onMounted(() => {
-  fetchLogs()
+onMounted(async () => {
+  await fetchLogs()
+  if (!error.value) {
+    await fetchKpiSummary(total.value)
+  }
 })
 </script>
 

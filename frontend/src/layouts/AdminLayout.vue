@@ -3,6 +3,7 @@
     <aside class="admin-sidebar" :class="{ 'is-open': sidebarOpen }">
       <div class="admin-sidebar-head">
         <RouterLink to="/admin" class="admin-brand" @click="sidebarOpen = false">
+          <img class="brand-mark" src="/clearsight-mark-light.svg" alt="Clearsight" />
           <span>Clearsight</span>
         </RouterLink>
         <span class="admin-sidebar-tag">Panel Pengawas v1.1</span>
