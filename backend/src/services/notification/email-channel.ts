@@ -35,7 +35,7 @@ export class EmailChannel implements NotificationChannel {
       return { status: 'dilewati' };
     }
 
-    const { subject, text } = buildNotificationEmail(payload);
+    const { subject, text, html } = buildNotificationEmail(payload);
 
     try {
       await this.transporter.sendMail({
@@ -43,6 +43,7 @@ export class EmailChannel implements NotificationChannel {
         to: payload.surelPelapor,
         subject,
         text,
+        html,
       });
       return { status: 'terkirim' };
     } catch (err) {
