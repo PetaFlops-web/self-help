@@ -21,7 +21,6 @@ import {
 
 const router = Router();
 
-// Project CRUD — admin only
 router.post(
   '/admin/projects',
   requireAuth,
@@ -56,7 +55,6 @@ router.delete(
   deleteProjectHandler,
 );
 
-// Value history — admin + peninjau
 router.get(
   '/admin/projects/:id/value-history',
   requireAuth,
@@ -65,7 +63,6 @@ router.get(
   valueHistoryHandler,
 );
 
-// Tender CRUD — admin only
 router.get(
   '/admin/projects/:id/tenders',
   requireAuth,

@@ -9,7 +9,6 @@ function getKey(): Buffer {
   if (!raw) {
     throw new Error('[crypto] ENCRYPTION_KEY tidak ditemukan di environment');
   }
-  // Accept 64-char hex string or 32+ char raw string
   if (/^[0-9a-fA-F]{64}$/.test(raw)) {
     return Buffer.from(raw, 'hex');
   }
@@ -19,12 +18,6 @@ function getKey(): Buffer {
   throw new Error('[crypto] ENCRYPTION_KEY harus minimal 32 karakter atau 64 hex');
 }
 
-/**
- * Encrypt a plaintext string using AES-256-GCM.
- * Returns null for empty/null input.
- * Each call produces different ciphertext (random IV).
- * Format: IV (12 bytes) + authTag (16 bytes) + ciphertext
- */
 export function encryptField(plaintext: string | null | undefined): Buffer | null {
   if (!plaintext || plaintext.length === 0) return null;
 
@@ -40,10 +33,6 @@ export function encryptField(plaintext: string | null | undefined): Buffer | nul
   return Buffer.concat([iv, authTag, encrypted]);
 }
 
-/**
- * Decrypt ciphertext produced by encryptField.
- * Returns null for null input.
- */
 export function decryptField(ciphertext: Buffer | null | undefined): string | null {
   if (!ciphertext || ciphertext.length === 0) return null;
 

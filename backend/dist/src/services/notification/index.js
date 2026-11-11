@@ -2,15 +2,6 @@ import { insertNotification, updateNotificationStatus, getNotificationById, getR
 import { getEmailChannel, hashEmail } from './email-channel.js';
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [5_000, 15_000, 45_000];
-/**
- * Trigger a notification after a report status change.
- *
- * Fail-safe (NFR-23): galat ditangkap dan dicatat, TIDAK PERNAH dilempar,
- * sehingga perubahan status laporan tetap berhasil walau pengiriman gagal.
- * Nilai kembaliannya hanya untuk MELAPORKAN hasil ke pemanggil, bukan untuk
- * menggagalkan operasi — pemanggil tidak boleh melempar error dari nilai ini.
- * Percobaan ulang (bila gagal) tetap berjalan asinkron di latar belakang.
- */
 export async function triggerNotification(tiket, statusDari, statusKe) {
     try {
         const surel = await getReportSurel(tiket);
@@ -63,10 +54,6 @@ function scheduleRetry(notifId, payload, attempt) {
         attemptSend(notifId, payload, attempt + 1).catch((err) => console.warn(`[notification] Retry attempt ${attempt + 1} gagal:`, err));
     }, delay);
 }
-/**
- * Manually retry a failed notification (admin endpoint).
- * Returns the updated notification or null if not found.
- */
 export async function retryNotification(notifId) {
     const notif = await getNotificationById(notifId);
     if (!notif)

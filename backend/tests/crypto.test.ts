@@ -1,7 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-// Set ENCRYPTION_KEY before importing the module
 process.env.ENCRYPTION_KEY = 'clearsight-dev-encryption-key-test-32-chars!!';
 
 const { encryptField, decryptField } = await import('../src/helpers/crypto.js');

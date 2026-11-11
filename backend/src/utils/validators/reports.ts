@@ -36,7 +36,6 @@ export const CreateReportBodySchema = z.object({
     .trim()
     .max(200, { message: 'nama_pelapor maksimal 200 karakter' })
     .optional(),
-  // Wajib: satu-satunya kanal notifikasi status laporan (FR-54 rev 8 Nov 2026).
   surel_pelapor: z
     .string({ error: 'surel_pelapor wajib diisi' })
     .trim()

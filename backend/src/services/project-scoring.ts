@@ -86,11 +86,6 @@ export async function collectScoreInput(client: DbClient, projectId: string): Pr
   return input;
 }
 
-/**
- * Hitung ulang skor memakai client yang sudah berada di dalam transaksi
- * pemanggil. Tidak membuka/menutup transaksi sendiri, sehingga perubahan data,
- * skor, dan riwayat_nilai dapat di-commit atau di-rollback bersama (Fase 28).
- */
 export async function recalculateProjectScoreInTx(
   client: DbClient,
   projectId: string,

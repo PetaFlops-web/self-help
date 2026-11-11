@@ -7,7 +7,6 @@ import multer, { MulterError } from 'multer';
 import { HttpError } from '../helpers/http.js';
 import { MediaMetadataError, stripMediaMetadata } from '../helpers/media-metadata.js';
 
-// ===== ETL file upload (CSV/JSON) — Fase 24.4 =====
 const ETL_ALLOWED_MIME: Record<string, string> = {
   'text/csv': 'csv',
   'text/plain': 'csv',
@@ -16,7 +15,7 @@ const ETL_ALLOWED_MIME: Record<string, string> = {
   'text/json': 'json',
 };
 
-const ETL_MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const ETL_MAX_SIZE = 10 * 1024 * 1024;
 const ETL_FILE_FIELD = 'file';
 
 const etlStorage = multer.memoryStorage();

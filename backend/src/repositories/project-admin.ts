@@ -44,13 +44,6 @@ export interface ValueHistoryRow {
   waktu: Date;
 }
 
-/**
- * Lima nilai pemicu skor yang wajib dicatat ke riwayat_nilai (FR-59). Dibaca
- * dengan cara yang sama seperti collectScoreInput(): tiga dari proyek, dua dari
- * tender terbaru. hari_rup_ke_tender bukan kolom — ia selisih
- * tender.tgl_pengumuman dan proyek.pengumuman_rup_tgl, sehingga perubahan salah
- * satu tanggal itu pun ikut tercatat.
- */
 export interface ScoreTriggerSnapshot {
   pagu: string | null;
   hps: string | null;
@@ -67,8 +60,6 @@ export const SCORE_TRIGGER_COLUMNS: (keyof ScoreTriggerSnapshot)[] = [
   'hari_rup_ke_tender',
 ];
 
-// Angka besar dan tanggal dikembalikan sebagai teks agar perbandingan
-// sebelum/sesudah stabil dan tanggal tidak bergeser zona waktu.
 const PROJECT_SELECT = `
   id, kode_rup, kode_tender, nama, dinas, kode_bps, tahun_anggaran,
   sumber_dana, metode_pemilihan, pagu::text AS pagu, hps::text AS hps,
@@ -114,7 +105,6 @@ export async function checkKodeTenderExists(client: DbClient, kodeTender: string
   return (res.rowCount ?? 0) > 0;
 }
 
-/** `forUpdate` mengunci baris proyek sampai transaksi pemanggil selesai. */
 export async function getProjectForAdmin(
   client: DbClient,
   id: string,
@@ -193,14 +183,8 @@ export async function updateProjectAdmin(
   await client.query(`UPDATE proyek SET ${sets.join(', ')} WHERE id = $${vals.length}`, vals);
 }
 
-/**
- * Hapus proyek beserta turunannya (SRS §9.4). Wajib dipanggil di dalam
- * transaksi. laporan_warga tidak dihapus (kesaksian, bukan turunan) dan
- * riwayat_nilai tidak disentuh (append-only, SRS §4.7).
- */
 export async function deleteProjectCascade(client: DbClient, projectId: string): Promise<void> {
   await client.query('UPDATE laporan_warga SET proyek_id = NULL WHERE proyek_id = $1', [projectId]);
-  // peserta_tender tidak punya proyek_id; terhubung lewat tender_id.
   await client.query(
     'DELETE FROM peserta_tender WHERE tender_id IN (SELECT id FROM tender WHERE proyek_id = $1)',
     [projectId],

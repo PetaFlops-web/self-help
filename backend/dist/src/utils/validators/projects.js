@@ -1,6 +1,5 @@
 import { z } from 'zod';
 const CURRENT_YEAR = new Date().getFullYear();
-/** Rentang wajar hps / nilai_kontrak terhadap pagu (SRS §9.2). */
 export const RASIO_MIN = 0.2;
 export const RASIO_MAX = 3.0;
 const isoDate = z
@@ -18,8 +17,6 @@ const tahunAnggaran = z.coerce
     .max(CURRENT_YEAR + 1, { message: `tahun_anggaran maksimal ${CURRENT_YEAR + 1}` });
 const rupiah = (field) => z.coerce.number({ error: `${field} harus angka` }).int({ message: `${field} harus bilangan bulat` }).positive({ message: `${field} harus bilangan bulat positif` });
 const optionalCode = z.string().trim().min(1).max(100);
-// Field yang tidak dikenal (termasuk skor_total dan kategori) dibuang Zod —
-// skor hanya ditulis recalculateProjectScore() (pengaman 3, AC-24).
 export const CreateProjectBodySchema = z.object({
     nama: z.string({ error: 'nama wajib diisi' }).trim().min(1, { message: 'nama wajib diisi' }).max(500),
     dinas: z.string({ error: 'dinas wajib diisi' }).trim().min(1, { message: 'dinas wajib diisi' }).max(200),
@@ -35,9 +32,6 @@ export const CreateProjectBodySchema = z.object({
     pengumuman_rup_tgl: isoDate.optional(),
     status: z.string().trim().max(100).optional(),
 });
-// Rasio hps/nilai_kontrak terhadap pagu dicek di service terhadap nilai
-// EFEKTIF (body digabung nilai tersimpan), karena PATCH sebagian bisa
-// mengirim salah satu saja.
 export const UpdateProjectBodySchema = z.object({
     nama: z.string().trim().min(1).max(500).optional(),
     dinas: z.string().trim().min(1).max(200).optional(),

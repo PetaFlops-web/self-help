@@ -18,8 +18,6 @@ async function withTransaction(fn) {
     }
     catch (err) {
         await client.query('ROLLBACK');
-        // Pengaman lapis DB: indeks unik kode_rup/kode_tender menolak permintaan
-        // bersamaan yang lolos pengecekan aplikasi.
         if (err.code === '23505') {
             throw new HttpError(409, 'kode_rup atau kode_tender sudah digunakan proyek lain');
         }
@@ -47,11 +45,6 @@ function diffFields(before, after, fields) {
     }
     return changes;
 }
-/**
- * Tolak hps/nilai_kontrak di luar 20%–300% dari pagu, diperiksa terhadap nilai
- * EFEKTIF (body digabung nilai tersimpan). Tanpa ini, PATCH yang hanya
- * mengirim hps — atau hanya pagu — lolos tanpa pemeriksaan rasio.
- */
 function assertValueRatios(effective) {
     const pagu = toNumberOrNull(effective.pagu);
     if (pagu === null || pagu <= 0)
@@ -88,12 +81,6 @@ async function lockEditableProject(client, id) {
         throw new HttpError(403, PEMERINTAH_FORBIDDEN);
     return project;
 }
-/**
- * Hitung ulang skor lalu catat setiap nilai pemicu skor yang berubah ke
- * riwayat_nilai (FR-59, pengaman 4). Berjalan di transaksi yang sama dengan
- * perubahan datanya: bila pencatatan gagal, perubahan ikut dibatalkan —
- * tidak ada nilai yang bergeser tanpa jejak.
- */
 async function rescoreAndRecordHistory(client, projectId, before, skorSebelum, ctx) {
     const score = await recalculateProjectScoreInTx(client, projectId);
     const after = await getScoreTriggerSnapshot(client, projectId);
@@ -126,7 +113,6 @@ export async function createProject(data, ctx) {
         await assertKodeBps(client, data.kode_bps);
         await assertUniqueCodes(client, data);
         const id = await createProjectRepo(client, data, ctx.actor.id);
-        // Nilai awal juga dicatat (nilai_lama null) agar riwayat dimulai dari asalnya.
         await rescoreAndRecordHistory(client, id, EMPTY_SNAPSHOT, null, ctx);
         return (await getProjectForAdmin(client, id));
     });
@@ -184,7 +170,6 @@ async function lockEditableTender(client, id) {
     const peek = await getTenderById(client, id);
     if (!peek)
         throw new HttpError(404, 'Tender tidak ditemukan');
-    // Kunci proyek induk lebih dulu (urutan sama dengan jalur proyek) agar tidak deadlock.
     const project = await lockEditableProject(client, peek.proyek_id);
     const tender = await getTenderById(client, id, true);
     if (!tender)

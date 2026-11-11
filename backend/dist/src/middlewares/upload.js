@@ -5,7 +5,6 @@ import path from 'node:path';
 import multer, { MulterError } from 'multer';
 import { HttpError } from '../helpers/http.js';
 import { MediaMetadataError, stripMediaMetadata } from '../helpers/media-metadata.js';
-// ===== ETL file upload (CSV/JSON) — Fase 24.4 =====
 const ETL_ALLOWED_MIME = {
     'text/csv': 'csv',
     'text/plain': 'csv',
@@ -13,7 +12,7 @@ const ETL_ALLOWED_MIME = {
     'application/json': 'json',
     'text/json': 'json',
 };
-const ETL_MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const ETL_MAX_SIZE = 10 * 1024 * 1024;
 const ETL_FILE_FIELD = 'file';
 const etlStorage = multer.memoryStorage();
 function etlFileFilter(_req, file, cb) {

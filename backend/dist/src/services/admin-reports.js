@@ -41,8 +41,6 @@ export async function verifyReportByTiket(tiket, input) {
     if (input.status === 'Diverifikasi' && existing.proyek_id) {
         await recalculateProjectScore(pool, existing.proyek_id);
     }
-    // Fail-safe notification trigger (NFR-23): status laporan sudah berubah di
-    // atas; hasil pengiriman hanya dilaporkan, tidak pernah menggagalkan operasi.
     const notification = await triggerNotification(tiket, existing.status, input.status);
     return { report: updated, previousStatus: existing.status, notification };
 }
@@ -100,7 +98,6 @@ export async function forwardReportByTiket(tiket, lembaga) {
     if (!updated) {
         throw new HttpError(500, 'Gagal meneruskan laporan');
     }
-    // Fail-safe notification trigger (NFR-23): lihat catatan di verifyReportByTiket.
     const notification = await triggerNotification(tiket, existing.status, 'Diteruskan');
     return { report: updated, previousStatus: existing.status, notification };
 }

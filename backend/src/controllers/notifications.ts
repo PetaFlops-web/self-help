@@ -28,7 +28,6 @@ export async function listNotificationsHandler(req: Request, res: Response): Pro
     offset: finalOffset,
   });
 
-  // Strip alamat_tujuan_hash from response (26.7: AC-20)
   const rows = result.rows.map((r) => ({
     id: r.id,
     tiket: r.tiket,

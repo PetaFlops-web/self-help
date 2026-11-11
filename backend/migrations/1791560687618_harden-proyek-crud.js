@@ -1,15 +1,3 @@
-/**
- * Pengerasan Fase 28 (temuan review 9 Nov 2026).
- *
- * 1. kode_tender unik bila diisi — pengecekan aplikasi saja bisa ditembus dua
- *    permintaan bersamaan (SRS §9.2: bentrok → 409, bukan ditimpa).
- * 2. dibuat_oleh / diubah_oleh diberi FK ke pengguna (tracker 28.1).
- * 3. riwayat_nilai.proyek_id tidak lagi ON DELETE CASCADE. SRS §4.7: riwayat
- *    "append-only dan tidak dapat dihapus ... tidak ada aturan retensi yang
- *    menghapusnya". Cascade membuat penghapusan proyek ikut menghapus jejak
- *    penggeseran nilainya. FK dilepas agar baris riwayat tetap utuh (termasuk
- *    proyek_id aslinya) setelah proyek dihapus.
- */
 exports.up = async (pgm) => {
   pgm.createIndex('proyek', 'kode_tender', {
     name: 'proyek_kode_tender_key',

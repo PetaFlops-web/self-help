@@ -22,7 +22,6 @@ const REPORT_AGGREGATE_JOIN = `
      GROUP BY proyek_id
   ) lw ON lw.proyek_id = p.id
 `;
-/** Bangun klausa WHERE terparameterisasi untuk daftar proyek; pisahkan filter tab bila diperlukan untuk KPI. */
 function buildProjectWhereClause(f, includeTabFilters = true) {
     const where = [];
     const params = [];

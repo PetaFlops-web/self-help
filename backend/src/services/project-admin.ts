@@ -34,7 +34,6 @@ export interface AuditContext {
   ip: string | null;
 }
 
-/** Perubahan per field untuk diff log_audit: nilai lama dan baru. */
 export type FieldChanges = Record<string, { lama: unknown; baru: unknown }>;
 
 const MAX_LIMIT = 100;
@@ -53,8 +52,6 @@ async function withTransaction<T>(fn: (client: DbClient) => Promise<T>): Promise
     return result;
   } catch (err) {
     await client.query('ROLLBACK');
-    // Pengaman lapis DB: indeks unik kode_rup/kode_tender menolak permintaan
-    // bersamaan yang lolos pengecekan aplikasi.
     if ((err as { code?: string }).code === '23505') {
       throw new HttpError(409, 'kode_rup atau kode_tender sudah digunakan proyek lain');
     }
@@ -88,11 +85,6 @@ function diffFields(
   return changes;
 }
 
-/**
- * Tolak hps/nilai_kontrak di luar 20%–300% dari pagu, diperiksa terhadap nilai
- * EFEKTIF (body digabung nilai tersimpan). Tanpa ini, PATCH yang hanya
- * mengirim hps — atau hanya pagu — lolos tanpa pemeriksaan rasio.
- */
 function assertValueRatios(effective: { pagu: unknown; hps: unknown; nilai_kontrak: unknown }): void {
   const pagu = toNumberOrNull(effective.pagu);
   if (pagu === null || pagu <= 0) return;
@@ -132,12 +124,6 @@ async function lockEditableProject(client: DbClient, id: string): Promise<Projec
   return project;
 }
 
-/**
- * Hitung ulang skor lalu catat setiap nilai pemicu skor yang berubah ke
- * riwayat_nilai (FR-59, pengaman 4). Berjalan di transaksi yang sama dengan
- * perubahan datanya: bila pencatatan gagal, perubahan ikut dibatalkan —
- * tidak ada nilai yang bergeser tanpa jejak.
- */
 async function rescoreAndRecordHistory(
   client: DbClient,
   projectId: string,
@@ -183,7 +169,6 @@ export async function createProject(
     await assertUniqueCodes(client, data);
 
     const id = await createProjectRepo(client, data, ctx.actor.id);
-    // Nilai awal juga dicatat (nilai_lama null) agar riwayat dimulai dari asalnya.
     await rescoreAndRecordHistory(client, id, EMPTY_SNAPSHOT, null, ctx);
     return (await getProjectForAdmin(client, id))!;
   });
@@ -276,7 +261,6 @@ export async function createTender(
 async function lockEditableTender(client: DbClient, id: string): Promise<{ tender: TenderAdminRow; project: ProjectAdminRow }> {
   const peek = await getTenderById(client, id);
   if (!peek) throw new HttpError(404, 'Tender tidak ditemukan');
-  // Kunci proyek induk lebih dulu (urutan sama dengan jalur proyek) agar tidak deadlock.
   const project = await lockEditableProject(client, peek.proyek_id);
   const tender = await getTenderById(client, id, true);
   if (!tender) throw new HttpError(404, 'Tender tidak ditemukan');

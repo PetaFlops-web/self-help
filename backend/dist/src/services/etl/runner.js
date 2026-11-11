@@ -34,7 +34,6 @@ export async function runEtl(sourceId, csvContent, sourceUrl, jsonContent) {
         let provenanceUrl;
         let parsedRows;
         if (csvContent !== undefined && csvContent !== '') {
-            // Manual CSV import — validate source_id exists in sumber_data
             const sumber = await getSumberDataById(sourceId);
             if (!sumber) {
                 throw new HttpError(400, 'source_id tidak ditemukan di sumber_data');
@@ -43,7 +42,6 @@ export async function runEtl(sourceId, csvContent, sourceUrl, jsonContent) {
             parsedRows = (await createSirupConnector({ csvContent }).fetchRows()).rows;
         }
         else if (jsonContent !== undefined && jsonContent !== '') {
-            // Manual JSON import
             const sumber = await getSumberDataById(sourceId);
             if (!sumber) {
                 throw new HttpError(400, 'source_id tidak ditemukan di sumber_data');
@@ -53,7 +51,6 @@ export async function runEtl(sourceId, csvContent, sourceUrl, jsonContent) {
             parsedRows = parseJsonImport(jsonContent);
         }
         else {
-            // Automatic fetch — only supported sources
             if (!SUPPORTED_SOURCES.has(sourceId)) {
                 throw new HttpError(400, 'source_id tidak didukung untuk pengambilan otomatis');
             }
@@ -95,7 +92,6 @@ export async function runEtl(sourceId, csvContent, sourceUrl, jsonContent) {
                 continue;
             }
             const v = result.data;
-            // 28.11: Don't overwrite manual_admin entries — record etl_error instead
             if (v.kode_rup) {
                 const conflict = await pool.query('SELECT asal_data FROM proyek WHERE kode_rup = $1', [v.kode_rup]);
                 if (conflict.rows[0]?.asal_data === 'manual_admin') {
@@ -105,12 +101,6 @@ export async function runEtl(sourceId, csvContent, sourceUrl, jsonContent) {
                     continue;
                 }
             }
-            // asal_data di-set eksplisit 'pemerintah': seluruh baris yang masuk lewat
-            // ETL/impor berasal dari unduhan sumber resmi, bukan input manual admin.
-            // Ditulis eksplisit (bukan mengandalkan default kolom) agar provenansi
-            // terbaca di kode dan auditable (temuan review 24.4). Entri manual_admin
-            // yang sudah ada sudah dicegat guard bentrok_entri_manual di atas, jadi
-            // ON CONFLICT di sini tidak pernah menimpa asal_data entri manual.
             const upsert = await pool.query(`INSERT INTO proyek (kode_rup, kode_tender, nama, dinas, kode_bps, tahun_anggaran, pagu, hps, sumber_dana, metode_pemilihan, pengumuman_rup_tgl, source_id, source_url, fetched_at, match_status, asal_data)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now(), 'unmatched', 'pemerintah')
          ON CONFLICT (kode_rup) DO UPDATE SET

@@ -60,11 +60,6 @@ export async function collectScoreInput(client, projectId) {
     }
     return input;
 }
-/**
- * Hitung ulang skor memakai client yang sudah berada di dalam transaksi
- * pemanggil. Tidak membuka/menutup transaksi sendiri, sehingga perubahan data,
- * skor, dan riwayat_nilai dapat di-commit atau di-rollback bersama (Fase 28).
- */
 export async function recalculateProjectScoreInTx(client, projectId) {
     const config = loadScoringConfig();
     const input = await collectScoreInput(client, projectId);

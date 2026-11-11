@@ -10,26 +10,11 @@ import type { NotificationPayload, NotificationSendStatus } from './types.js';
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAYS_MS = [5_000, 15_000, 45_000];
 
-/**
- * Ringkasan hasil pemicu notifikasi, dikembalikan ke pemanggil agar status
- * pengiriman dapat ditampilkan di respons API. Tidak memuat alamat pelapor.
- */
 export interface NotificationOutcome {
-  /** Status percobaan pertama: terkirim, gagal, dilewati, atau tertunda. */
   status: NotificationSendStatus;
-  /** Pesan galat penyedia bila status gagal. Tanpa isi pesan maupun alamat. */
   galat?: string;
 }
 
-/**
- * Trigger a notification after a report status change.
- *
- * Fail-safe (NFR-23): galat ditangkap dan dicatat, TIDAK PERNAH dilempar,
- * sehingga perubahan status laporan tetap berhasil walau pengiriman gagal.
- * Nilai kembaliannya hanya untuk MELAPORKAN hasil ke pemanggil, bukan untuk
- * menggagalkan operasi — pemanggil tidak boleh melempar error dari nilai ini.
- * Percobaan ulang (bila gagal) tetap berjalan asinkron di latar belakang.
- */
 export async function triggerNotification(
   tiket: string,
   statusDari: string,
@@ -97,10 +82,6 @@ function scheduleRetry(notifId: string, payload: NotificationPayload, attempt: n
   }, delay);
 }
 
-/**
- * Manually retry a failed notification (admin endpoint).
- * Returns the updated notification or null if not found.
- */
 export async function retryNotification(
   notifId: string,
 ): Promise<{ id: string; status_kirim: string; percobaan: number } | null> {

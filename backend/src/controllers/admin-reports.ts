@@ -67,8 +67,6 @@ export async function verifyReport(req: Request<{ id: string }>, res: Response):
     ip,
   });
 
-  // Callback error notifikasi: status laporan tetap berubah (fail-safe), tetapi
-  // bila pengiriman surel gagal/dilewati, beri tahu admin lewat respons.
   const message =
     notification.status === 'gagal'
       ? 'Status laporan berhasil diperbarui, tetapi notifikasi surel gagal terkirim'
