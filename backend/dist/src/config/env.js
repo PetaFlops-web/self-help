@@ -3,7 +3,10 @@ dotenv.config();
 const nodeEnv = process.env.NODE_ENV || 'development';
 export const isDev = nodeEnv === 'development';
 export const isProd = nodeEnv === 'production';
-const required = ['DATABASE_URL', 'REDIS_URL', 'ENCRYPTION_KEY'];
+const DEV_ENCRYPTION_PLACEHOLDER = 'clearsight-dev-encryption-key-replace-in-prod-0123456789';
+const required = isProd
+    ? ['DATABASE_URL', 'REDIS_URL', 'JWT_SECRET', 'ENCRYPTION_KEY']
+    : ['DATABASE_URL', 'REDIS_URL', 'ENCRYPTION_KEY'];
 const missing = required.filter((key) => !process.env[key]);
 if (missing.length > 0) {
     throw new Error(`[env] Variabel environment wajib tidak ditemukan: ${missing.join(', ')}. ` +
@@ -19,9 +22,9 @@ export const config = {
     llmServiceUrl: (process.env.LLM_SERVICE_URL || 'http://localhost:3001').replace(/\/+$/, ''),
     llmServiceTimeoutMs: Number(process.env.LLM_SERVICE_TIMEOUT_MS) || 30000,
     allowedOrigins: process.env.ALLOWED_ORIGINS
-        ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+        ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
         : [],
-    jwtSecret: process.env.JWT_SECRET || 'clearsight-dev-jwt-secret-replace-in-production-1234567890',
+    jwtSecret: process.env.JWT_SECRET,
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
     encryptionKey: process.env.ENCRYPTION_KEY,
     smtp: {
@@ -31,17 +34,14 @@ export const config = {
         pass: process.env.SMTP_PASS || null,
         from: process.env.MAIL_FROM || null,
     },
-    appBaseUrl: process.env.APP_BASE_URL || 'http://localhost:5173',
+    appBaseUrl: (process.env.APP_BASE_URL || 'http://localhost:5173').replace(/\/+$/, ''),
 };
 const JWT_EXPIRES_IN_RE = /^\d+(ms|s|m|h|d|w)$/;
 if (!JWT_EXPIRES_IN_RE.test(config.jwtExpiresIn)) {
     throw new Error(`[env] JWT_EXPIRES_IN tidak valid: "${config.jwtExpiresIn}". ` +
         `Gunakan format seperti "24h", "7d", "3600s".`);
 }
-if (isProd && config.jwtSecret.length < 32) {
-    throw new Error('[env] JWT_SECRET harus minimal 32 karakter di production.');
-}
-if (isProd && config.encryptionKey.length < 32) {
-    throw new Error('[env] ENCRYPTION_KEY harus minimal 32 karakter di production.');
+if (isProd && (config.encryptionKey.length < 32 || config.encryptionKey === DEV_ENCRYPTION_PLACEHOLDER)) {
+    throw new Error('[env] ENCRYPTION_KEY wajib diisi rahasia unik minimal 32 karakter (bukan nilai dev) di production.');
 }
 export default config;

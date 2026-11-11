@@ -1,5 +1,6 @@
-// Ubah VITE_API_BASE_URL pada .env di root project, bukan di folder src.
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api').replace(/\/+$/, '')
+// Ubah VITE_API_BASE_URL pada .env atau build args Docker Compose.
+const DEFAULT_API_BASE_URL = import.meta.env.PROD ? '/api' : 'http://localhost:8000/api'
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '')
 export const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS || 15000)
 
 // Origin backend untuk aset statis (hapus akhiran /api dari base URL).
