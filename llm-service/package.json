@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "LLM microservice AliranTerang: penjelasan risiko proyek publik berbahasa awam",
   "type": "module",
-  "license": "ISC",
+  "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server.ts",
     "build": "tsc",

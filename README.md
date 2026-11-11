@@ -310,3 +310,7 @@ Aplikasi ini **masih berjalan dalam mode simulasi**. Data proyek berasal dari pe
 Skor risiko **bukan** keluaran AI: perhitungannya memakai mesin aturan deterministik dari `backend/config/scoring.json`, sehingga hasilnya dapat diaudit dan dihitung ulang. LLM hanya menjelaskan skor yang sudah final dalam bahasa awam, tidak pernah menghitung atau mengubahnya. Bobot dan ambang hanya dapat diubah lewat berkas konfigurasi yang terlacak git, bukan lewat API.
 
 Seluruh angka yang ditampilkan adalah indikator risiko untuk diperiksa, bukan bukti pelanggaran.
+
+## Lisensi
+
+Proyek ini dirilis di bawah [MIT License](LICENSE) — Copyright (c) 2026 Akbar Vabiansyah, Ferdi Kurniawan, M Rizky Arya Seto.
