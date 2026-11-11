@@ -1,6 +1,37 @@
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MIN_YEAR = 2000;
 const MAX_YEAR = 2100;
+export function parseBoundedYear(rawValue, fieldName) {
+    const tahunRaw = (rawValue ?? '').trim();
+    if (!tahunRaw) {
+        return { ok: false, reason: `${fieldName} wajib diisi` };
+    }
+    const tahunNum = Number(tahunRaw);
+    if (!Number.isInteger(tahunNum)) {
+        return { ok: false, reason: `${fieldName} harus bilangan bulat` };
+    }
+    if (tahunNum < MIN_YEAR || tahunNum > MAX_YEAR) {
+        return { ok: false, reason: `${fieldName} harus antara ${MIN_YEAR} dan ${MAX_YEAR}` };
+    }
+    return { ok: true, value: tahunNum };
+}
+export function parseNonNegativeBigInt(rawValue, fieldName, required = false) {
+    const trimmed = (rawValue ?? '').trim();
+    if (required && !trimmed) {
+        return { ok: false, reason: `${fieldName} wajib diisi` };
+    }
+    let parsed;
+    try {
+        parsed = BigInt(trimmed);
+    }
+    catch {
+        return { ok: false, reason: `${fieldName} harus bilangan bulat non-negatif` };
+    }
+    if (parsed < 0n) {
+        return { ok: false, reason: `${fieldName} tidak boleh negatif` };
+    }
+    return { ok: true, value: parsed.toString() };
+}
 function isValidDate(value) {
     if (!DATE_RE.test(value))
         return false;
@@ -23,43 +54,24 @@ export function validateProjectRow(row, validKodeBps) {
     if (!kode_bps || !validKodeBps.has(kode_bps)) {
         return { ok: false, reason: 'kode_bps tidak terdaftar di wilayah' };
     }
-    const tahunRaw = (row.tahun_anggaran ?? '').trim();
-    if (!tahunRaw) {
-        return { ok: false, reason: 'tahun_anggaran wajib diisi' };
+    const tahunCheck = parseBoundedYear(row.tahun_anggaran, 'tahun_anggaran');
+    if (!tahunCheck.ok) {
+        return tahunCheck;
     }
-    const tahunNum = Number(tahunRaw);
-    if (!Number.isInteger(tahunNum)) {
-        return { ok: false, reason: 'tahun_anggaran harus bilangan bulat' };
+    const tahunNum = tahunCheck.value;
+    const paguCheck = parseNonNegativeBigInt(row.pagu, 'pagu');
+    if (!paguCheck.ok) {
+        return paguCheck;
     }
-    if (tahunNum < MIN_YEAR || tahunNum > MAX_YEAR) {
-        return { ok: false, reason: `tahun_anggaran harus antara ${MIN_YEAR} dan ${MAX_YEAR}` };
-    }
-    const paguRaw = (row.pagu ?? '').trim();
-    let paguBigInt;
-    try {
-        paguBigInt = BigInt(paguRaw);
-    }
-    catch {
-        return { ok: false, reason: 'pagu harus bilangan bulat non-negatif' };
-    }
-    if (paguBigInt < 0n) {
-        return { ok: false, reason: 'pagu tidak boleh negatif' };
-    }
-    const pagu = paguBigInt.toString();
+    const pagu = paguCheck.value;
     let hps = null;
     const hpsRaw = (row.hps ?? '').trim();
     if (hpsRaw) {
-        let hpsBigInt;
-        try {
-            hpsBigInt = BigInt(hpsRaw);
+        const hpsCheck = parseNonNegativeBigInt(hpsRaw, 'hps');
+        if (!hpsCheck.ok) {
+            return hpsCheck;
         }
-        catch {
-            return { ok: false, reason: 'hps harus bilangan bulat non-negatif' };
-        }
-        if (hpsBigInt < 0n) {
-            return { ok: false, reason: 'hps tidak boleh negatif' };
-        }
-        hps = hpsBigInt.toString();
+        hps = hpsCheck.value;
     }
     const sumber_dana = (row.sumber_dana ?? '').trim() || null;
     const metode_pemilihan = (row.metode_pemilihan ?? '').trim() || null;

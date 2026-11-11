@@ -1292,11 +1292,12 @@ const swaggerSpec: JsonObject = {
         summary: 'Impor manual berkas CSV/JSON (Fase 24.4, FR-43)',
         description:
           'Mengunggah berkas CSV atau JSON untuk sumber yang hanya menyediakan unduhan ' +
-          '(mis. SRC-04, SRC-06, SRC-07). Dikirim sebagai multipart/form-data dengan field ' +
-          'berkas bernama "file" (maksimal 10 MB, hanya CSV/JSON). Baris valid di-upsert ' +
-          'berdasarkan kode_rup dan ditandai asal_data="pemerintah"; baris duplikat dalam ' +
-          'berkas dan baris invalid disimpan ke etl_error, serta dikembalikan di errors[] ' +
-          'dengan nomor baris. Baris yang bentrok dengan entri manual_admin yang sudah ada ' +
+          '(mis. SRC-01, SRC-02, SRC-04, SRC-06, SRC-07). Dikirim sebagai multipart/form-data dengan field ' +
+          'berkas bernama "file" (maksimal 10 MB, hanya CSV/JSON). Mendukung impor paket proyek SiRUP (kode_rup), ' +
+          'anggaran dinas multi-tahun SRC-04 (anggaran_dinas untuk D1-01), dan peserta/pemenang tender SRC-02 ' +
+          '(perusahaan tanpa PII dan peserta_tender untuk D2-04) dengan rekalkulasi skor proyek terdampak. ' +
+          'Baris duplikat dalam berkas dan baris invalid disimpan ke etl_error, serta dikembalikan di errors[] ' +
+          'dengan nomor baris. Baris proyek yang bentrok dengan entri manual_admin yang sudah ada ' +
           'ditolak (alasan "bentrok_entri_manual") agar input admin tidak tertimpa impor. ' +
           'Membutuhkan peran admin.',
         operationId: 'importEtlFile',

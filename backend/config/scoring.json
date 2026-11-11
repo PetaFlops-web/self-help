@@ -28,7 +28,7 @@
       "sedang": 20,
       "tinggi": 40,
       "required_fields": ["kenaikan_pagu_pct"],
-      "sumber": "SRC-01",
+      "sumber": "SRC-04, SRC-01",
       "uraian_aturan": "Pagu naik dibanding tahun lalu untuk paket sejenis"
     },
     {

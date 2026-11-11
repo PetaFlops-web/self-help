@@ -102,6 +102,9 @@ export interface PaginatedProjectsResult {
 }
 
 export interface ProjectRow {
+  dinas: string | null;
+  kode_bps: string | null;
+  tahun_anggaran: number | null;
   hps: unknown;
   nilai_kontrak: unknown;
 }

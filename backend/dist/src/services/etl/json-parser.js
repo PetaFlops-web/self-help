@@ -1,4 +1,5 @@
-const FIELD_MAP = {
+import { mapRawRecords, parseRawJson } from './records.js';
+export const JSON_PROJECT_FIELD_MAP = {
     kode_rup: 'kode_rup',
     kode_tender: 'kode_tender',
     nama_paket: 'nama',
@@ -15,31 +16,6 @@ const FIELD_MAP = {
     pengumuman_rup_tgl: 'pengumuman_rup_tgl',
 };
 export function parseJsonImport(jsonContent) {
-    let data;
-    try {
-        data = JSON.parse(jsonContent);
-    }
-    catch {
-        throw new Error('Format JSON tidak valid');
-    }
-    if (!Array.isArray(data)) {
-        throw new Error('JSON harus berupa array objek proyek');
-    }
-    const result = [];
-    for (let i = 0; i < data.length; i++) {
-        const obj = data[i];
-        if (!obj || typeof obj !== 'object')
-            continue;
-        const normalized = {};
-        const raw = {};
-        for (const [key, value] of Object.entries(obj)) {
-            const strValue = String(value ?? '');
-            raw[key] = strValue;
-            const mapped = FIELD_MAP[key];
-            if (mapped)
-                normalized[mapped] = strValue;
-        }
-        result.push({ normalized, raw, lineNumber: i + 1 });
-    }
-    return result;
+    const { records } = parseRawJson(jsonContent, 'JSON harus berupa array objek proyek');
+    return mapRawRecords(records, JSON_PROJECT_FIELD_MAP);
 }

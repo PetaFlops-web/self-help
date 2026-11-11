@@ -4,6 +4,7 @@ const nodeEnv = process.env.NODE_ENV || 'development';
 export const isDev = nodeEnv === 'development';
 export const isProd = nodeEnv === 'production';
 const DEV_ENCRYPTION_PLACEHOLDER = 'clearsight-dev-encryption-key-replace-in-prod-0123456789';
+const DEV_JWT_FALLBACK = 'clearsight-dev-jwt-secret-replace-in-production-1234567890';
 const required = isProd
     ? ['DATABASE_URL', 'REDIS_URL', 'JWT_SECRET', 'ENCRYPTION_KEY']
     : ['DATABASE_URL', 'REDIS_URL', 'ENCRYPTION_KEY'];
@@ -24,7 +25,9 @@ export const config = {
     allowedOrigins: process.env.ALLOWED_ORIGINS
         ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
         : [],
-    jwtSecret: process.env.JWT_SECRET,
+    jwtSecret: isProd
+        ? process.env.JWT_SECRET
+        : (process.env.JWT_SECRET || DEV_JWT_FALLBACK),
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '24h',
     encryptionKey: process.env.ENCRYPTION_KEY,
     smtp: {

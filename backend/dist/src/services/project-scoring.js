@@ -1,7 +1,8 @@
 import { loadScoringConfig } from '../config/scoring.js';
 import { scoreProject } from './scoring.js';
 import { toNum } from '../helpers/number.js';
-import { deleteIndicatorFindingsByProjectId, getUnpublishedDocumentSummary, getVerifiedReportCount, getPaymentDisbursedPercentage, getPhysicalProgressPercentage, getUnfulfilledProcedureSummary, getProjectRow, getRabTotalReference, getRabTotalVolume, getVerifiedFieldMeasurements, getTenderRow, insertIndicatorFinding, updateProjectScore, } from '../repositories/project-scoring.js';
+import { deleteIndicatorFindingsByProjectId, getDepartmentBudgetRows, getUnpublishedDocumentSummary, getVerifiedReportCount, getPaymentDisbursedPercentage, getPhysicalProgressPercentage, getUnfulfilledProcedureSummary, getProjectRow, getRabTotalReference, getRabTotalVolume, getVerifiedFieldMeasurements, getTenderRow, getWinnerConcentrationStats, getWinningCompanyId, insertIndicatorFinding, updateProjectScore, } from '../repositories/project-scoring.js';
+const MIN_PACKAGES_FOR_CONCENTRATION = 2;
 export async function collectScoreInput(client, projectId) {
     const projectRow = await getProjectRow(client, projectId);
     const tender = await getTenderRow(client, projectId);
@@ -56,6 +57,24 @@ export async function collectScoreInput(client, projectId) {
         }
         if (maxSelisihPct !== null) {
             input.selisih_volume_pct = maxSelisihPct;
+        }
+    }
+    const tahunAnggaran = toNum(projectRow?.tahun_anggaran);
+    if (projectRow?.dinas && tahunAnggaran !== null) {
+        if (projectRow.kode_bps) {
+            const budgetRows = await getDepartmentBudgetRows(client, projectRow.dinas, projectRow.kode_bps, tahunAnggaran);
+            const paguCurrent = toNum(budgetRows.find((r) => Number(r.tahun) === tahunAnggaran)?.pagu);
+            const paguPrev = toNum(budgetRows.find((r) => Number(r.tahun) === tahunAnggaran - 1)?.pagu);
+            if (paguCurrent !== null && paguPrev !== null && paguPrev > 0) {
+                input.kenaikan_pagu_pct = Math.round(((paguCurrent - paguPrev) / paguPrev) * 100);
+            }
+        }
+        const winningCompanyId = await getWinningCompanyId(client, projectId);
+        if (winningCompanyId) {
+            const stats = await getWinnerConcentrationStats(client, projectRow.dinas, tahunAnggaran, winningCompanyId);
+            if (stats.total_paket >= MIN_PACKAGES_FOR_CONCENTRATION) {
+                input.konsentrasi_pemenang_pct = Math.round((stats.paket_menang / stats.total_paket) * 100);
+            }
         }
     }
     return input;

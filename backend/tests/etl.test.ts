@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateProjectRow } from '../src/services/etl/validator.js';
@@ -10,13 +11,15 @@ import redisClient, { connectRedis } from '../src/config/redis.js';
 
 const VALID_BPS = new Set(['1871']);
 const TEST_URL = 'https://example.test/sirup.csv';
+const TRACKED_SOURCES = ['SRC-01', 'SRC-02', 'SRC-04'];
 
 interface SourceBaseline {
+  source_id: string;
   row_count: number | null;
   last_fetched_at: Date | null;
 }
 
-let sourceBaseline: SourceBaseline | null = null;
+let sourceBaselines: SourceBaseline[] = [];
 
 function validRow(overrides: Record<string, string> = {}): Record<string, string> {
   return {
@@ -42,30 +45,51 @@ async function cleanupTestRows(): Promise<void> {
      WHERE (pair.proyek_id = project.id OR pair.pasangan_id = project.id)
        AND project.kode_rup LIKE 'TEST-RUP-%'`,
   );
+  await pool.query(
+    `DELETE FROM riwayat_nilai WHERE proyek_id IN (SELECT id FROM proyek WHERE kode_rup LIKE 'TEST-RUP-%')`,
+  );
+  await pool.query(
+    `DELETE FROM indikator_temuan WHERE proyek_id IN (SELECT id FROM proyek WHERE kode_rup LIKE 'TEST-RUP-%')`,
+  );
+  await pool.query(
+    `DELETE FROM peserta_tender WHERE tender_id IN (SELECT id FROM tender WHERE proyek_id IN (SELECT id FROM proyek WHERE kode_rup LIKE 'TEST-RUP-%'))`,
+  );
+  await pool.query(
+    `DELETE FROM tender WHERE proyek_id IN (SELECT id FROM proyek WHERE kode_rup LIKE 'TEST-RUP-%')`,
+  );
+  await pool.query("DELETE FROM perusahaan WHERE nama_badan_usaha LIKE 'PT Uji ETL%'");
+  await pool.query("DELETE FROM anggaran_dinas WHERE dinas LIKE 'Dinas Uji ETL%'");
   await pool.query("DELETE FROM proyek WHERE kode_rup LIKE 'TEST-RUP-%'");
   await pool.query(
     `DELETE FROM etl_error
-      WHERE source_id = 'SRC-01'
-        AND baris_mentah->>'kode_rup' LIKE 'TEST-RUP-%'`,
+      WHERE source_id = ANY($1::text[])
+        AND (
+          baris_mentah->>'kode_rup' LIKE 'TEST-RUP-%'
+          OR baris_mentah->>'kode_tender' LIKE 'TEST-TENDER-%'
+          OR baris_mentah->>'dinas' LIKE 'Dinas Uji ETL%'
+          OR baris_mentah->>'nama_badan_usaha' LIKE 'PT Uji ETL%'
+        )`,
+    [TRACKED_SOURCES],
   );
 }
 
 before(async () => {
   const source = await pool.query<SourceBaseline>(
-    `SELECT row_count, last_fetched_at FROM sumber_data WHERE source_id = 'SRC-01'`,
+    `SELECT source_id, row_count, last_fetched_at FROM sumber_data WHERE source_id = ANY($1::text[])`,
+    [TRACKED_SOURCES],
   );
-  sourceBaseline = source.rows[0] ?? null;
+  sourceBaselines = source.rows;
   await cleanupTestRows();
 });
 
 after(async () => {
   await cleanupTestRows();
-  if (sourceBaseline) {
+  for (const baseline of sourceBaselines) {
     await pool.query(
       `UPDATE sumber_data
           SET row_count = $2, last_fetched_at = $3
         WHERE source_id = $1`,
-      ['SRC-01', sourceBaseline.row_count, sourceBaseline.last_fetched_at],
+      [baseline.source_id, baseline.row_count, baseline.last_fetched_at],
     );
   }
   if (redisClient.isOpen) await redisClient.quit();
@@ -417,4 +441,141 @@ test('advisory lock: dua run paralel — salah satu dapat 409', async () => {
   const fulfilled = results.filter((r) => r.status === 'fulfilled');
   const rejected = results.filter((r) => r.status === 'rejected');
   assert.equal(fulfilled.length + rejected.length, 2);
+});
+
+test('SRC-04 impor CSV anggaran_dinas: validasi wilayah, upsert, catat etl_error, dan hitung ulang D1-01', async () => {
+  const projectRes = await pool.query<{ id: string }>(
+    `INSERT INTO proyek (kode_rup, nama, dinas, kode_bps, tahun_anggaran, pagu, source_id)
+     VALUES ('TEST-RUP-BUDGET-01', 'Proyek Uji Anggaran', 'Dinas Uji ETL APBD', '1871', 2025, 800000000, 'SRC-01')
+     RETURNING id`,
+  );
+  const projectId = projectRes.rows[0].id;
+
+  const csv = [
+    'dinas,kode_bps,tahun,pagu,realisasi',
+    'Dinas Uji ETL APBD,1871,2024,1000000000,900000000',
+    'Dinas Uji ETL APBD,1871,2025,1500000000,1200000000',
+    'Dinas Uji ETL APBD,9999,2025,1500000000,0',
+  ].join('\n');
+
+  const result = await runEtl('SRC-04', csv, TEST_URL);
+  assert.equal(result.status, 'partial');
+  assert.equal(result.accepted, 2);
+  assert.equal(result.rejected, 1);
+  assert.equal(result.errors.length, 1);
+  assert.equal(result.errors[0].baris, 4);
+
+  const budgetRows = await pool.query<{ tahun: number; is_dummy: boolean }>(
+    `SELECT tahun, is_dummy FROM anggaran_dinas WHERE dinas = 'Dinas Uji ETL APBD' ORDER BY tahun ASC`,
+  );
+  assert.equal(budgetRows.rows.length, 2);
+  assert.equal(budgetRows.rows[0].is_dummy, false);
+
+  const findings = await pool.query<{ nilai_terukur: string; tingkat: string }>(
+    `SELECT nilai_terukur, tingkat FROM indikator_temuan WHERE proyek_id = $1 AND kode_aturan = 'D1-01'`,
+    [projectId],
+  );
+  assert.equal(findings.rows.length, 1);
+  assert.equal(Number(findings.rows[0].nilai_terukur), 50);
+  assert.equal(findings.rows[0].tingkat, 'tinggi');
+});
+
+test('SRC-04 backward-compatible: CSV berformat proyek SiRUP tetap masuk ke tabel proyek', async () => {
+  const csv =
+    'kode_rup,nama_paket,satker,kode_bps,tahun_anggaran,pagu\n' +
+    'TEST-RUP-SRC04-PROJ,Paket Uji SRC-04,Dinas Uji ETL APBD,1871,2025,950000000\n';
+
+  const result = await runEtl('SRC-04', csv, TEST_URL);
+  assert.equal(result.status, 'success');
+  assert.equal(result.accepted, 1);
+
+  const proj = await pool.query<{ kode_rup: string; asal_data: string }>(
+    `SELECT kode_rup, asal_data FROM proyek WHERE kode_rup = 'TEST-RUP-SRC04-PROJ'`,
+  );
+  assert.equal(proj.rows.length, 1);
+  assert.equal(proj.rows[0].asal_data, 'pemerintah');
+});
+
+test('SRC-02 impor JSON peserta_tender: zero-PII (DR-07), sanitasi etl_error, dan hitung ulang D2-04', async () => {
+  const insertedIds: string[] = [];
+  for (const [rup, tender] of [
+    ['TEST-RUP-WIN-01', 'TEST-TENDER-WIN-01'],
+    ['TEST-RUP-WIN-02', 'TEST-TENDER-WIN-02'],
+  ]) {
+    const r = await pool.query<{ id: string }>(
+      `INSERT INTO proyek (kode_rup, kode_tender, nama, dinas, kode_bps, tahun_anggaran, pagu, source_id)
+       VALUES ($1, $2, $1, 'Dinas Uji ETL LPSE', '1871', 2025, 500000000, 'SRC-01')
+       RETURNING id`,
+      [rup, tender],
+    );
+    insertedIds.push(r.rows[0].id);
+  }
+
+  const rawNpwp = '01.234.567.8-999.000';
+  const expectedHash = createHash('sha256').update(rawNpwp).digest('hex');
+
+  const jsonContent = JSON.stringify([
+    {
+      kode_tender: 'TEST-TENDER-WIN-01',
+      nama_badan_usaha: 'PT Uji ETL Juara',
+      npwp: rawNpwp,
+      nik: '1871010101010001',
+      alamat: 'Jl Rahasia No 1',
+      telepon: '081234567890',
+      harga_penawaran: '480000000',
+      menang: true,
+    },
+    {
+      kode_tender: 'TEST-TENDER-WIN-02',
+      nama_badan_usaha: 'PT Uji ETL Juara',
+      npwp: rawNpwp,
+      harga_penawaran: '490000000',
+      menang: 'true',
+    },
+    {
+      kode_tender: 'TEST-TENDER-WIN-01',
+      nama_badan_usaha: 'PT Uji ETL Pendamping',
+      harga_penawaran: '495000000',
+      menang: false,
+    },
+    {
+      kode_tender: 'TEST-TENDER-MISSING',
+      nama_badan_usaha: 'PT Uji ETL Gagal',
+      npwp: rawNpwp,
+      nik: '1871010101010002',
+      alamat: 'Jl Rahasia No 2',
+      menang: true,
+    },
+  ]);
+
+  const result = await runEtl('SRC-02', undefined, TEST_URL, jsonContent);
+  assert.equal(result.status, 'partial');
+  assert.equal(result.accepted, 3);
+  assert.equal(result.rejected, 1);
+
+  const company = await pool.query<{ npwp_hash: string | null; is_dummy: boolean }>(
+    `SELECT npwp_hash, is_dummy FROM perusahaan WHERE nama_badan_usaha = 'PT Uji ETL Juara'`,
+  );
+  assert.equal(company.rows.length, 1);
+  assert.equal(company.rows[0].npwp_hash, expectedHash);
+  assert.notEqual(company.rows[0].npwp_hash, rawNpwp);
+  assert.equal(company.rows[0].is_dummy, false);
+
+  const errorLog = await pool.query<{ baris_mentah: Record<string, unknown> }>(
+    `SELECT baris_mentah FROM etl_error WHERE source_id = 'SRC-02' AND baris_mentah->>'kode_tender' = 'TEST-TENDER-MISSING'`,
+  );
+  assert.equal(errorLog.rows.length, 1);
+  assert.equal('nik' in errorLog.rows[0].baris_mentah, false);
+  assert.equal('alamat' in errorLog.rows[0].baris_mentah, false);
+  assert.equal('npwp' in errorLog.rows[0].baris_mentah, false);
+
+  for (const id of insertedIds) {
+    const findings = await pool.query<{ nilai_terukur: string; tingkat: string }>(
+      `SELECT nilai_terukur, tingkat FROM indikator_temuan WHERE proyek_id = $1 AND kode_aturan = 'D2-04'`,
+      [id],
+    );
+    assert.equal(findings.rows.length, 1);
+    assert.equal(Number(findings.rows[0].nilai_terukur), 100);
+    assert.equal(findings.rows[0].tingkat, 'tinggi');
+  }
 });

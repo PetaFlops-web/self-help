@@ -1,6 +1,34 @@
 export async function getProjectRow(client, projectId) {
-    const res = await client.query('SELECT hps, nilai_kontrak FROM proyek WHERE id = $1', [projectId]);
+    const res = await client.query('SELECT dinas, kode_bps, tahun_anggaran, hps, nilai_kontrak FROM proyek WHERE id = $1', [projectId]);
     return res.rows[0];
+}
+export async function getDepartmentBudgetRows(client, dinas, kodeBps, tahun) {
+    const res = await client.query(`SELECT tahun, pagu
+       FROM anggaran_dinas
+      WHERE dinas = $1
+        AND kode_bps = $2
+        AND tahun IN ($3, $4)`, [dinas, kodeBps, tahun, tahun - 1]);
+    return res.rows;
+}
+export async function getWinningCompanyId(client, projectId) {
+    const res = await client.query(`SELECT pt.perusahaan_id
+       FROM tender t
+       JOIN peserta_tender pt ON pt.tender_id = t.id
+      WHERE t.proyek_id = $1
+        AND pt.menang = true
+      ORDER BY t.tgl_penetapan DESC NULLS LAST, t.id DESC, pt.perusahaan_id ASC
+      LIMIT 1`, [projectId]);
+    return res.rows[0]?.perusahaan_id ?? null;
+}
+export async function getWinnerConcentrationStats(client, dinas, tahunAnggaran, companyId) {
+    const res = await client.query(`SELECT COUNT(DISTINCT t.proyek_id)::int AS total_paket,
+            COUNT(DISTINCT t.proyek_id) FILTER (WHERE pt.perusahaan_id = $3)::int AS paket_menang
+       FROM tender t
+       JOIN proyek p ON p.id = t.proyek_id
+       JOIN peserta_tender pt ON pt.tender_id = t.id AND pt.menang = true
+      WHERE p.dinas = $1
+        AND p.tahun_anggaran = $2`, [dinas, tahunAnggaran, companyId]);
+    return res.rows[0] ?? { total_paket: 0, paket_menang: 0 };
 }
 export async function getTenderRow(client, projectId) {
     const res = await client.query(`SELECT t.jumlah_penawar,
