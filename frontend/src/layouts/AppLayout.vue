@@ -26,10 +26,6 @@
     </header>
 
     <main class="site-main site-container">
-      <header v-if="!isHome" class="page-head">
-        <p class="eyebrow">TRANSPARANSI PUBLIK</p>
-        <h1>{{ title }}</h1>
-      </header>
       <RouterView v-slot="{ Component }">
         <Suspense>
           <template #default>
@@ -58,7 +54,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 
 const route = useRoute()
@@ -68,9 +64,6 @@ const links = [
   { to: '/lapor', label: 'Lapor warga' },
   { to: '/lacak-laporan', label: 'Lacak laporan' },
 ]
-
-const title = computed(() => route.meta.title || 'Clearsight')
-const isHome = computed(() => Boolean(route.meta.hideHeader))
 
 // Menu mobile otomatis menutup setelah berpindah halaman
 const navMenu = ref(null)

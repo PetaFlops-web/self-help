@@ -428,7 +428,10 @@ Skor terhitung [skor]/100. Sumber: [sumber_data], per [tanggal_data]."</span>
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useToast } from '@/composables/useToast'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
+
+const toast = useToast()
 
 // State
 const activeTab = ref('params')
@@ -574,6 +577,7 @@ function refreshData() {
   setTimeout(() => {
     loading.value = false
     feedback.value = 'Status guardrail dan parameter inferensi model berhasil diperbarui.'
+    toast.success(feedback.value, 'Data Diperbarui')
   }, 400)
 }
 
@@ -599,6 +603,7 @@ Penafian Wajib:
 function copyCode(content, title) {
   navigator.clipboard.writeText(content).then(() => {
     feedback.value = `${title} berhasil disalin ke papan klip!`
+    toast.success(feedback.value, 'Disalin')
   })
 }
 

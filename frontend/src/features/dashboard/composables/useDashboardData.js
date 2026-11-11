@@ -90,6 +90,9 @@ async function loadExplanation(projectId) {
     if (result) {
       state.ai.explanation = result.explanation
       state.ai.chips = result.chips
+      if (result.createdAt) {
+        state.ai.createdAt = result.createdAt
+      }
       state.aiLoaded = true
     }
   } finally {

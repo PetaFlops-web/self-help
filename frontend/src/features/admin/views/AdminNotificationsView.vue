@@ -439,9 +439,11 @@ import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { adminNotificationsApi } from '@/services/api/admin-notifications.api'
 import { useAuthStore } from '@/stores/auth'
+import { useToast } from '@/composables/useToast'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 
 const auth = useAuthStore()
+const toast = useToast()
 
 // State
 const items = ref([])
@@ -580,6 +582,7 @@ async function handleRetry(item) {
   try {
     const res = await adminNotificationsApi.retry(item.id)
     successMsg.value = `Notifikasi tiket ${item.tiket} berhasil dikirim ulang.`
+    toast.success(successMsg.value, 'Notifikasi Terkirim')
     if (res) {
       item.status_kirim = res.status_kirim || 'terkirim'
       item.percobaan = res.percobaan ?? (item.percobaan + 1)
@@ -587,6 +590,7 @@ async function handleRetry(item) {
     }
   } catch (err) {
     error.value = err.message || `Gagal mengirim ulang notifikasi tiket ${item.tiket}`
+    toast.error(error.value, 'Gagal Mengirim Ulang')
   } finally {
     retryingId.value = null
   }
@@ -602,9 +606,11 @@ async function executeRetention() {
     const cleanedCount = Array.isArray(res.tiket_dibersihkan) ? res.tiket_dibersihkan.length : 0
     showRetentionModal.value = false
     successMsg.value = `Prosedur retensi selesai: ${cleanedCount} kontak surel pelapor yang melewati 30 hari telah dibersihkan secara permanen.`
+    toast.success(successMsg.value, 'Retensi Kontak Selesai')
     fetchNotifications()
   } catch (err) {
     error.value = err.message || 'Gagal menjalankan prosedur retensi kontak'
+    toast.error(error.value, 'Gagal Menjalankan Retensi')
   } finally {
     retentionLoading.value = false
   }

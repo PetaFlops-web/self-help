@@ -33,6 +33,9 @@ export interface ProjectFilters {
   kode_bps?: string;
   dinas?: string;
   kategori?: string;
+  asal_data?: string;
+  has_waiting_reports?: boolean;
+  match_status?: string;
   tahun_anggaran?: number;
   q?: string;
   pagu_min?: number;
@@ -40,6 +43,7 @@ export interface ProjectFilters {
   nilai_kontrak_min?: number;
   nilai_kontrak_max?: number;
   limit?: number;
+  offset?: number;
 }
 
 export interface IndicatorFindingRow {
@@ -78,6 +82,23 @@ export interface StatsSummary {
   perlu_perhatian: number;
   tinggi: number;
   rata_rata_skor: number | null;
+}
+
+export interface ProjectKpiSummary {
+  total_proyek: number;
+  total_pagu: number;
+  tinggi: number;
+  perlu_perhatian: number;
+  rendah: number;
+  unmatched: number;
+}
+
+export interface PaginatedProjectsResult {
+  projects: Project[];
+  total: number;
+  limit: number;
+  offset: number;
+  kpi: ProjectKpiSummary;
 }
 
 export interface ProjectRow {

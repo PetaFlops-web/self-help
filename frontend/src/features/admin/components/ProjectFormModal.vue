@@ -145,7 +145,7 @@
               type="number"
               class="form-input"
               min="1"
-              step="1000"
+              step="1"
               placeholder="Contoh: 7500000000"
               required
             />
@@ -164,7 +164,7 @@
               type="number"
               class="form-input"
               min="1"
-              step="1000"
+              step="1"
               placeholder="Contoh: 7420000000"
             />
             <span v-if="form.hps" class="form-hint">
@@ -282,6 +282,7 @@
 import { ref, computed, watch } from 'vue'
 import { adminProjectsApi } from '@/services/api/admin-projects.api'
 import { formatCurrency } from '@/utils/formatters'
+import { useToast } from '@/composables/useToast'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -289,6 +290,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue', 'saved'])
+const toast = useToast()
 
 const modalTitleId = 'project-modal-title'
 const submitting = ref(false)
@@ -424,13 +426,24 @@ async function handleSubmit() {
       res = await adminProjectsApi.create(payload)
     }
 
+    const proj = res.project || res.data || {}
+    const skorSesudahVal = res.skor_sesudah ?? (proj.skor_total != null ? Number(proj.skor_total) : (proj.score != null ? Number(proj.score) : 50))
+    const kategoriVal = res.kategori || proj.kategori || 'Perlu Perhatian'
+
     successFeedback.value = {
       skor_sebelum: res.skor_sebelum ?? (props.project?.skor_total || 0),
-      skor_sesudah: res.skor_sesudah ?? (res.data?.skor_total || res.data?.score || 50),
-      kategori: res.kategori || res.data?.kategori || 'Perlu Perhatian',
+      skor_sesudah: skorSesudahVal,
+      kategori: kategoriVal,
     }
 
-    emit('saved', res)
+    toast.success(
+      isEdit.value
+        ? `Perubahan proyek berhasil disimpan (Skor risiko: ${skorSesudahVal}).`
+        : `Proyek baru berhasil ditambahkan (Skor risiko: ${skorSesudahVal}).`,
+      'Proyek Tersimpan',
+    )
+
+    emit('saved', { ...res, skor_sesudah: skorSesudahVal })
     // Beri jeda 800ms agar user melihat feedback skor sebelum modal ditutup
     setTimeout(() => {
       close()
@@ -443,6 +456,7 @@ async function handleSubmit() {
     } else {
       errorMsg.value = err.message || 'Gagal menyimpan proyek. Periksa koneksi dan coba lagi.'
     }
+    toast.error(errorMsg.value, 'Gagal Menyimpan Proyek')
   } finally {
     submitting.value = false
   }

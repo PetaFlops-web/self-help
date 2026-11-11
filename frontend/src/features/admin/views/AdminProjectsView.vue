@@ -56,7 +56,7 @@
         <span class="kpi-label">TOTAL PROYEK</span>
         <div class="kpi-val-row">
           <SkeletonBlock v-if="loading && !dataLoaded" height="26px" width="50px" radius="6px" />
-          <span v-else class="kpi-val">{{ total }}</span>
+          <span v-else class="kpi-val">{{ kpiTotal }}</span>
         </div>
         <span class="kpi-sub">Pagu {{ formatRupiahRingkas(totalPagu) }}</span>
       </div>
@@ -354,7 +354,7 @@
 
                   <!-- Status Integrasi SPSE -->
                   <span v-if="p.is_dummy" class="badge-etl is-dummy">Data Simulasi</span>
-                  <span v-else-if="p.is_matched !== false" class="badge-etl is-matched">
+                  <span v-else-if="isMatched(p)" class="badge-etl is-matched">
                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" class="prov-icon">
                       <path d="M5 13l4 4L19 7" />
                     </svg>
@@ -509,6 +509,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { adminProjectsApi } from '@/services/api/admin-projects.api'
 import { useAuthStore } from '@/stores/auth'
+import { useToast } from '@/composables/useToast'
 import { formatCurrency, formatRupiahRingkas } from '@/utils/formatters'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 
@@ -519,10 +520,12 @@ import TenderFormModal from '@/features/admin/components/TenderFormModal.vue'
 import ProjectExecutionModal from '@/features/admin/components/ProjectExecutionModal.vue'
 
 const auth = useAuthStore()
+const toast = useToast()
 
 // State Data
 const projects = ref([])
 const total = ref(0)
+const serverKpi = ref(null)
 const loading = ref(false)
 const isSearching = ref(false)
 const dataLoaded = ref(false)
@@ -554,18 +557,36 @@ const selectedProject = ref(null)
 
 let searchDebounceTimer = null
 
-// Opsi SKPD
-const dinasOptions = [
+// Opsi SKPD (daftar kurasi + dinas yang muncul pada baris proyek)
+const BASE_DINAS_OPTIONS = [
   'Dinas Bina Marga & Bina Konstruksi Prov. Lampung',
+  'Dinas BMBK Provinsi Lampung',
   'Dinas Pengelolaan Sumber Daya Air Prov. Lampung',
+  'Dinas PSDA Provinsi Lampung',
   'Dinas Perumahan, Kawasan Permukiman & Cipta Karya Prov. Lampung',
+  'Dinas Lingkungan Hidup Prov. Lampung',
+  'Dinas PU dan Penataan Ruang Pesisir Barat',
+  'Dinas PUPR Pesisir Barat',
   'Dinas PU Kota Bandar Lampung',
   'Dinas PU Kabupaten Lampung Selatan',
   'Dinas PU Kabupaten Lampung Tengah',
   'Dinas PU Kabupaten Lampung Timur',
   'Dinas Kesehatan Provinsi Lampung',
   'Dinas Pendidikan dan Kebudayaan Provinsi Lampung',
+  'Pemprov Lampung',
+  'Pemkab Lampung Utara',
+  'Project Jalan Tol Trans Sumatera',
 ]
+
+const dinasOptions = computed(() => {
+  const set = new Set(BASE_DINAS_OPTIONS)
+  for (const p of projects.value) {
+    if (p.dinas && typeof p.dinas === 'string') {
+      set.add(p.dinas)
+    }
+  }
+  return Array.from(set)
+})
 
 // Opsi Wilayah
 const regionOptions = [
@@ -592,7 +613,13 @@ const currentPage = computed(() => Math.floor(currentOffset.value / currentLimit
 const paginationStart = computed(() => (total.value === 0 ? 0 : currentOffset.value + 1))
 const paginationEnd = computed(() => Math.min(currentOffset.value + currentLimit.value, total.value))
 
+const kpiTotal = computed(() => {
+  if (serverKpi.value) return Number(serverKpi.value.total_proyek) || 0
+  return total.value
+})
+
 const totalPagu = computed(() => {
+  if (serverKpi.value) return Number(serverKpi.value.total_pagu) || 0
   return projects.value.reduce((acc, cur) => acc + (Number(cur.pagu) || 0), 0)
 })
 
@@ -604,7 +631,21 @@ function getRiskCat(p) {
   return 'Rendah'
 }
 
+function isMatched(p) {
+  if (p.match_status) return p.match_status === 'matched'
+  return p.is_matched === true
+}
+
 const kpiCounts = computed(() => {
+  if (serverKpi.value) {
+    return {
+      tinggi: Number(serverKpi.value.tinggi) || 0,
+      perhatian: Number(serverKpi.value.perlu_perhatian) || 0,
+      rendah: Number(serverKpi.value.rendah) || 0,
+      unmatched: Number(serverKpi.value.unmatched) || 0,
+    }
+  }
+
   let tinggi = 0
   let perhatian = 0
   let rendah = 0
@@ -616,50 +657,49 @@ const kpiCounts = computed(() => {
     else if (cat === 'Perlu Perhatian') perhatian++
     else rendah++
 
-    if (p.is_matched === false) unmatched++
+    if (!p.is_dummy && !isMatched(p)) unmatched++
   }
 
   return { tinggi, perhatian, rendah, unmatched }
 })
 
 const pctTinggi = computed(() => {
-  const tot = total.value || projects.value.length
+  const tot = kpiTotal.value || projects.value.length
   return tot ? Math.round((kpiCounts.value.tinggi / tot) * 100) : 0
 })
 
 const pctPerhatian = computed(() => {
-  const tot = total.value || projects.value.length
+  const tot = kpiTotal.value || projects.value.length
   return tot ? Math.round((kpiCounts.value.perhatian / tot) * 100) : 0
 })
 
 const pctRendah = computed(() => {
-  const tot = total.value || projects.value.length
+  const tot = kpiTotal.value || projects.value.length
   return tot ? Math.round((kpiCounts.value.rendah / tot) * 100) : 0
 })
 
 const projectTabs = computed(() => [
-  { value: 'semua', label: 'Semua Proyek', count: total.value },
+  { value: 'semua', label: 'Semua Proyek', count: kpiTotal.value },
   { value: 'tinggi', label: 'Risiko Tinggi', count: kpiCounts.value.tinggi },
   { value: 'perhatian', label: 'Perlu Perhatian', count: kpiCounts.value.perhatian },
   { value: 'rendah', label: 'Risiko Rendah', count: kpiCounts.value.rendah },
   { value: 'belum_cocok', label: 'Belum Cocok', count: kpiCounts.value.unmatched },
 ])
 
-// Filtered projects locally when local tab / waiting report filter is toggled
-const filteredProjects = computed(() => {
-  return projects.value.filter((p) => {
-    // Tab filter
-    if (activeTab.value === 'tinggi' && getRiskCat(p) !== 'Tinggi') return false
-    if (activeTab.value === 'perhatian' && getRiskCat(p) !== 'Perlu Perhatian') return false
-    if (activeTab.value === 'rendah' && getRiskCat(p) !== 'Rendah') return false
-    if (activeTab.value === 'belum_cocok' && p.is_matched !== false) return false
+const TAB_TO_KATEGORI = {
+  tinggi: 'Tinggi',
+  perhatian: 'Perlu Perhatian',
+  rendah: 'Rendah',
+}
 
-    // Waiting reports toggle
-    if (filterHasWaitingReports.value && (p.laporan_menunggu || 0) <= 0) return false
+const KATEGORI_TO_TAB = {
+  Tinggi: 'tinggi',
+  'Perlu Perhatian': 'perhatian',
+  Rendah: 'rendah',
+}
 
-    return true
-  })
-})
+// Daftar proyek sudah difilter dan dipaginasi oleh server melalui fetchProjects()
+const filteredProjects = computed(() => projects.value)
 
 // Fetch Projects
 async function fetchProjects() {
@@ -675,12 +715,15 @@ async function fetchProjects() {
       kategori: filterKategori.value,
       asal_data: filterAsalData.value,
       tahun_anggaran: filterTA.value,
+      has_waiting_reports: filterHasWaitingReports.value,
+      match_status: activeTab.value === 'belum_cocok' ? 'unmatched' : undefined,
       limit: currentLimit.value,
       offset: currentOffset.value,
     })
 
     projects.value = res.projects
     total.value = res.total
+    serverKpi.value = res.kpi || null
     dataLoaded.value = true
   } catch (err) {
     errorMsg.value = err.message || 'Gagal memuat daftar proyek'
@@ -703,16 +746,26 @@ function handleSearchDebounce() {
 }
 
 function handleFilterApply() {
+  if (filterKategori.value !== 'semua') {
+    activeTab.value = KATEGORI_TO_TAB[filterKategori.value] || 'semua'
+  } else if (activeTab.value in TAB_TO_KATEGORI) {
+    activeTab.value = 'semua'
+  }
   currentOffset.value = 0
   fetchProjects()
 }
 
 function switchTab(tab) {
   activeTab.value = tab
+  filterKategori.value = TAB_TO_KATEGORI[tab] || 'semua'
+  currentOffset.value = 0
+  fetchProjects()
 }
 
 function toggleWaitingReports() {
   filterHasWaitingReports.value = !filterHasWaitingReports.value
+  currentOffset.value = 0
+  fetchProjects()
 }
 
 function prevPage() {
@@ -770,12 +823,18 @@ function openExecutionModal(project) {
 }
 
 function onProjectSaved(res) {
-  feedbackMsg.value = `Data proyek berhasil disimpan. Skor risiko terhitung: ${res?.skor_sesudah ?? '—'}.`
+  const skor = res?.skor_sesudah ?? res?.scoring?.skor_total ?? '—'
+  feedbackMsg.value = `Data proyek berhasil disimpan. Skor risiko terhitung: ${skor}.`
   fetchProjects()
 }
 
 function onProjectDeleted() {
-  feedbackMsg.value = 'Proyek manual berhasil dihapus permanen.'
+  const msg = 'Proyek manual berhasil dihapus permanen.'
+  feedbackMsg.value = msg
+  toast.success(msg, 'Proyek Dihapus')
+  if (projects.value.length <= 1 && currentOffset.value > 0) {
+    currentOffset.value = Math.max(0, currentOffset.value - currentLimit.value)
+  }
   fetchProjects()
 }
 

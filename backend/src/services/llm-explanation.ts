@@ -35,8 +35,14 @@ const INSTITUTION_LABELS: Record<LlmTargetInstitution, string> = {
   dinas_terkait: 'Dinas Terkait',
 };
 
-export type ExplainResult = LlmExplainOutput & { generated_by: 'llm' | 'fallback' | 'cache' };
-export type DraftResult = LlmDraftOutput & { generated_by: 'llm' | 'fallback' | 'cache' };
+export type ExplainResult = LlmExplainOutput & {
+  generated_by: 'llm' | 'fallback' | 'cache';
+  dibuat_pada?: string | Date;
+};
+export type DraftResult = LlmDraftOutput & {
+  generated_by: 'llm' | 'fallback' | 'cache';
+  dibuat_pada?: string | Date;
+};
 
 function isUuidLike(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -175,11 +181,16 @@ export async function explainProject(id: string): Promise<ExplainResult> {
   const payload = buildPayload(project, result, 'explain', 'warga awam', reports, rab.items);
   const inputHash = hashObject(payload);
 
-  const cached = (await findCachedExplanation(inputHash, 'explain')) as LlmExplainOutput | null;
+  const cached = await findCachedExplanation(inputHash, 'explain');
   if (cached) {
-    return { generated_by: 'cache', ...cached };
+    return {
+      generated_by: 'cache',
+      dibuat_pada: cached.dibuat_pada,
+      ...(cached.isi_json as LlmExplainOutput),
+    };
   }
 
+  const now = new Date();
   try {
     const output = (await callLlmService(payload)) as LlmExplainOutput;
     await saveExplanation({
@@ -190,10 +201,10 @@ export async function explainProject(id: string): Promise<ExplainResult> {
       versi_prompt: VERSI_PROMPT,
       input_hash: inputHash,
     }).catch((e) => console.error('[llm-cache] gagal simpan penjelasan explain:', e));
-    return { generated_by: 'llm', ...output };
+    return { generated_by: 'llm', dibuat_pada: now, ...output };
   } catch (err) {
     if (err instanceof LlmServiceUnavailableError) {
-      return { generated_by: 'fallback', ...buildFallbackExplain(project, result) };
+      return { generated_by: 'fallback', dibuat_pada: now, ...buildFallbackExplain(project, result) };
     }
     throw err;
   }
@@ -206,11 +217,16 @@ export async function draftProject(id: string, targetInstitution: LlmTargetInsti
   const payload = buildPayload(project, result, 'draft', targetInstitution, reports, rab.items);
   const inputHash = hashObject(payload);
 
-  const cached = (await findCachedExplanation(inputHash, 'draft')) as LlmDraftOutput | null;
+  const cached = await findCachedExplanation(inputHash, 'draft');
   if (cached) {
-    return { generated_by: 'cache', ...cached };
+    return {
+      generated_by: 'cache',
+      dibuat_pada: cached.dibuat_pada,
+      ...(cached.isi_json as LlmDraftOutput),
+    };
   }
 
+  const now = new Date();
   try {
     const output = (await callLlmService(payload)) as LlmDraftOutput;
     await saveExplanation({
@@ -221,10 +237,10 @@ export async function draftProject(id: string, targetInstitution: LlmTargetInsti
       versi_prompt: VERSI_PROMPT,
       input_hash: inputHash,
     }).catch((e) => console.error('[llm-cache] gagal simpan penjelasan draft:', e));
-    return { generated_by: 'llm', ...output };
+    return { generated_by: 'llm', dibuat_pada: now, ...output };
   } catch (err) {
     if (err instanceof LlmServiceUnavailableError) {
-      return { generated_by: 'fallback', ...buildFallbackDraft(project, result, targetInstitution, reports) };
+      return { generated_by: 'fallback', dibuat_pada: now, ...buildFallbackDraft(project, result, targetInstitution, reports) };
     }
     throw err;
   }

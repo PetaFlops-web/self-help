@@ -30,12 +30,15 @@ export const adminProjectsApi = {
    */
   async list(params = {}) {
     const cleanParams = {}
-    if (params.search && params.search.trim()) cleanParams.search = params.search.trim()
+    const rawQuery = params.q ?? params.search
+    if (typeof rawQuery === 'string' && rawQuery.trim()) cleanParams.q = rawQuery.trim()
     if (params.dinas && params.dinas !== 'semua') cleanParams.dinas = params.dinas
     if (params.kode_bps && params.kode_bps !== 'semua') cleanParams.kode_bps = params.kode_bps
     if (params.kategori && params.kategori !== 'semua') cleanParams.kategori = params.kategori
     if (params.asal_data && params.asal_data !== 'semua') cleanParams.asal_data = params.asal_data
     if (params.tahun_anggaran && params.tahun_anggaran !== 'semua') cleanParams.tahun_anggaran = params.tahun_anggaran
+    if (params.has_waiting_reports) cleanParams.has_waiting_reports = 'true'
+    if (params.match_status && params.match_status !== 'semua') cleanParams.match_status = params.match_status
 
     const limit = Math.min(Number(params.limit) || 10, 100)
     const offset = Math.max(Number(params.offset) || 0, 0)
@@ -84,21 +87,17 @@ export const adminProjectsApi = {
 
   /**
    * Mengambil detail proyek untuk form admin.
+   * Memanggil langsung endpoint resmi GET /api/projects/:id tanpa galat 404 redundant.
    * @param {string|number} id
    * @returns {Promise<Object>}
    */
   async get(id) {
     if (!id) throw new Error('ID proyek wajib diisi')
-    try {
-      const { data } = await http.get(endpoints.adminProject(id))
-      return data.project || data.data || data
-    } catch (err) {
-      if (err.response?.status === 404) {
-        const { data } = await http.get(endpoints.project(id))
-        return data.project || data.data || data
-      }
-      throw err
+    const { data } = await http.get(endpoints.project(id))
+    if (data?.status === 'error') {
+      throw new Error(data.message || 'Gagal memuat detail proyek')
     }
+    return data.project || data.data || data
   },
 
   /**
@@ -219,7 +218,10 @@ export const adminProjectsApi = {
   async getRabItems(projectId) {
     if (!projectId) throw new Error('ID proyek wajib diisi')
     const { data } = await http.get(endpoints.projectRabItems(projectId))
-    return Array.isArray(data.items) ? data.items : []
+    if (Array.isArray(data.rab_items?.items)) return data.rab_items.items
+    if (Array.isArray(data.items)) return data.items
+    if (Array.isArray(data.rab_items)) return data.rab_items
+    return []
   },
 
   /**
@@ -265,9 +267,14 @@ export const adminProjectsApi = {
   async getPayments(projectId) {
     if (!projectId) throw new Error('ID proyek wajib diisi')
     const { data } = await http.get(endpoints.projectPayments(projectId))
+    const container = data.payments || data
     return {
-      pembayaran: Array.isArray(data.pembayaran) ? data.pembayaran : [],
-      ringkasan: data.ringkasan || null,
+      pembayaran: Array.isArray(container.pembayaran)
+        ? container.pembayaran
+        : Array.isArray(data.pembayaran)
+          ? data.pembayaran
+          : [],
+      ringkasan: container.ringkasan || data.ringkasan || null,
     }
   },
 
@@ -314,7 +321,12 @@ export const adminProjectsApi = {
   async getProgress(projectId) {
     if (!projectId) throw new Error('ID proyek wajib diisi')
     const { data } = await http.get(endpoints.projectProgress(projectId))
-    return Array.isArray(data.progres) ? data.progres : []
+    const container = data.progress || data
+    return Array.isArray(container.progres)
+      ? container.progres
+      : Array.isArray(data.progres)
+        ? data.progres
+        : []
   },
 
   /**

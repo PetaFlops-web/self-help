@@ -115,10 +115,12 @@ const copied = ref(false)
 const draftLoading = ref(false)
 
 async function createDraft() {
-  if (!project.value?.id) return
+  const currentProject = project?.value || project
+  const projectId = currentProject?.id
+  if (!projectId) return
   draftLoading.value = true
   try {
-    const data = await projectsApi.draft(project.value.id)
+    const data = await projectsApi.draft(projectId)
     const description = formatDraftText(data)
     navigateToReport(description)
   } catch (err) {
@@ -151,12 +153,15 @@ function formatDraftText(d) {
 }
 
 function navigateToReport(description) {
-  const title = `Draf laporan tindak lanjut - ${project.value.name || ''}`.trim()
+  const currentProject = project?.value || project
+  const projectId = currentProject?.id
+  const projectName = currentProject?.title || currentProject?.name || ''
+  const title = `Draf laporan tindak lanjut - ${projectName}`.trim()
   router.push({
     path: '/lapor',
     query: {
-      projectId: project.value.id,
-      projectName: project.value.name || '',
+      projectId,
+      projectName,
       title,
       category: 'fund_flow',
       description,

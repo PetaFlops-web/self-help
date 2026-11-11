@@ -68,6 +68,9 @@
 <script setup>
 import { ref } from 'vue'
 import { adminProjectsApi } from '@/services/api/admin-projects.api'
+import { useToast } from '@/composables/useToast'
+
+const toast = useToast()
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -98,6 +101,7 @@ async function handleDelete() {
     } else {
       errorMsg.value = err.message || 'Gagal menghapus proyek.'
     }
+    toast.error(errorMsg.value, 'Gagal Menghapus Proyek')
   } finally {
     submitting.value = false
   }

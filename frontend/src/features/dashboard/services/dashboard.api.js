@@ -230,7 +230,16 @@ export const dashboardApi = {
         .slice(0, 2)
       chips.push(...lembagaList)
 
-      return { explanation, chips }
+      let createdAt = ''
+      if (explainData.dibuat_pada) {
+        const dateObj = new Date(explainData.dibuat_pada)
+        if (!isNaN(dateObj.getTime())) {
+          const dateStr = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short' }).format(dateObj)
+          createdAt = `Dibuat ${dateStr}`
+        }
+      }
+
+      return { explanation, chips, createdAt }
     } catch (error) {
       console.error('Gagal memuat AI dari backend:', error)
       return null

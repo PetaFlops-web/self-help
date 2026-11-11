@@ -376,14 +376,14 @@
       :show="rejectOpen"
       :tiket="tiket"
       @close="rejectOpen = false"
-      @success="onActionSuccess"
+      @success="onActionSuccess('rejected')"
     />
     <ForwardModal
       :show="forwardOpen"
       :tiket="tiket"
       :proyek-id="proyekId"
       @close="forwardOpen = false"
-      @success="onActionSuccess"
+      @success="onActionSuccess('forwarded')"
     />
   </div>
 </template>
@@ -394,6 +394,7 @@ import { useRoute, RouterLink } from 'vue-router'
 import { adminReportsApi } from '@/services/api'
 import MediaGallery from '@/components/ui/MediaGallery.vue'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
+import { useToast } from '@/composables/useToast'
 import { toMediaItems } from '@/utils/media'
 import {
   STATUS_TRANSITIONS,
@@ -407,6 +408,7 @@ import RejectModal from '../components/RejectModal.vue'
 import ForwardModal from '../components/ForwardModal.vue'
 
 const route = useRoute()
+const toast = useToast()
 
 const tiket = computed(() => String(route.params.tiket || ''))
 
@@ -559,8 +561,16 @@ async function runDirectTransition(target) {
   try {
     await adminReportsApi.verify(tiket.value, { status: target })
     await loadDetail()
+    const msg = target === 'Diverifikasi'
+      ? `Laporan #${tiket.value} berhasil diverifikasi.`
+      : target === 'Selesai'
+        ? `Laporan #${tiket.value} berhasil ditandai Selesai.`
+        : `Status laporan #${tiket.value} berhasil diubah ke ${target}.`
+    toast.success(msg, 'Status Diperbarui')
   } catch (err) {
-    actionError.value = err?.userMessage || err?.message || 'Gagal memperbarui status laporan.'
+    const errMsg = err?.userMessage || err?.message || 'Gagal memperbarui status laporan.'
+    actionError.value = errMsg
+    toast.error(errMsg, 'Gagal Memperbarui Status')
   } finally {
     actionBusy.value = ''
   }
@@ -575,9 +585,14 @@ function openForward() {
   forwardOpen.value = true
 }
 
-function onActionSuccess() {
+function onActionSuccess(type) {
   rejectOpen.value = false
   forwardOpen.value = false
+  if (type === 'rejected') {
+    toast.success(`Laporan #${tiket.value} telah ditolak dengan alasan tercatat.`, 'Laporan Ditolak')
+  } else if (type === 'forwarded') {
+    toast.success(`Laporan #${tiket.value} berhasil diteruskan ke instansi berwenang.`, 'Laporan Diteruskan')
+  }
   loadDetail()
 }
 

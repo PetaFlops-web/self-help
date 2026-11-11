@@ -87,10 +87,12 @@
 import { ref, computed } from 'vue'
 import { RouterLink, RouterView, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useToast } from '@/composables/useToast'
 
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+const toast = useToast()
 
 const sidebarOpen = ref(false)
 const loggingOut = ref(false)
@@ -194,6 +196,7 @@ async function handleLogout() {
   loggingOut.value = true
   await auth.logout()
   loggingOut.value = false
+  toast.info('Anda telah keluar dari sesi Panel Pengawas.', 'Logout Berhasil')
   router.push('/admin/login')
 }
 </script>

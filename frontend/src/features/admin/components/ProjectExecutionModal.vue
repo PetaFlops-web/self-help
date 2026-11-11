@@ -534,6 +534,7 @@
 import { ref, watch } from 'vue'
 import { adminProjectsApi } from '@/services/api/admin-projects.api'
 import { formatCurrency, formatDate } from '@/utils/formatters'
+import { useToast } from '@/composables/useToast'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 
 const props = defineProps({
@@ -542,6 +543,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue', 'saved'])
+const toast = useToast()
 
 const activeTab = ref('rab') // 'rab' | 'payments' | 'progress'
 
@@ -707,11 +709,13 @@ async function saveRabItem() {
       res = await adminProjectsApi.createRabItem(props.project.id, payload)
       successMsg.value = `Item RAB berhasil ditambahkan. Skor risiko terhitung: ${res?.scoring?.skor_total ?? '—'}.`
     }
+    toast.success(successMsg.value, 'RAB Disimpan')
     cancelRabForm()
     fetchRabItems()
     emit('saved', res)
   } catch (err) {
     errorMsg.value = err.message || 'Gagal menyimpan item RAB'
+    toast.error(errorMsg.value, 'Gagal Menyimpan RAB')
   } finally {
     submitting.value = false
   }
@@ -724,10 +728,12 @@ async function confirmDeleteRab(item) {
   try {
     const res = await adminProjectsApi.deleteRabItem(item.id)
     successMsg.value = `Item RAB berhasil dihapus. Skor risiko terhitung: ${res?.scoring?.skor_total ?? '—'}.`
+    toast.success(successMsg.value, 'RAB Dihapus')
     fetchRabItems()
     emit('saved', res)
   } catch (err) {
     errorMsg.value = err.message || 'Gagal menghapus item RAB'
+    toast.error(errorMsg.value, 'Gagal Menghapus RAB')
   }
 }
 
@@ -783,11 +789,13 @@ async function savePayment() {
       res = await adminProjectsApi.createPayment(props.project.id, payload)
       successMsg.value = `Termin pembayaran berhasil ditambahkan. Skor risiko terhitung: ${res?.scoring?.skor_total ?? '—'}.`
     }
+    toast.success(successMsg.value, 'Pembayaran Disimpan')
     cancelPaymentForm()
     fetchPayments()
     emit('saved', res)
   } catch (err) {
     errorMsg.value = err.message || 'Gagal menyimpan pembayaran'
+    toast.error(errorMsg.value, 'Gagal Menyimpan Pembayaran')
   } finally {
     submitting.value = false
   }
@@ -800,10 +808,12 @@ async function confirmDeletePayment(p) {
   try {
     const res = await adminProjectsApi.deletePayment(p.id)
     successMsg.value = `Termin pembayaran berhasil dihapus. Skor risiko terhitung: ${res?.scoring?.skor_total ?? '—'}.`
+    toast.success(successMsg.value, 'Pembayaran Dihapus')
     fetchPayments()
     emit('saved', res)
   } catch (err) {
     errorMsg.value = err.message || 'Gagal menghapus pembayaran'
+    toast.error(errorMsg.value, 'Gagal Menghapus Pembayaran')
   }
 }
 
@@ -852,11 +862,13 @@ async function saveProgress() {
       res = await adminProjectsApi.createProgress(props.project.id, payload)
       successMsg.value = `Catatan progres fisik berhasil ditambahkan. Skor risiko terhitung: ${res?.scoring?.skor_total ?? '—'}.`
     }
+    toast.success(successMsg.value, 'Progres Disimpan')
     cancelProgressForm()
     fetchProgress()
     emit('saved', res)
   } catch (err) {
     errorMsg.value = err.message || 'Gagal menyimpan progres'
+    toast.error(errorMsg.value, 'Gagal Menyimpan Progres')
   } finally {
     submitting.value = false
   }
@@ -869,10 +881,12 @@ async function confirmDeleteProgress(item) {
   try {
     const res = await adminProjectsApi.deleteProgress(item.id)
     successMsg.value = `Catatan progres berhasil dihapus. Skor risiko terhitung: ${res?.scoring?.skor_total ?? '—'}.`
+    toast.success(successMsg.value, 'Progres Dihapus')
     fetchProgress()
     emit('saved', res)
   } catch (err) {
     errorMsg.value = err.message || 'Gagal menghapus progres'
+    toast.error(errorMsg.value, 'Gagal Menghapus Progres')
   }
 }
 </script>

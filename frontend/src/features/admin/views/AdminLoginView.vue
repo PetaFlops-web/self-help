@@ -50,10 +50,12 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const toast = useToast()
 
 const form = ref({ surel: '', kata_sandi: '' })
 const loading = computed(() => auth.loading)
@@ -64,6 +66,7 @@ async function handleSubmit() {
   // "surel tidak ditemukan" dan "kata sandi salah".
   try {
     await auth.login(form.value.surel, form.value.kata_sandi)
+    toast.success(`Selamat datang, ${auth.user?.nama || 'Admin'}.`, 'Login Berhasil')
     const redirect = route.query.redirect
     router.push(typeof redirect === 'string' && redirect.startsWith('/admin') ? redirect : '/admin')
   } catch {

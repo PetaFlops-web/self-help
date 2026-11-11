@@ -354,10 +354,8 @@ onMounted(() => {
   --accent: var(--orange, #ff6a2b);
   --accent-soft: #fff1ea;
 
-  background: var(--bg-outer, #e9ebea);
-  border-radius: 28px;
-  /* atas 40px, samping 48px, bawah 64px (sesuai jarak di desain) */
-  padding: clamp(20px, 3vw, 40px) clamp(20px, 4vw, 48px) clamp(28px, 4.5vw, 64px);
+  background: transparent;
+  padding: 12px 0 clamp(28px, 4.5vw, 64px);
   margin-top: 8px;
   font-family: var(--font);
   color: var(--ink, #111);
@@ -521,7 +519,7 @@ onMounted(() => {
 
 /* ---------- Panel kanan ---------- */
 .aside { display: grid; gap: 14px; }
-.sla-card { box-sizing: border-box; background: #fff; border-radius: 24px; padding: 24px 24px 18px; margin-bottom: 11px; }
+.sla-card { box-sizing: border-box; background: #fff; border: 1px solid var(--line, #ebe7e2); border-radius: 24px; padding: 24px 24px 18px; margin-bottom: 11px; }
 .sla-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; font-size: 14px; line-height: 20px; }
 .sla-count { color: var(--red, #d6341e); font-weight: 800; font-size: 13.5px; white-space: nowrap; }
 .sla-bar { height: 12px; margin-top: 10px; border-radius: 999px; background: #ececea; overflow: hidden; }
@@ -571,7 +569,7 @@ onMounted(() => {
 .search-btn:focus-visible { outline: 3px solid rgba(255, 106, 43, 0.4); outline-offset: 3px; }
 
 /* ---------- Kartu putih ---------- */
-.card-white { background: #fff; border-radius: 28px; padding: 28px 28px 26px; }
+.card-white { background: #fff; border: 1px solid var(--line, #ebe7e2); border-radius: 28px; padding: 28px 28px 26px; }
 .card-white h2 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
 .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .card-head p,

@@ -11,19 +11,28 @@ export interface SaveExplanationInput {
   input_hash: string;
 }
 
+export interface CachedExplanation {
+  isi_json: LlmOutput;
+  dibuat_pada: Date;
+}
+
 export async function findCachedExplanation(
   inputHash: string,
   jenis: LlmTask,
-): Promise<LlmOutput | null> {
-  const res = await pool.query<{ isi_json: LlmOutput }>(
-    `SELECT isi_json
+): Promise<CachedExplanation | null> {
+  const res = await pool.query<{ isi_json: LlmOutput; dibuat_pada: Date }>(
+    `SELECT isi_json, dibuat_pada
        FROM penjelasan_llm
       WHERE input_hash = $1 AND jenis = $2
       ORDER BY dibuat_pada DESC NULLS LAST
       LIMIT 1`,
     [inputHash, jenis],
   );
-  return res.rows[0]?.isi_json ?? null;
+  if (!res.rows[0]) return null;
+  return {
+    isi_json: res.rows[0].isi_json,
+    dibuat_pada: res.rows[0].dibuat_pada,
+  };
 }
 
 export async function saveExplanation(input: SaveExplanationInput): Promise<void> {

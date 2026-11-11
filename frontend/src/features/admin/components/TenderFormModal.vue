@@ -225,6 +225,7 @@
 import { ref, watch } from 'vue'
 import { adminProjectsApi } from '@/services/api/admin-projects.api'
 import { formatCurrency } from '@/utils/formatters'
+import { useToast } from '@/composables/useToast'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 
 const props = defineProps({
@@ -233,6 +234,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue', 'tender-updated'])
+const toast = useToast()
 
 const tenders = ref([])
 const loadingTenders = ref(false)
@@ -321,11 +323,13 @@ async function handleSaveTender() {
       await adminProjectsApi.createTender(props.project.id, payload)
       successMsg.value = 'Tender baru berhasil ditambahkan. Skor risiko proyek telah dihitung ulang.'
     }
+    toast.success(successMsg.value, 'Tender Disimpan')
     showForm.value = false
     await loadTenders()
     emit('tender-updated')
   } catch (err) {
     errorMsg.value = err.response?.data?.message || err.message || 'Gagal menyimpan data tender'
+    toast.error(errorMsg.value, 'Gagal Menyimpan Tender')
   } finally {
     savingTender.value = false
   }
@@ -336,10 +340,12 @@ async function handleDeleteTender(tender) {
   try {
     await adminProjectsApi.deleteTender(tender.id)
     successMsg.value = 'Tender berhasil dihapus. Skor risiko proyek telah dihitung ulang.'
+    toast.success(successMsg.value, 'Tender Dihapus')
     await loadTenders()
     emit('tender-updated')
   } catch (err) {
     errorMsg.value = err.response?.data?.message || err.message || 'Gagal menghapus tender'
+    toast.error(errorMsg.value, 'Gagal Menghapus Tender')
   }
 }
 

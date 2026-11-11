@@ -22,7 +22,8 @@ const REPORT_AGGREGATE_JOIN = `
      GROUP BY proyek_id
   ) lw ON lw.proyek_id = p.id
 `;
-export async function listProjects(f) {
+/** Bangun klausa WHERE terparameterisasi untuk daftar proyek; pisahkan filter tab bila diperlukan untuk KPI. */
+function buildProjectWhereClause(f, includeTabFilters = true) {
     const where = [];
     const params = [];
     if (f.kode_bps) {
@@ -33,17 +34,26 @@ export async function listProjects(f) {
         params.push(f.dinas);
         where.push(`p.dinas = $${params.length}`);
     }
-    if (f.kategori) {
-        params.push(f.kategori);
-        where.push(`p.kategori = $${params.length}`);
-    }
     if (f.tahun_anggaran !== undefined) {
         params.push(f.tahun_anggaran);
         where.push(`p.tahun_anggaran = $${params.length}`);
     }
+    if (f.asal_data) {
+        if (f.asal_data === 'dummy') {
+            where.push('p.is_dummy = TRUE');
+        }
+        else {
+            params.push(f.asal_data);
+            where.push(`(p.asal_data = $${params.length} AND COALESCE(p.is_dummy, FALSE) = FALSE)`);
+        }
+    }
+    if (f.has_waiting_reports) {
+        where.push('COALESCE(lw.laporan_menunggu, 0) > 0');
+    }
     if (f.q) {
         params.push(`%${f.q}%`);
-        where.push(`(p.nama ILIKE $${params.length} OR p.dinas ILIKE $${params.length})`);
+        const pIdx = params.length;
+        where.push(`(p.nama ILIKE $${pIdx} OR p.dinas ILIKE $${pIdx} OR p.kode_rup ILIKE $${pIdx} OR p.kode_tender ILIKE $${pIdx})`);
     }
     if (f.pagu_min !== undefined) {
         params.push(f.pagu_min);
@@ -61,19 +71,104 @@ export async function listProjects(f) {
         params.push(f.nilai_kontrak_max);
         where.push(`p.nilai_kontrak IS NOT NULL AND p.nilai_kontrak::numeric <= $${params.length}`);
     }
+    if (includeTabFilters) {
+        if (f.kategori) {
+            params.push(f.kategori);
+            where.push(`p.kategori = $${params.length}`);
+        }
+        if (f.match_status) {
+            if (f.match_status === 'unmatched') {
+                where.push(`(p.match_status = 'unmatched' OR p.match_status IS NULL)`);
+            }
+            else {
+                params.push(f.match_status);
+                where.push(`p.match_status = $${params.length}`);
+            }
+        }
+    }
+    return {
+        whereSql: where.length ? `WHERE ${where.join(' AND ')}` : '',
+        params,
+    };
+}
+export async function listProjects(f) {
+    const { whereSql, params } = buildProjectWhereClause(f, true);
     const limit = f.limit && f.limit > 0 ? Math.min(f.limit, 200) : 100;
-    params.push(limit);
+    const offset = f.offset && f.offset >= 0 ? f.offset : 0;
+    params.push(limit, offset);
+    const limitIdx = params.length - 1;
+    const offsetIdx = params.length;
     const sql = `
     SELECT ${PROJECT_COLUMNS}
       FROM proyek p
       LEFT JOIN wilayah w ON w.kode_bps = p.kode_bps
       ${REPORT_AGGREGATE_JOIN}
-    ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+    ${whereSql}
      ORDER BY p.skor_total DESC NULLS LAST, p.nama
-     LIMIT $${params.length}
+     LIMIT $${limitIdx} OFFSET $${offsetIdx}
   `;
     const res = await pool.query(sql, params);
     return res.rows;
+}
+export async function listProjectsPaginated(f) {
+    const limit = f.limit && f.limit > 0 ? Math.min(f.limit, 200) : 100;
+    const offset = f.offset && f.offset >= 0 ? f.offset : 0;
+    const fullFilter = buildProjectWhereClause(f, true);
+    const baseFilter = buildProjectWhereClause(f, false);
+    const hasTabFilters = Boolean(f.kategori || f.match_status);
+    const rowParams = [...fullFilter.params, limit, offset];
+    const limitIdx = rowParams.length - 1;
+    const offsetIdx = rowParams.length;
+    const rowsSql = `
+    SELECT ${PROJECT_COLUMNS}
+      FROM proyek p
+      LEFT JOIN wilayah w ON w.kode_bps = p.kode_bps
+      ${REPORT_AGGREGATE_JOIN}
+    ${fullFilter.whereSql}
+     ORDER BY p.skor_total DESC NULLS LAST, p.nama
+     LIMIT $${limitIdx} OFFSET $${offsetIdx}
+  `;
+    const waitingJoin = f.has_waiting_reports ? REPORT_AGGREGATE_JOIN : '';
+    const kpiSql = `
+    SELECT COUNT(*)::int AS total_proyek,
+           COALESCE(SUM(COALESCE(p.pagu::numeric, 0)), 0)::float8 AS total_pagu,
+           COUNT(*) FILTER (WHERE p.kategori = 'Tinggi')::int AS tinggi,
+           COUNT(*) FILTER (WHERE p.kategori = 'Perlu Perhatian')::int AS perlu_perhatian,
+           COUNT(*) FILTER (WHERE p.kategori = 'Rendah')::int AS rendah,
+           COUNT(*) FILTER (WHERE p.match_status = 'unmatched' OR p.match_status IS NULL)::int AS unmatched
+      FROM proyek p
+      ${waitingJoin}
+    ${baseFilter.whereSql}
+  `;
+    const countSql = `
+    SELECT COUNT(*)::int AS total
+      FROM proyek p
+      ${waitingJoin}
+    ${fullFilter.whereSql}
+  `;
+    const [rowsRes, kpiRes, countRes] = await Promise.all([
+        pool.query(rowsSql, rowParams),
+        pool.query(kpiSql, baseFilter.params),
+        hasTabFilters
+            ? pool.query(countSql, fullFilter.params)
+            : Promise.resolve(null),
+    ]);
+    const kpi = kpiRes.rows[0] ?? {
+        total_proyek: 0,
+        total_pagu: 0,
+        tinggi: 0,
+        perlu_perhatian: 0,
+        rendah: 0,
+        unmatched: 0,
+    };
+    const total = countRes ? (countRes.rows[0]?.total ?? 0) : kpi.total_proyek;
+    return {
+        projects: rowsRes.rows,
+        total,
+        limit,
+        offset,
+        kpi,
+    };
 }
 export async function getProjectById(id) {
     const res = await pool.query(`SELECT ${PROJECT_COLUMNS}

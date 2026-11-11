@@ -429,6 +429,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useToast } from '@/composables/useToast'
 import { adminEtlApi } from '@/services/api/admin-etl.api'
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue'
 import EtlConfirmModal from '@/features/admin/components/EtlConfirmModal.vue'
@@ -436,6 +437,7 @@ import EtlRawJsonDrawer from '@/features/admin/components/EtlRawJsonDrawer.vue'
 import { formatCurrency, formatDate } from '@/utils/formatters'
 
 const auth = useAuthStore()
+const toast = useToast()
 
 const activeTab = ref('sources')
 const loading = ref(false)
@@ -608,12 +610,14 @@ async function executePipeline(payload) {
       res = await adminEtlApi.runEtl({ source_id })
       feedback.value = `Pipa data "${getSourceName(source_id)}" berhasil dieksekusi: ${res.accepted} baris diterima, ${res.rejected} ditolak.`
     }
+    toast.success(feedback.value, 'ETL Selesai')
     if (onSuccess) onSuccess(res)
     fetchSources()
     fetchErrors()
     fetchUnmatched()
   } catch (err) {
     error.value = err.response?.data?.message || err.message || 'Gagal menjalankan pipa ETL'
+    toast.error(error.value, 'Gagal Menjalankan ETL')
     if (onError) onError(err)
   }
 }
@@ -635,9 +639,11 @@ async function handleMatchDecision(unmatchedId, matchedId, decision) {
     feedback.value = decision === 'match'
       ? 'Keputusan pencocokan paket berhasil disimpan.'
       : 'Penolakan pasangan paket tender berhasil dicatat.'
+    toast.success(feedback.value, 'Pencocokan Tersimpan')
     fetchUnmatched()
   } catch (err) {
     error.value = err.message || 'Gagal memproses keputusan pencocokan'
+    toast.error(error.value, 'Gagal Memproses Pencocokan')
   } finally {
     actionInProgress.value = false
   }
