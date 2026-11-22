@@ -137,24 +137,21 @@
             :class="{ 'is-active': activeRange === 'today' }"
             @click="setQuickRange('today')"
           >
-            <span class="chip-dot">●</span>
-            <span>Hari Ini</span>
+                        <span>Hari Ini</span>
           </button>
           <button
             class="chip-filter"
             :class="{ 'is-active': activeRange === '7d' }"
             @click="setQuickRange('7d')"
           >
-            <span class="chip-dot">●</span>
-            <span>7 Hari Terakhir</span>
+                        <span>7 Hari Terakhir</span>
           </button>
           <button
             class="chip-filter"
             :class="{ 'is-active': activeRange === '30d' }"
             @click="setQuickRange('30d')"
           >
-            <span class="chip-dot">●</span>
-            <span>30 Hari Terakhir</span>
+                        <span>30 Hari Terakhir</span>
           </button>
         </div>
 
@@ -996,11 +993,6 @@ onMounted(async () => {
   align-items: center;
   gap: 6px;
   transition: all 0.15s ease;
-}
-
-.chip-filter .chip-dot {
-  color: #ff5c00;
-  font-size: 9px;
 }
 
 .chip-filter.is-active {

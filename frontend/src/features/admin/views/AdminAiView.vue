@@ -118,16 +118,14 @@
             :class="{ 'is-active': filterStrictOnly }"
             @click="filterStrictOnly = !filterStrictOnly"
           >
-            <span class="chip-dot">●</span>
-            <span>Mode Ketat (Deterministik)</span>
+                        <span>Mode Ketat (Deterministik)</span>
           </button>
           <button
             class="chip-filter"
             :class="{ 'is-active': filterExemptionOnly }"
             @click="filterExemptionOnly = !filterExemptionOnly"
           >
-            <span class="chip-dot">●</span>
-            <span>Pengecualian Nama Lembaga</span>
+                        <span>Pengecualian Nama Lembaga</span>
           </button>
         </div>
 
@@ -1025,11 +1023,6 @@ const simulationSummary = computed(() => {
   align-items: center;
   gap: 6px;
   transition: all 0.15s ease;
-}
-
-.chip-filter .chip-dot {
-  color: #ff5c00;
-  font-size: 9px;
 }
 
 .chip-filter.is-active {

@@ -178,8 +178,7 @@
           :class="{ 'is-active': filterHasWaitingReports }"
           @click="toggleWaitingReports"
         >
-          <span class="chip-dot">●</span>
-          <span>Ada Laporan Menunggu</span>
+                    <span>Ada Laporan Menunggu</span>
         </button>
 
         <!-- Tombol Segarkan -->
@@ -1177,11 +1176,6 @@ onUnmounted(() => {
   white-space: nowrap;
   transition: all 0.15s ease;
   flex-shrink: 0;
-}
-
-.chip-filter .chip-dot {
-  color: #ff5c00;
-  font-size: 10px;
 }
 
 .chip-filter:hover {

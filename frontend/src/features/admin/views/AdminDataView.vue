@@ -164,7 +164,6 @@
             :class="{ 'is-active': filterHighSimilarityOnly }"
             @click="filterHighSimilarityOnly = !filterHighSimilarityOnly"
           >
-            <span class="chip-dot">●</span>
             <span>Hanya Kemiripan &gt; 50%</span>
           </button>
 
@@ -999,11 +998,6 @@ onMounted(() => {
   gap: 6px;
   white-space: nowrap;
   transition: all 0.15s ease;
-}
-
-.chip-filter .chip-dot {
-  color: #ff5c00;
-  font-size: 10px;
 }
 
 .chip-filter.is-active {

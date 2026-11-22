@@ -167,24 +167,21 @@
             :class="{ 'is-active': filterStatus === 'gagal' }"
             @click="toggleChipStatus('gagal')"
           >
-            <span class="chip-dot">●</span>
-            <span>Hanya Gagal Kirim</span>
+                        <span>Hanya Gagal Kirim</span>
           </button>
           <button
             class="chip-filter"
             :class="{ 'is-active': filterStatus === 'dalam_antrean' }"
             @click="toggleChipStatus('dalam_antrean')"
           >
-            <span class="chip-dot">●</span>
-            <span>Dalam Antrean</span>
+                        <span>Dalam Antrean</span>
           </button>
           <button
             class="chip-filter"
             :class="{ 'is-active': filterStatus === 'terkirim' }"
             @click="toggleChipStatus('terkirim')"
           >
-            <span class="chip-dot">●</span>
-            <span>Terkirim</span>
+                        <span>Terkirim</span>
           </button>
         </div>
 
@@ -1044,11 +1041,6 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   transition: all 0.15s ease;
-}
-
-.chip-filter .chip-dot {
-  color: #ff5c00;
-  font-size: 9px;
 }
 
 .chip-filter.is-active {

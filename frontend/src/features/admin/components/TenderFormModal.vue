@@ -68,7 +68,13 @@
             <p>Belum ada paket lelang SPSE yang terhubung dengan proyek ini.</p>
           </div>
 
-          <div v-else-if="!showForm" class="tenders-table-wrap">
+          <div
+            v-else-if="!showForm"
+            class="tenders-table-wrap"
+            role="region"
+            tabindex="0"
+            aria-label="Tabel daftar tender, dapat digeser ke samping pada layar sempit"
+          >
             <table class="tenders-table">
               <thead>
                 <tr>
@@ -522,11 +528,13 @@ watch(
 .tenders-table-wrap {
   border: 1px solid var(--c-border, #EAE6DF);
   border-radius: 8px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .tenders-table {
   width: 100%;
+  min-width: 640px;
   border-collapse: collapse;
   font-size: 12px;
 }

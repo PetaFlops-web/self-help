@@ -130,8 +130,7 @@
             :class="{ 'is-active': activeStatus === 'Dilaporkan' }"
             @click="toggleWaitingOnly"
           >
-            <span class="chip-dot">●</span>
-            <span>Menunggu Verifikasi Saja</span>
+                        <span>Menunggu Verifikasi Saja</span>
           </button>
         </div>
 
@@ -730,10 +729,6 @@ onUnmounted(() => {
   white-space: nowrap;
   flex-shrink: 0;
   transition: all 0.15s ease;
-}
-
-.chip-filter .chip-dot {
-  color: #d97706;
 }
 
 .chip-filter.is-active {
