@@ -387,7 +387,7 @@
               <!-- Kolom 7: Aksi -->
               <td class="td-action">
                 <div class="actions-group">
-                  <RouterLink :to="`/proyek/${p.id}`" class="btn-action-detail">
+                  <RouterLink :to="`/admin/proyek/${p.id}`" class="btn-action-detail">
                     Detail →
                   </RouterLink>
 

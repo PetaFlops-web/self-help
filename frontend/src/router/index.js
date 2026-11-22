@@ -60,6 +60,16 @@ const router = createRouter({
           },
         },
         {
+          path: 'proyek/:id',
+          name: 'admin-project-detail',
+          component: () => import('@/features/admin/views/AdminProjectDetailView.vue'),
+          meta: {
+            requiresAuth: true,
+            roles: ['admin', 'peninjau', 'verifikator'],
+            title: 'Profil Proyek Pengawasan',
+          },
+        },
+        {
           path: 'data',
           name: 'admin-data',
           component: () => import('@/features/admin/views/AdminDataView.vue'),
