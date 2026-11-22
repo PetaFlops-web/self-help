@@ -1,4 +1,8 @@
-docs/
+docs/*
+!docs/images/
+
 .env.production
+
 AGENTS.md
+
 ui_ux_clearsight.figcraft
