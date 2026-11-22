@@ -63,16 +63,7 @@ Data pengadaan dan anggaran daerah sebenarnya terbuka, tetapi tersebar di banyak
 
 ## Arsitektur
 
-```mermaid
-flowchart LR
-    U[Pengguna] --> N[Nginx reverse proxy]
-    N --> F[Frontend Vue 3]
-    N --> B[Backend Express 5]
-    B --> D[(PostgreSQL 17)]
-    B --> R[(Redis 8)]
-    B --> L[LLM Service]
-    L --> P[mock / OpenAI / Gemini]
-```
+![Arsitektur Clearsight](docs/images/arsitektur.png)
 
 Seluruh trafik HTTP masuk lewat Nginx. Frontend, backend, dan LLM service tidak di-expose langsung ke host, dan LLM service hanya bisa diakses internal oleh backend.
 
@@ -158,7 +149,7 @@ cd frontend && npm run lint && npm run build
 
 ## Dokumentasi Lanjutan
 
-- [Panduan Impor Data ETL (CSV & JSON)](docs/ETL.md): format berkas, aturan validasi, dan contoh untuk paket pengadaan, anggaran dinas, serta peserta tender.
+- [Panduan Impor Data ETL (CSV & JSON)](ETL.md): format berkas, aturan validasi, dan contoh untuk paket pengadaan, anggaran dinas, serta peserta tender.
 - Swagger/OpenAPI tersedia di `/docs` pada mode development.
 
 ## Status dan Roadmap
