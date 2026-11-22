@@ -179,4 +179,4 @@ All components of this project were developed from conception through deployment
 
 ## License
 
-Released under the [MIT License](LICENSE). Copyright (c) 2026 Akbar Vabiansyah, Ferdi Kurniawan, M Rizky Arya Seto.
+Released under the [MIT License](LICENSE). Copyright (c) 2026 Akbar Vabiansyah.
